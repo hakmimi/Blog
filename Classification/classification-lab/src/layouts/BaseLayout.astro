@@ -15,7 +15,10 @@ const fullTitle = title === site.name ? title : `${title} · ${site.name}`;
     <meta name="description" content={description} />
     {keywords.length > 0 && <meta name="keywords" content={keywords.join(', ')} />}
     <meta name="author" content={site.author} />
-    <meta name="theme-color" content="#0f2233" />
+    <meta name="theme-color" content="#070b14" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" />
     <link rel="canonical" href={canonical} />
     <link rel="icon" href={`${base}/favicon.svg`} type="image/svg+xml" />
     <meta property="og:type" content={type} />
@@ -80,7 +83,7 @@ const fullTitle = title === site.name ? title : `${title} · ${site.name}`;
           || (words.length ? '<p>No matches. Try a broader term.</p>' : '');
       });
       document.querySelector('#theme-toggle')?.addEventListener('click', () => {
-        const cur = document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        const cur = document.documentElement.dataset.theme || 'dark';
         const next = cur === 'dark' ? 'light' : 'dark';
         document.documentElement.dataset.theme = next;
         try { localStorage.setItem('theme', next); } catch (e) {}
