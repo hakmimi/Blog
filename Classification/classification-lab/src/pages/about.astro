@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { allSeries, seriesUrl } from '../lib/content';
+import { site } from '../data/site';
+---
+<BaseLayout title="About" description={`How ${site.name} is written: one real dataset per series, runnable code, honest comparisons.`}>
+  <section class="section prose narrow">
+    <p class="eyebrow">About</p>
+    <h1>Written to be run</h1>
+    <p class="lede">{site.name} is a collection of long-form series about applied machine learning. Each series picks one real dataset and follows it end to end.</p>
+    <h2 id="principles">Ground rules</h2>
+    <ul>
+      <li><strong>Code first.</strong> Every snippet is a real excerpt of a script in the repository, and the numbers in the text are pasted from its output.</li>
+      <li><strong>Same rows, same folds.</strong> When models are compared, they share the data, the split and the tuning budget.</li>
+      <li><strong>Uncertainty is shown.</strong> Differences are reported with bootstrap intervals and across several splits, not as a single lucky number.</li>
+      <li><strong>Claims stay small.</strong> One dataset is evidence about that dataset, not a law about algorithms.</li>
+    </ul>
+    <h2 id="series">Series</h2>
+    <ul>{allSeries.map((s) => <li><a href={seriesUrl(s.slug)}>{s.title}</a> — {s.tagline}</li>)}</ul>
+    <h2 id="data">Data and licenses</h2>
+    <p>Each series documents its own dataset, checksum and license. The Classification series uses the <a href="https://archive.ics.uci.edu/dataset/222/bank+marketing">UCI Bank Marketing</a> data (Moro, Rita &amp; Cortez, 2014, <a href="https://doi.org/10.24432/C5K306">doi:10.24432/C5K306</a>, CC BY 4.0). Original code and prose are MIT licensed.</p>
+  </section>
+</BaseLayout>

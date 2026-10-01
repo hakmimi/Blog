@@ -1,0 +1,90 @@
+---
+import '../styles/global.css';
+import 'katex/dist/katex.min.css';
+import { site } from '../data/site';
+import { base } from '../lib/content';
+const { title, description = site.tagline, keywords = [], type = 'website', published, modified, jsonLd } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const fullTitle = title === site.name ? title : `${title} · ${site.name}`;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    {keywords.length > 0 && <meta name="keywords" content={keywords.join(', ')} />}
+    <meta name="author" content={site.author} />
+    <meta name="theme-color" content="#0f2233" />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href={`${base}/favicon.svg`} type="image/svg+xml" />
+    <meta property="og:type" content={type} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:site_name" content={site.name} />
+    {published && <meta property="article:published_time" content={published} />}
+    {modified && <meta property="article:modified_time" content={modified} />}
+    {keywords.map((k: string) => <meta property="article:tag" content={k} />)}
+    <meta name="twitter:card" content="summary" />
+    <title>{fullTitle}</title>
+    {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+    <script is:inline>
+      try { const t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <a class="brand" href={`${base}/`} aria-label={`${site.name} home`}>
+        <span class="brand-mark" aria-hidden="true">{site.short}</span>
+        <span>{site.name}</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href={`${base}/#series`}>Series</a>
+        <a href={`${base}/topics/`}>Topics</a>
+        <a href={`${base}/about/`}>About</a>
+        <button class="icon-btn" id="theme-toggle" type="button" aria-label="Toggle dark mode">◐</button>
+        <button class="search-open" type="button" aria-label="Open search">Search <kbd>/</kbd></button>
+      </nav>
+    </header>
+    <main id="main"><slot /></main>
+    <footer>
+      <p><strong>{site.name}</strong> — {site.tagline}</p>
+      <p>Code samples are MIT licensed. Datasets keep their own licenses, credited in each series.</p>
+    </footer>
+    <dialog id="search-dialog" aria-labelledby="search-title">
+      <form method="dialog"><button class="close" aria-label="Close search">×</button></form>
+      <h2 id="search-title">Search the blog</h2>
+      <input id="search-input" type="search" placeholder="Try calibration, XGBoost or leakage" autocomplete="off" />
+      <div id="search-results" aria-live="polite"></div>
+    </dialog>
+    <script define:vars={{ base }}>
+      const dialog = document.querySelector('#search-dialog');
+      const input = document.querySelector('#search-input');
+      const results = document.querySelector('#search-results');
+      const open = () => { dialog && dialog.showModal(); input && input.focus(); };
+      document.querySelector('.search-open')?.addEventListener('click', open);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement && document.activeElement.tagName)) { e.preventDefault(); open(); }
+      });
+      let index = [];
+      input?.addEventListener('input', async () => {
+        if (!index.length) index = await fetch(base + '/search-index.json').then((r) => r.json());
+        const words = input.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+        const hits = words.length ? index.filter((x) => {
+          const hay = (x.title + ' ' + x.description + ' ' + x.keywords.join(' ') + ' ' + x.text).toLowerCase();
+          return words.every((w) => hay.includes(w));
+        }).slice(0, 8) : [];
+        results.innerHTML = hits.map((x) => '<a href="' + x.url + '"><strong>' + x.title + '</strong><span>' + x.series + ' · ' + x.description + '</span></a>').join('')
+          || (words.length ? '<p>No matches. Try a broader term.</p>' : '');
+      });
+      document.querySelector('#theme-toggle')?.addEventListener('click', () => {
+        const cur = document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        const next = cur === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        try { localStorage.setItem('theme', next); } catch (e) {}
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,42 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import ArticleCard from '../../../components/ArticleCard.astro';
+import { allSeries, getArticles, seriesBySlug, topicUrl, fmtDate, iso, articleUrl } from '../../../lib/content';
+
+export function getStaticPaths() {
+  return allSeries.map((s) => ({ params: { series: s.slug } }));
+}
+const { series } = Astro.params;
+const s = seriesBySlug[series as string];
+const articles = await getArticles(series);
+const words = articles.reduce((n, a) => n + (a.body ?? '').split(/\s+/).length, 0);
+const extra = series === 'classification' ? [
+  ['Live lab: classify a fruit', 'Drag sliders, watch k-nearest neighbors vote.', `/series/${series}/fruit-lab/`],
+  ['Methods & protocol', 'Splits, tuning budget, metrics and what they do not prove.', `/series/${series}/methods/`],
+] : [];
+---
+<BaseLayout title={s.title} description={s.description} keywords={s.keywords}>
+  <section class="hero small" style={`--accent:${s.accent}`}>
+    <div class="hero-inner">
+      <p class="eyebrow">Series · {s.status === 'complete' ? 'complete' : 'in progress'}</p>
+      <h1>{s.title}</h1>
+      <p class="lede">{s.description}</p>
+      <div class="hero-stats">
+        <div><strong>{articles.length}</strong><span>parts</span></div>
+        <div><strong>~{Math.round(words / 100) * 100}</strong><span>words</span></div>
+        <div><strong>{fmtDate(new Date(s.started))}</strong><span>started</span></div>
+      </div>
+      <ul class="chips on-dark">{s.keywords.map((k) => <li><a href={topicUrl(k)}>{k}</a></li>)}</ul>
+    </div>
+  </section>
+  <section class="section">
+    <div class="article-list">
+      {articles.map((a) => <ArticleCard article={a} />)}
+    </div>
+    {extra.length > 0 && (
+      <div class="extras">
+        {extra.map(([t, d, href]) => <a href={`${import.meta.env.BASE_URL.replace(/\/$/, '')}${href}`}><strong>{t}</strong><span>{d}</span></a>)}
+      </div>
+    )}
+  </section>
+</BaseLayout>

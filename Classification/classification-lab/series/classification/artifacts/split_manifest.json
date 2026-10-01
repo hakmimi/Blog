@@ -1,0 +1,38 @@
+{
+  "total_rows": 41188,
+  "development_rows": 32950,
+  "holdout_rows": 8238,
+  "split_row": 32950,
+  "development_prevalence": 0.0637329286798179,
+  "holdout_prevalence": 0.3083272638990046,
+  "feature_count_primary": 19,
+  "excluded_primary": [
+    "duration"
+  ],
+  "folds": [
+    {
+      "train_start": 0,
+      "train_end_exclusive": 16475,
+      "validation_start": 16475,
+      "validation_end_exclusive": 21911,
+      "train_positive": 706,
+      "validation_positive": 322
+    },
+    {
+      "train_start": 0,
+      "train_end_exclusive": 21911,
+      "validation_start": 21911,
+      "validation_end_exclusive": 27348,
+      "train_positive": 1028,
+      "validation_positive": 297
+    },
+    {
+      "train_start": 0,
+      "train_end_exclusive": 27348,
+      "validation_start": 27348,
+      "validation_end_exclusive": 32950,
+      "train_positive": 1325,
+      "validation_positive": 775
+    }
+  ]
+}

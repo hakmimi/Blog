@@ -1,0 +1,170 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import katex from 'katex';
+const b = import.meta.env.BASE_URL.replace(/\/$/, '') + '/series/classification';
+const standardization = katex.renderToString('z_j=(x_j-\\mu_j)/s_j', { throwOnError: false });
+const distance = katex.renderToString('d(x,x_i)=\\sqrt{\\sum_{j=1}^{3}(z_j-z_{ij})^2}', { displayMode: true, throwOnError: false });
+const vote = katex.renderToString('V_c=\\sum_{i\\in N_k} \\mathbf{1}(y_i=c)/(d_i+10^{-6})', { throwOnError: false });
+---
+<BaseLayout title="Live Lab: Classify a Fruit" description="Change a fruit's measurements and watch a transparent k-nearest-neighbors classifier make a three-class prediction.">
+  <section class="lab-hero">
+    <div>
+      <p class="eyebrow">Live technical lab · multiclass classification</p>
+      <h1>What fruit is this?</h1>
+      <p class="lede">Move three measurements. A real k-nearest-neighbors calculation standardizes them, finds nearby labeled fruits, and turns their distance-weighted votes into a prediction you can inspect.</p>
+    </div>
+    <div class="lab-brief">
+      <p><strong>The pain</strong> Raw measurements use different units, classes overlap, and a label can hide uncertainty.</p>
+      <p><strong>The goal</strong> Predict apple, orange, or lemon—and show exactly which examples supported the answer.</p>
+      <p><strong>Success means</strong> A reader can change a feature, see the neighborhood change, and explain the prediction.</p>
+    </div>
+  </section>
+
+  <section class="fruit-lab" aria-labelledby="playground-title">
+    <div class="lab-controls">
+      <h2 id="playground-title">1. Describe the unknown fruit</h2>
+      <label>Weight <output id="weight-value">135 g</output>
+        <input id="weight" type="range" min="60" max="235" value="135" step="1" />
+      </label>
+      <label>Sweetness <output id="sweetness-value">5.5 / 10</output>
+        <input id="sweetness" type="range" min="1" max="10" value="5.5" step="0.1" />
+      </label>
+      <label>Yellow hue <output id="hue-value">55 / 100</output>
+        <input id="hue" type="range" min="15" max="85" value="55" step="1" />
+      </label>
+      <label>Neighbors, k <output id="k-value">7</output>
+        <input id="neighbors" type="range" min="1" max="15" value="7" step="2" />
+      </label>
+      <div class="prediction" aria-live="polite">
+        <span>Predicted class</span>
+        <strong id="predicted-fruit">Loading…</strong>
+        <div id="vote-bars"></div>
+      </div>
+    </div>
+    <div class="lab-chart">
+      <h2>2. Inspect the neighborhood</h2>
+      <svg id="fruit-chart" viewBox="0 0 720 470" role="img" aria-labelledby="fruit-chart-title fruit-chart-desc">
+        <title id="fruit-chart-title">Fruit training examples and current query</title>
+        <desc id="fruit-chart-desc">Scatter plot of fruit weight against sweetness. Lines connect the query to its nearest standardized neighbors.</desc>
+      </svg>
+      <div class="legend" aria-label="Class colors"><span class="apple">Apple</span><span class="orange">Orange</span><span class="lemon">Lemon</span><span class="query">Your fruit</span></div>
+    </div>
+    <div class="neighbor-panel">
+      <h2>3. Audit the vote</h2>
+      <p>Distance uses all three standardized features. The plot shows two; hue still affects the neighbor list.</p>
+      <div class="table-scroll"><table><thead><tr><th>Rank</th><th>Class</th><th>Distance</th><th>Vote weight</th></tr></thead><tbody id="neighbor-table"></tbody></table></div>
+    </div>
+  </section>
+
+  <section class="section prose lab-explainer">
+    <h2 id="math">What the browser is calculating</h2>
+    <p>Feature scales are learned from the labeled examples. For feature <em>j</em>, standardization is <span set:html={standardization} />, where μ is the training mean and <em>s</em> its standard deviation. Euclidean distance between query <em>x</em> and training fruit <em>xᵢ</em> is:</p>
+    <div class="formula" set:html={distance} />
+    <p>The lab selects the <em>k</em> smallest distances. Class <em>c</em> receives vote <span set:html={vote} />. Displayed shares divide each class vote by the total. They are useful local vote shares, not guaranteed calibrated probabilities.</p>
+
+    <pre><code class="language-python">from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+
+model = make_pipeline(
+    StandardScaler(),
+    KNeighborsClassifier(n_neighbors=7, weights="distance"),
+)
+model.fit(X_train, y_train)
+probabilities = model.predict_proba(X_test)</code></pre>
+
+    <h2 id="benchmark">The same data, four famous classifiers</h2>
+    <p>The live view uses k-NN because every prediction is inspectable. The reproducible Python experiment also fits multinomial logistic regression, a constrained decision tree, and a Random Forest on the same stratified split.</p>
+    <img src={`${b}/figures/fruit-confusion-matrices.png`} alt="Four confusion matrices comparing logistic regression, k-nearest neighbors, a decision tree, and a random forest on synthetic fruit classes." />
+    <p><em>Figure 1. Counts come from a 90-example synthetic test set. The overlap is intentional; these measurements are teaching data, not agricultural observations.</em></p>
+    <p>On the completed seeded run, logistic regression and k-NN each classify 81 of 90 test fruits correctly (90.0% accuracy). Logistic regression has the lowest multiclass log loss, 0.200; the tree is less accurate at 85.6% and much more confidently wrong, with log loss 1.049. This is one split of synthetic data, so the useful conclusion is about inspectable behavior—not a universal model ranking.</p>
+    <p>Download the <a href={`${b}/artifacts/fruit_benchmark.csv`}>measured benchmark</a>, <a href={`${b}/artifacts/synthetic_fruits.csv`}>synthetic dataset</a>, or <a href={`${b}/code/run_fruit_lab.py`}>generating code</a>.</p>
+
+    <h2 id="lessons">What to notice</h2>
+    <ul>
+      <li><strong>Scaling changes geometry.</strong> Without it, grams dominate a 1–10 sweetness score.</li>
+      <li><strong>Classes can overlap.</strong> A plausible orange-like fruit may still sit among apples.</li>
+      <li><strong>k controls bias and variance.</strong> Small k reacts locally; large k smooths across regions.</li>
+      <li><strong>A vote is not an explanation of nature.</strong> It explains this algorithm’s output given these examples and features.</li>
+      <li><strong>Multiclass is not three independent labels.</strong> These classes are mutually exclusive, and their displayed vote shares sum to one.</li>
+    </ul>
+    <div class="callout"><strong>What this example does not establish:</strong> real fruit taxonomy, causal effects, deployment calibration, or superiority of one classifier. Its purpose is to make representation → distance → neighbors → votes → class visible before the bank case adds drift and operational cost.</div>
+  </section>
+
+  <script>
+    const NS = 'http://www.w3.org/2000/svg';
+    const colors = { apple: '#d95f59', orange: '#e89a24', lemon: '#d1b91f' };
+    const inputs = {
+      weight_g: document.querySelector('#weight'),
+      sweetness: document.querySelector('#sweetness'),
+      yellow_hue: document.querySelector('#hue'),
+      k: document.querySelector('#neighbors'),
+    };
+    const outputs = {
+      weight_g: document.querySelector('#weight-value'),
+      sweetness: document.querySelector('#sweetness-value'),
+      yellow_hue: document.querySelector('#hue-value'),
+      k: document.querySelector('#k-value'),
+    };
+    let payload;
+    const svg = document.querySelector('#fruit-chart');
+    const scaleX = value => 62 + (value - 55) / (245 - 55) * 620;
+    const scaleY = value => 408 - (value - 1) / 9 * 345;
+    const element = (name, attrs={}) => {
+      const node = document.createElementNS(NS, name);
+      Object.entries(attrs).forEach(([key,value]) => node.setAttribute(key, String(value)));
+      return node;
+    };
+    function render() {
+      if (!payload) return;
+      const query = {
+        weight_g: Number(inputs.weight_g.value),
+        sweetness: Number(inputs.sweetness.value),
+        yellow_hue: Number(inputs.yellow_hue.value),
+      };
+      const k = Number(inputs.k.value);
+      outputs.weight_g.textContent = `${query.weight_g.toFixed(0)} g`;
+      outputs.sweetness.textContent = `${query.sweetness.toFixed(1)} / 10`;
+      outputs.yellow_hue.textContent = `${query.yellow_hue.toFixed(0)} / 100`;
+      outputs.k.textContent = String(k);
+      const features = payload.features;
+      const ranked = payload.points.map(point => {
+        const squared = features.reduce((sum, feature) => {
+          const delta = (query[feature] - point[feature]) / payload.scales[feature];
+          return sum + delta * delta;
+        }, 0);
+        return { ...point, distance: Math.sqrt(squared) };
+      }).sort((a,b) => a.distance - b.distance);
+      const nearest = ranked.slice(0, k);
+      const votes = { apple: 0, orange: 0, lemon: 0 };
+      nearest.forEach(point => votes[point.fruit] += 1 / (point.distance + 1e-6));
+      const total = Object.values(votes).reduce((a,b) => a+b, 0);
+      const winner = Object.entries(votes).sort((a,b) => b[1]-a[1])[0][0];
+      document.querySelector('#predicted-fruit').textContent = winner;
+      document.querySelector('#predicted-fruit').style.color = colors[winner];
+      document.querySelector('#vote-bars').innerHTML = Object.entries(votes).map(([label,vote]) => {
+        const share = vote / total;
+        return `<div><span>${label}</span><i style="width:${(share*100).toFixed(1)}%;background:${colors[label]}"></i><b>${(share*100).toFixed(1)}%</b></div>`;
+      }).join('');
+      document.querySelector('#neighbor-table').innerHTML = nearest.map((point,index) => `<tr><td>${index+1}</td><td><span class="dot" style="background:${colors[point.fruit]}"></span>${point.fruit}</td><td>${point.distance.toFixed(3)}</td><td>${(1/(point.distance+1e-6)).toFixed(2)}</td></tr>`).join('');
+
+      svg.querySelectorAll('.dynamic').forEach(node => node.remove());
+      if (!svg.querySelector('.axes')) {
+        const axes = element('g', { class: 'axes' });
+        axes.append(element('line',{x1:62,y1:408,x2:682,y2:408}));
+        axes.append(element('line',{x1:62,y1:408,x2:62,y2:63}));
+        const xlabel=element('text',{x:372,y:455,'text-anchor':'middle'}); xlabel.textContent='Weight (grams)'; axes.append(xlabel);
+        const ylabel=element('text',{x:18,y:235,transform:'rotate(-90 18 235)','text-anchor':'middle'}); ylabel.textContent='Sweetness (1–10)'; axes.append(ylabel);
+        svg.append(axes);
+      }
+      const layer = element('g',{class:'dynamic'});
+      nearest.forEach(point => layer.append(element('line',{x1:scaleX(query.weight_g),y1:scaleY(query.sweetness),x2:scaleX(point.weight_g),y2:scaleY(point.sweetness),class:'neighbor-line'})));
+      payload.points.forEach(point => layer.append(element('circle',{cx:scaleX(point.weight_g),cy:scaleY(point.sweetness),r:nearest.includes(point)?8:5,fill:colors[point.fruit],opacity:nearest.includes(point)?.95:.46,stroke:nearest.includes(point)?'#17324d':'white','stroke-width':nearest.includes(point)?2:1})));
+      layer.append(element('circle',{cx:scaleX(query.weight_g),cy:scaleY(query.sweetness),r:11,fill:'#fff',stroke:'#17324d','stroke-width':4}));
+      layer.append(element('circle',{cx:scaleX(query.weight_g),cy:scaleY(query.sweetness),r:3.5,fill:'#17324d'}));
+      svg.append(layer);
+    }
+    fetch(import.meta.env.BASE_URL.replace(/\/$/, '') + '/series/classification/artifacts/fruit_points.json').then(response => response.json()).then(data => { payload=data; render(); });
+    Object.values(inputs).forEach(input => input.addEventListener('input', render));
+  </script>
+</BaseLayout>

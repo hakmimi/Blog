@@ -1,0 +1,59 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ArticleCard from '../components/ArticleCard.astro';
+import { site } from '../data/site';
+import { allSeries, assetUrl, fmtDate, getArticles, getTopics, seriesUrl, topicUrl } from '../lib/content';
+const articles = await getArticles();
+const latest = [...articles].sort((a, b) => +b.data.date - +a.data.date).slice(0, 4);
+const topics = [...(await getTopics()).entries()].sort((a, b) => b[1].articles.length - a[1].articles.length).slice(0, 14);
+const count = (slug: string) => articles.filter((a) => a.data.series === slug).length;
+---
+<BaseLayout title={site.name} description={site.tagline} keywords={['machine learning', 'python', 'data science', 'tutorial']}>
+  <section class="hero">
+    <div class="hero-inner">
+      <p class="eyebrow">Hands-on machine learning</p>
+      <h1>Read it, run it, compare it.</h1>
+      <p class="lede">{site.tagline} Every series follows one real dataset from raw CSV to a decision you can defend — with the code, the output and the numbers side by side.</p>
+      <div class="hero-stats">
+        <div><strong>{allSeries.length}</strong><span>{allSeries.length === 1 ? 'series' : 'series'}</span></div>
+        <div><strong>{articles.length}</strong><span>articles</span></div>
+        <div><strong>100%</strong><span>reproducible code</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="series">
+    <div class="section-head">
+      <p class="eyebrow">Series</p>
+      <h2>Long-form, one topic at a time</h2>
+    </div>
+    <div class="series-grid">
+      {allSeries.map((s) => (
+        <a class="series-card" href={seriesUrl(s.slug)} style={`--accent:${s.accent}`}>
+          {s.cover && <img src={assetUrl(s.slug, 'figures', s.cover)} alt="" loading="lazy" />}
+          <div>
+            <p class="eyebrow">{count(s.slug)} parts · {s.status === 'complete' ? 'complete' : 'in progress'} · since {fmtDate(new Date(s.started))}</p>
+            <h3>{s.title}</h3>
+            <p>{s.description}</p>
+            <ul class="chips">{s.keywords.slice(0, 4).map((k) => <li><span>{k}</span></li>)}</ul>
+          </div>
+        </a>
+      ))}
+      <div class="series-card soon"><div><p class="eyebrow">Next</p><h3>More series on the way</h3><p>Regression, clustering, time series, NLP — each one built the same way: one dataset, real code, honest comparisons.</p></div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><p class="eyebrow">Latest</p><h2>Newest articles</h2></div>
+    <div class="article-list">
+      {latest.map((a) => <ArticleCard article={a} showSeries />)}
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><p class="eyebrow">Browse</p><h2>Topics</h2></div>
+    <ul class="chips big">
+      {topics.map(([key, t]) => <li><a href={topicUrl(t.label)}>{t.label} <b>{t.articles.length}</b></a></li>)}
+    </ul>
+  </section>
+</BaseLayout>

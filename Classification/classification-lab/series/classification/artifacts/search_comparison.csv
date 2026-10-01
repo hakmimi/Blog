@@ -1,0 +1,3 @@
+method,candidate_budget,folds_per_candidate,fits,wall_clock_seconds,best_cv_average_precision,best_params
+Grid search,4,3,12,2.9470314999925904,0.1013811911670509,"{""model__C"": 0.1}"
+Randomized search,4,3,12,2.957433499977924,0.10123104135955156,"{""model__C"": 0.1873817422860384}"

@@ -1,0 +1,24 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+const cards = [
+  ['Prediction moment','Start of the current contact; duration is unavailable.'],
+  ['Split','Stratified 80/20 random split (seed 42) for the leaderboard; first 80% / last 20% by row order for part 16.'],
+  ['Selection','Same budget for every model: 8 random candidates, 3-fold CV, scored on average precision.'],
+  ['Primary features','All source inputs except duration. Unknown categories remain explicit.'],
+  ['Synthetic track','Fruit lab: one controlled factor changed at a time; fixed random seed 20260930.'],
+  ['Reporting','Average precision, AUC, log loss, ECE, profit at an out-of-fold threshold, paired bootstrap.'],
+];
+---
+<BaseLayout title="Methods">
+  <section class="section prose">
+    <p class="eyebrow">Methods at a glance</p>
+    <h1>One protocol, visible assumptions</h1>
+    <p class="lede">These choices make the comparisons interpretable. They do not turn one dataset into universal evidence.</p>
+    <div class="methods-grid">{cards.map(([h,p]) => <article><h2>{h}</h2><p>{p}</p></article>)}</div>
+    <h2 id="scope">What the benchmark can establish</h2>
+    <p>It estimates how these concrete pipelines behave on a held-out sample (and, in part 16, a later period) of this dataset. It can reveal sensitivity to the split, class rarity, objectives, and thresholds. It cannot identify causal effects of contacting people, prove that the row-order proxy matches a future deployment, or crown a model family for every tabular problem.</p>
+    <h2 id="artifacts">Audit the run</h2>
+    <p>Start with the <a href={`${import.meta.env.BASE_URL}series/classification/artifacts/leaderboard_summary.json`}>machine-readable result summary</a>, then inspect <a href={`${import.meta.env.BASE_URL}series/classification/artifacts/leaderboard.csv`}>every model's metrics</a> and <a href={`${import.meta.env.BASE_URL}series/classification/artifacts/leaderboard_predictions.csv`}>test-set scores for all 13 models</a>. The code defines preprocessing inside each fitted pipeline so encoders and scalers learn from training rows only.</p>
+  </section>
+</BaseLayout>
+

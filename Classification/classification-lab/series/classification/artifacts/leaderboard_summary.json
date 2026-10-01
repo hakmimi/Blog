@@ -1,0 +1,17 @@
+{
+  "winner_by_average_precision": "LightGBM",
+  "test_rows": 8238,
+  "train_rows": 32950,
+  "prevalence": 0.11265417111780131,
+  "random_search_candidates_per_model": 8,
+  "cv_folds": 3,
+  "call_everyone_profit": -814.0,
+  "cost_per_call": 1.0,
+  "value_per_subscription": 8.0,
+  "versions": {
+    "scikit-learn": "1.8.0",
+    "xgboost": "3.4.1",
+    "lightgbm": "4.7.0",
+    "catboost": "1.2.10"
+  }
+}

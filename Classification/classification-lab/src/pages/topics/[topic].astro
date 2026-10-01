@@ -1,0 +1,19 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ArticleCard from '../../components/ArticleCard.astro';
+import { getTopics } from '../../lib/content';
+
+export async function getStaticPaths() {
+  const topics = await getTopics();
+  return [...topics.entries()].map(([key, t]) => ({ params: { topic: key }, props: { label: t.label, articles: t.articles } }));
+}
+const { label, articles } = Astro.props;
+---
+<BaseLayout title={`Articles about ${label}`} description={`${articles.length} article(s) tagged ${label}.`} keywords={[label]}>
+  <section class="section">
+    <div class="section-head"><p class="eyebrow">Topic</p><h1>{label}</h1></div>
+    <div class="article-list">
+      {articles.map((a: any) => <ArticleCard article={a} showSeries />)}
+    </div>
+  </section>
+</BaseLayout>
