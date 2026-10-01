@@ -19,15 +19,18 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: Classification/classification-lab/package-lock.json
       - run: npm ci
+        working-directory: Classification/classification-lab
       - run: npm run build
+        working-directory: Classification/classification-lab
         env:
           SITE_URL: https://${{ github.repository_owner }}.github.io
           BASE_PATH: /${{ github.event.repository.name }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: Classification/classification-lab/dist
   deploy:
     environment:
       name: github-pages
