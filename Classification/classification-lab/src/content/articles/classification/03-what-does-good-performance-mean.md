@@ -5,12 +5,94 @@ series: "classification"
 order: 3
 date: 2026-09-30
 updated: 2026-10-02
-keywords: ["precision recall", "roc auc", "average precision", "confusion matrix", "metrics"]
-readingTime: "14 min read"
+keywords: ["precision recall", "roc auc", "average precision", "confusion matrix", "classification report", "metrics"]
+readingTime: "20 min read"
 figure: "ch03-threshold-roc-pr.png"
 ---
 
-We need a model to grade, so let's train the simplest serious one: logistic regression on the 19 pre-call features. Don't worry about how it works yet ([part 5](/series/classification/05-logistic-regression-naive-bayes/)). The point of this chapter is that **the same set of predictions can look brilliant or useless depending on the metric**.
+## Introduction
+
+A bank that never phones anyone gets 88.7% of its predictions right, because 88.7% of customers say no. A model that actually works, the one we build in this chapter, gets 90.1%. If accuracy were the whole story, 1.4 points would be a poor return on a whole machine-learning project.
+
+Accuracy is not the whole story. The same set of predictions can look brilliant or useless depending on the metric you use to grade it, and picking the wrong metric is one of the quietest ways to ship the wrong model. Here the model finds only 22% of the people who would subscribe, and we can call that a success or a failure depending on what we measure.
+
+So before we compare thirteen classifiers, we need to agree on the yardstick. In this chapter we train one simple model, logistic regression, and keep it fixed. Then we grade the same 8,238 predictions in several ways, until it is clear why average precision is our main metric and why the threshold is a separate decision.
+
+## Goals: what are we trying to achieve?
+
+The same predictions can look brilliant or useless depending on how you grade them. Our goal is to learn which grade to trust on this data.
+
+By the end you will be able to:
+
+- **Read a confusion matrix** and compute accuracy, precision and recall from its four cells.
+- **Read a classification report**, row by row, and know why the "yes" row matters more than the averages.
+- **Explain why the threshold is a dial**, and what moving it does to calls, hits and misses.
+- **Choose between ROC-AUC, average precision and precision at top-k** for a problem with rare positives.
+
+## Theory: what a classifier outputs and how it is graded
+
+### A score, a cut-off, and a decision
+
+Most classifiers do not output "yes" or "no". They output a **score** for each customer, usually a probability between 0 and 1. A **threshold** (also called a cut-off) turns the score into a decision: everything at or above the threshold is "yes", everything below is "no".
+
+That gives two separate questions. *How well does the score rank customers?* (Does it put likely subscribers above unlikely ones?) And *where do we cut?* The first is a property of the model. The second is a decision about money and capacity. Mixing them up is the root of most metric mistakes, and the whole chapter follows this split.
+
+### The confusion matrix
+
+Once we have decisions, we compare them with the truth. Every customer lands in exactly one of four cells:
+
+| | Predicted no | Predicted yes |
+|---|---|---|
+| **Actually no** | **TN**, true negative: correctly left alone | **FP**, false positive: a wasted call |
+| **Actually yes** | **FN**, false negative: a missed customer | **TP**, true positive: a win |
+
+Two conventions to keep in mind. In scikit-learn, **rows are the truth and columns are the prediction**, and `confusion_matrix(y_true, y_pred).ravel()` returns the cells in the order TN, FP, FN, TP. And "positive" does not mean "good": it means *the class we are looking for*. Here that is "subscribes".
+
+The two kinds of error are not equal. A false positive costs one phone call. A false negative costs a subscription, which in our later cost model is worth eight calls. The matrix keeps the two errors apart, which is exactly what a single accuracy number hides.
+
+Every standard metric is a ratio of these four cells:
+
+| Metric | Formula | The question it answers |
+|---|---|---|
+| **Accuracy** | (TP + TN) / all | How often is the decision right? |
+| **Precision** | TP / (TP + FP) | Of the people we call, how many say yes? |
+| **Recall** (true positive rate, sensitivity) | TP / (TP + FN) | Of everyone who would say yes, how many did we reach? |
+| **Specificity** | TN / (TN + FP) | Of the people who would say no, how many did we leave alone? |
+| **False positive rate** | FP / (FP + TN) = 1 − specificity | Of the people who would say no, how many did we call anyway? |
+| **F1** | 2 · precision · recall / (precision + recall) | One number that is high only when both precision and recall are high. |
+
+Precision and recall pull in opposite directions. Lower the threshold and you call more people, so recall rises and precision usually falls. F1 is the harmonic mean of the two, so it punishes a model that is good at only one of them.
+
+### The classification report
+
+`sklearn.metrics.classification_report` prints these ratios **for each class**, as if each class were the "positive" one in turn, plus three summary rows. You read it like this:
+
+- **precision, recall, f1-score:** the formulas above, computed once for the class "no" and once for the class "yes".
+- **support:** how many real customers belong to each class. Always read it first, because it tells you how much weight each row carries (here 7,310 "no" against 928 "yes").
+- **accuracy:** one number for the whole table.
+- **macro avg:** the plain average of the two classes. It treats a rare class and a common class as equally important, so it exposes a model that ignores the minority.
+- **weighted avg:** the average weighted by support. It is dominated by the common class, so on imbalanced data it looks flattering.
+
+For imbalanced data, the row to look at is the one for the minority class: the "yes" row.
+
+### Ranking quality: ROC and precision-recall curves
+
+Sliding the threshold from 1 down to 0 traces out a curve. The **ROC curve** plots recall against the false positive rate, and its area (**ROC-AUC**) has a clean meaning: the probability that a random subscriber scores higher than a random non-subscriber. The **precision-recall curve** plots precision against recall, and its area is summarised by **average precision (AP)**. Neither depends on any one threshold, so they grade the ranking and nothing else. Why they behave very differently when positives are rare is the main experiment of this chapter.
+
+## The work plan: how do we do it?
+
+We train one simple model, logistic regression, and keep it fixed. We then grade the same 8,238 predictions in four ways:
+
+1. **Confusion matrix and classification report** at a cut-off of 0.5, and the ratios built from them.
+2. **Threshold sweep**: move the cut-off and watch precision and recall trade places.
+3. **ROC-AUC against average precision**: a test that shows which one is fooled by imbalance.
+4. **Precision at top-k**: the metric that matches a call centre with limited capacity.
+
+## Implementation
+
+### Train the model we will grade
+
+We need a model to grade, so we train the simplest serious one: logistic regression on the 19 pre-call features. Don't worry about how it works yet ([part 5](/series/classification/05-logistic-regression-naive-bayes/)).
 
 ```python
 import numpy as np
@@ -36,27 +118,6 @@ p = model.fit(Xtr, ytr).predict_proba(Xte)[:, 1]      # probability of "subscrib
 ```
 
 `p` is a vector of 8,238 numbers between 0 and 1, one per held-out customer. A *classifier* is what you get when you choose a cut-off and call everything above it "yes". Everything below is about how we grade that choice.
-
-## Goals: what are we trying to achieve?
-
-The same predictions can look brilliant or useless depending on how you grade them. Our goal is to learn which grade to trust on this data.
-
-By the end you will be able to:
-
-- **Read a confusion matrix** and compute accuracy, precision and recall from its four cells.
-- **Explain why the threshold is a dial**, and what moving it does to calls, hits and misses.
-- **Choose between ROC-AUC, average precision and precision at top-k** for a problem with rare positives.
-
-## The work plan: how do we do it?
-
-We train one simple model, logistic regression, and keep it fixed. We then grade the same 8,238 predictions in four ways:
-
-1. **Confusion matrix** at a cut-off of 0.5, and the ratios built from it.
-2. **Threshold sweep**: move the cut-off and watch precision and recall trade places.
-3. **ROC-AUC against average precision**: a test that shows which one is fooled by imbalance.
-4. **Precision at top-k**: the metric that matches a call centre with limited capacity.
-
-## Implementation
 
 ### The confusion matrix: four numbers that contain everything
 
@@ -85,6 +146,50 @@ Every metric is a ratio of these four cells:
 - **Recall** = TP/(TP+FN) = 0.22. *Of everyone who would say yes, how many did we reach?* This is your coverage; it drives total revenue.
 
 The model is conservative: it only flags 294 people, and when it does it's usually right. It misses four in five subscribers. Is that good? **It depends entirely on where you put the threshold, and nothing about 0.5 is sacred.**
+
+### The classification report: the same numbers, per class
+
+Writing those ratios by hand is useful once. In practice you let scikit-learn print them for both classes:
+
+```python
+from sklearn.metrics import classification_report
+
+print(classification_report(yte, p >= 0.5, target_names=["no", "yes"], digits=3))
+```
+
+```output
+              precision    recall  f1-score   support
+
+          no      0.909     0.988     0.947      7310
+         yes      0.690     0.219     0.332       928
+
+    accuracy                          0.901      8238
+   macro avg      0.800     0.603     0.639      8238
+weighted avg      0.884     0.901     0.877      8238
+```
+
+Read it from the bottom of the problem up. Start with **support**: 7,310 "no" and 928 "yes", so the "yes" class is 11.3% of the rows. Now read the two class rows:
+
+- **The "no" row looks excellent**: precision 0.909, recall 0.988. The model leaves almost all non-subscribers alone. That is easy, because "no" is the majority.
+- **The "yes" row tells the real story**: precision 0.690 matches the confusion matrix (203 / 294), but recall is only 0.219 and F1 is 0.332. The model is right when it calls, and it calls rarely.
+- **The averages disagree about how good the model is.** The weighted average F1 is 0.877, and the macro average F1 is 0.639. Weighted is dominated by the 7,310 easy customers. Macro gives both classes equal weight, so it is the honest one for a rare-positive problem. (The macro recall of 0.603 is also called *balanced accuracy*: the average of recall and specificity, my own reading of the printed numbers.)
+
+Two more ratios from the same cells, computed on the same predictions: the false positive rate is 91 / 7,310 = 0.012, and specificity is 0.988. Only 1.2% of non-subscribers get a pointless call, which is why ROC-AUC will look so comfortable later.
+
+The report also moves with the threshold. At 0.12 (calls rise from 294 to 1,613) it reads:
+
+```output
+              precision    recall  f1-score   support
+
+          no      0.950     0.861     0.903      7310
+         yes      0.369     0.642     0.469       928
+
+    accuracy                          0.836      8238
+   macro avg      0.660     0.752     0.686      8238
+weighted avg      0.885     0.836     0.854      8238
+```
+
+Accuracy fell from 0.901 to 0.836, and the model is still better by most measures that matter for the "yes" class: recall tripled (0.219 to 0.642) and F1 for "yes" rose from 0.332 to 0.469. **Accuracy went down while the model got more useful.** That is the whole argument against grading this problem by accuracy.
 
 ### The threshold is a dial, not a constant
 
@@ -166,8 +271,8 @@ Calling the top tenth gets us 45% of all subscribers, with a hit rate of 51% (ve
 
 The numbers this chapter printed, for the same model and the same 8,238 customers:
 
-- **At threshold 0.5:** 294 calls, precision 0.69, recall 0.22.
-- **At threshold 0.12:** 1,613 calls, precision 0.37, recall 0.64.
+- **At threshold 0.5:** 294 calls, precision 0.69, recall 0.22, F1 for "yes" 0.332 (macro F1 0.639).
+- **At threshold 0.12:** 1,613 calls, precision 0.37, recall 0.64, F1 for "yes" 0.469, and accuracy down from 0.901 to 0.836.
 - **Ranking quality:** ROC-AUC 0.801, average precision 0.465 (random guessing gives 0.113).
 - **After dropping 80% of the positives:** AUC 0.805, but AP 0.181.
 - **Top 10% of scores:** precision 0.51, capturing 45% of all subscribers.
@@ -183,6 +288,8 @@ Reading three thresholds in a table is one thing; dragging the dial is better. M
 ## Analysis and conclusion: what did we learn?
 
 - **The same predictions get very different grades.** Accuracy says 0.901, recall says 0.22, and AUC says 0.80, all for one model.
+- **Read the "yes" row of the classification report, not the averages.** Weighted-average F1 (0.877) is dominated by the easy majority, and macro-average F1 (0.639) is the honest summary.
+- **Accuracy can fall while the model gets more useful.** Moving the threshold from 0.5 to 0.12 cost 6.5 points of accuracy and tripled recall.
 - **ROC-AUC is optimistic on imbalanced data.** Dropping 80% of the positives left AUC almost unchanged (0.801 to 0.805) but cut AP from 0.465 to 0.181. AP tells you how hard the job really is.
 - **A threshold is a business decision**, not a model property. The metrics above grade ranking quality. [Parts 11](/series/classification/11-probabilities-calibration-thresholds-costs/) and [14](/series/classification/14-pricing-the-models/) handle where to cut.
 
