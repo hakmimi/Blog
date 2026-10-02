@@ -4,7 +4,7 @@ description: "Measure whether a model's 30% really means 30%, repair a lying Nai
 series: "classification"
 order: 11
 date: 2026-09-30
-updated: 2026-10-01
+updated: 2026-10-02
 keywords: ["calibration", "threshold", "cost-sensitive learning", "expected profit", "isotonic regression", "platt scaling", "reliability diagram"]
 readingTime: "17 min read"
 figure: "ch11-calibration.png"
@@ -17,7 +17,28 @@ A model gives each customer a number. Two questions follow, and they are differe
 
 If the answer to (1) is yes, (2) has a clean closed-form solution. If it's no, you can often repair it. This chapter does both, on three models we've already met.
 
-## Setting up three models
+## Goals: what are we trying to achieve?
+
+A model gives each customer a number. Our goal is to check that the number is honest, repair it when it is not, and then turn it into a decision with a formula.
+
+By the end you will be able to:
+
+- **Measure calibration** with a reliability diagram and the Expected Calibration Error (ECE).
+- **Repair a lying model** with Platt scaling or isotonic regression, and know what each one costs.
+- **Derive the call threshold from costs**: `p* = cost / value`, and check it on held-out data.
+
+## The work plan: how do we do it?
+
+We use three models we already know, and a separate calibration slice:
+
+1. **Set up** logistic regression, a random forest and Naive Bayes, with a calibration slice carved out of the training data.
+2. **Measure honesty**: ECE and a reliability diagram on the test set.
+3. **Repair** the models that lie, with sigmoid and isotonic calibration.
+4. **Decide**: the break-even threshold from a cost table (a call costs 1, a subscription is worth 8), and the profit it produces.
+
+## Implementation
+
+### Setting up three models
 
 We'll fit logistic regression, a random forest and Gaussian Naive Bayes, and carve a *calibration slice* out of the training data for the repair step later. (Calibration needs its own data: fit the model on one part, fit the correction on another, or you'd measure honesty on the answers the model memorised.)
 
@@ -51,7 +72,7 @@ models = {
 }
 ```
 
-## Measuring honesty: ECE and the reliability diagram
+### Measuring honesty: ECE and the reliability diagram
 
 Sort the test customers by predicted probability, split them into ten equal groups, and compare **the average prediction** with **the actual subscription rate** in each. A calibrated model has both equal in every group. The *Expected Calibration Error* (ECE) is the size-weighted average gap:
 
@@ -81,14 +102,11 @@ Naive Bayes                        AP=0.353  logloss=1.317  brier=0.1343  ECE=0.
 true base rate: 0.113
 ```
 
-![Reliability diagrams for logistic regression, random forest and Naive Bayes on the test split.](/series/classification/figures/ch11-calibration.png)
-*Figure 1. Points on the diagonal are honest. Logistic regression and the forest hug it; Naive Bayes sits far below it in the upper range: when it says 0.9, the truth is much lower.*
-
 Two reassuring results and one bad one:
 
 - **Logistic regression is calibrated** (ECE 0.012). It's trained on log loss, a proper scoring rule, so honest probabilities are what it's *rewarded* for.
 - **The random forest is also fine** (ECE 0.015) here. With leaves of at least 10 customers, the averaged proportions are sensible. Many textbooks claim forests are badly calibrated; that depends on leaf size and base rate, and here it is not an issue.
-- **Naive Bayes is badly miscalibrated:** ECE 0.120 and a log loss of 1.317, five times worse than the others. Its average prediction (0.142) is already too high, and in the extremes it is wildly over-confident, exactly as part 5 predicted.
+- **Naive Bayes is badly miscalibrated:** ECE 0.120 and a log loss of 1.317, five times worse than the others. Its average prediction (0.142) is already too high, and in the extremes it is wildly over-confident, exactly as [part 5](/series/classification/05-logistic-regression-naive-bayes/) predicted.
 
 <div class="callout gotcha">
 
@@ -96,7 +114,7 @@ Two reassuring results and one bad one:
 
 </div>
 
-## Repairing a lying model
+### Repairing a lying model
 
 Calibration repair means learning a monotone function that maps the model's raw score to an honest probability. Two standard choices:
 
@@ -131,7 +149,7 @@ Read this table slowly; each row teaches something.
 
 </div>
 
-## From probability to a decision
+### From probability to a decision
 
 Now the part everyone skips: **where do we cut?** Suppose the finance team gives us two numbers:
 
@@ -179,7 +197,42 @@ The results:
 
 The right way to find a threshold in practice is **not** to read it off the test set. Either trust the formula with calibrated probabilities, or choose it on out-of-fold training predictions and *freeze it* before touching the test set. The leaderboard does the latter.
 
-## The policy menu
+## What did we get? Results
+
+Calibration on the test set:
+
+| Model | AP | Log loss | Brier | ECE | Mean p |
+|---|---|---|---|---|---|
+| Logistic regression | 0.462 | 0.272 | 0.0771 | 0.012 | 0.111 |
+| Random forest | 0.485 | 0.266 | 0.0750 | 0.015 | 0.111 |
+| Naive Bayes | 0.353 | 1.317 | 0.1343 | 0.120 | 0.142 |
+
+After repair:
+
+| Model | AP | Log loss | ECE |
+|---|---|---|---|
+| Random forest + sigmoid | 0.485 | 0.267 | 0.015 |
+| Random forest + isotonic | 0.464 | 0.266 | 0.008 |
+| Naive Bayes + sigmoid | 0.368 | 0.304 | 0.027 |
+| Naive Bayes + isotonic | 0.356 | 0.288 | 0.006 |
+
+Profit at the break-even threshold of 0.125 (call costs 1, subscription worth 8):
+
+- **Call everyone:** −814.
+- **Random forest, raw:** +3,333 from 1,499 calls (best in hindsight 3,372).
+- **Random forest, calibrated:** +3,376 from 1,400 calls, equal to the best in hindsight.
+
+![Reliability diagrams for logistic regression, random forest and Naive Bayes on the test split.](/series/classification/figures/ch11-calibration.png)
+*Figure 1. Points on the diagonal are honest. Logistic regression and the forest hug it; Naive Bayes sits far below it in the upper range: when it says 0.9, the truth is much lower.*
+
+## Analysis and conclusion: what did we learn?
+
+- **Logistic regression and the forest are already honest** (ECE 0.012 and 0.015). Naive Bayes is not (ECE 0.120), and Platt scaling brings its log loss from 1.317 down to 0.304.
+- **Isotonic can hurt ranking.** It made the forest's AP fall from 0.485 to 0.464, because the staircase creates ties. Prefer sigmoid unless you have a lot of calibration data.
+- **The formula only works with honest probabilities.** The calibrated forest's best threshold was 0.127, within 0.002 of the formula. The raw forest's was 0.138, a loss of about 1%.
+- **Never choose the threshold on the test set.** Use the formula with calibrated probabilities, or choose it on out-of-fold training predictions and freeze it.
+
+### The policy menu
 
 Thresholds aren't the only decision rule. All of these are legitimate:
 
@@ -192,7 +245,7 @@ Thresholds aren't the only decision rule. All of these are legitimate:
 
 Notice what the *model* is responsible for in each: producing a good ranking, and (for the first and last) honest probabilities. The *policy* turns that into action. Evaluating the model on accuracy at 0.5 skips both.
 
-## Takeaways
+### Takeaways
 
 1. Check calibration with a reliability diagram and ECE; proper-scoring-rule models (logistic, boosting) usually pass.
 2. Repair what fails with Platt scaling first; isotonic can create ties and hurt ranking.
@@ -200,4 +253,10 @@ Notice what the *model* is responsible for in each: producing a good ranking, an
 4. Never choose the threshold on the test set. Choose it on out-of-fold predictions, then freeze it.
 5. Ranking quality (AP) and probability quality (log loss, ECE) are different axes. Look at both.
 
-That completes the toolkit. Parts 12–14 are the payoff: thirteen models, one split, one budget, and all of the above applied to every one of them. [Let's race them.](/series/classification/12-head-to-head-leaderboard/)
+### So what did we do?
+
+We measured calibration, repaired Naive Bayes, and derived the call threshold from the cost table. Calibrated probabilities make the break-even formula work, and ranking quality and probability quality are separate axes.
+
+### In the next part
+
+That completes the toolkit. [Parts 12](/series/classification/12-head-to-head-leaderboard/)–[14](/series/classification/14-pricing-the-models/) are the payoff: thirteen models, one split, one budget, and all of the above applied to every one of them. [Let's race them.](/series/classification/12-head-to-head-leaderboard/)

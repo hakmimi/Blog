@@ -4,13 +4,13 @@ description: "Three very different ways to classify, run on the same customers: 
 series: "classification"
 order: 9
 date: 2026-09-30
-updated: 2026-10-01
+updated: 2026-10-02
 keywords: ["knn", "svm", "neural networks", "mlp", "feature scaling", "platt scaling", "scikit-learn"]
 readingTime: "16 min read"
 figure: "ch09-svm-scaling.png"
 ---
 
-So far we've covered linear models (part 5), trees (6), bagging (7) and boosting (8). Three more families show up in every "which classifier?" discussion, and on tabular data they each have a characteristic role:
+So far we've covered linear models ([part 5](/series/classification/05-logistic-regression-naive-bayes/)), trees (6), bagging (7) and boosting (8). Three more families show up in every "which classifier?" discussion, and on tabular data they each have a characteristic role:
 
 - **k-nearest neighbours** — classify by looking at similar customers. No training at all.
 - **Support vector machines** — draw the widest possible margin. Elegant maths, awkward scaling.
@@ -44,7 +44,27 @@ unscaled = ColumnTransformer([("c", ohe, cat)], remainder="passthrough")
 def ap(m): return average_precision_score(yte, m.predict_proba(Xte)[:, 1])
 ```
 
-## k-nearest neighbours: a model that is *only* a distance
+## Goals: what are we trying to achieve?
+
+Three more families show up in every "which classifier?" discussion. Our goal is practical: for each one, learn what you must do to the data, or to your expectations, before it is usable.
+
+By the end you will be able to:
+
+- **Explain why k-NN needs scaling and a large k**, even when the damage on this data is small.
+- **Say why an SVM's score is not a probability**, and fix it with Platt scaling.
+- **Judge a small neural network honestly**: competitive, not dominant.
+
+## The work plan: how do we do it?
+
+Same split, one family at a time, with one question each:
+
+1. **k-NN**: does scaling matter, and how large should k be?
+2. **SVM**: how does it rank, what does it output, and what does the RBF kernel cost?
+3. **Neural network**: how far does a small MLP get with early stopping?
+
+## Implementation
+
+### k-nearest neighbours: a model that is *only* a distance
 
 k-NN predicts a customer's probability as the share of subscribers among the *k* most similar training customers. "Similar" means small Euclidean distance — which makes it the model most sensitive to how you encode the features.
 
@@ -85,11 +105,11 @@ for k in (5, 15, 50, 150, 400):
   k=400  AP=0.456
 ```
 
-With `k=5` a probability can only be 0, 0.2, 0.4 … 1 — coarse, noisy, and only 0.356. For a rare-positive problem you need **large k** (50+) so each neighbourhood contains some positives. This is the same bias-variance dial as `min_samples_leaf` in part 6: small = flexible and noisy, large = smooth.
+With `k=5` a probability can only be 0, 0.2, 0.4 … 1 — coarse, noisy, and only 0.356. For a rare-positive problem you need **large k** (50+) so each neighbourhood contains some positives. This is the same bias-variance dial as `min_samples_leaf` in [part 6](/series/classification/06-decision-trees/): small = flexible and noisy, large = smooth.
 
 **k-NN's real problem is cost at prediction time.** There is no model to apply: every prediction scans (or indexes) the whole training set. Fine at 33k rows, painful at 33 million, and the model file *is* the dataset.
 
-## SVMs: elegant, but not a probability model
+### SVMs: elegant, but not a probability model
 
 A linear SVM finds the hyperplane that separates the classes with the widest margin; it cares only about the points near the boundary. On this data it ranks about as well as logistic regression. The catch is what it *outputs*:
 
@@ -134,12 +154,9 @@ for n in (2000, 4000, 8000, 16000):
   n=16000    16.2s
 ```
 
-![Fit time of an RBF SVM versus number of training rows, on a log-log scale, against a linear SVM.](/series/classification/figures/ch09-svm-scaling.png)
-*Figure 1. Doubling the data multiplies RBF-SVM training time by 3–7×. The full 32,950-row training set would take a few minutes per fit, which is why the leaderboard uses the linear SVM only.*
-
 Doubling the rows costs 3–7× in time. Extrapolating to the full 32,950-row training set means minutes *per fit*, and tuning needs dozens of fits. This is the well-known reason kernel SVMs faded for datasets beyond ~50k rows. **We therefore leave the RBF SVM out of the leaderboard and say so, rather than quietly training it on a subsample.**
 
-## Neural networks: a flexible learner, a fussy one
+### Neural networks: a flexible learner, a fussy one
 
 A multilayer perceptron stacks layers of weighted sums and non-linearities, trained by gradient descent on log loss — so, unlike SVMs, it outputs probabilities directly. The scikit-learn version is small but real:
 
@@ -161,7 +178,30 @@ A small 64×32 network reaches 0.477 — *better than logistic regression (0.464
 
 The warning label for neural nets on tabular data: **they are competitive, not dominant.** With careful engineering (embeddings for categories, batch norm, long schedules) deep learning can match gradient boosting on some tabular datasets, but rarely beats it by margin, and it needs far more tuning and far more care with feature scaling and random seeds. For a fast baseline, a small MLP is fine. As a final answer, it needs a reason.
 
-## Summary: how each family behaves on this data
+## What did we get? Results
+
+| Model | Setting | AP |
+|---|---|---|
+| k-NN, k=50 | unscaled / scaled | 0.449 / 0.455 |
+| k-NN, scaled | k = 5 / 15 / 150 / 400 | 0.356 / 0.425 / 0.456 / 0.456 |
+| Linear SVM | raw margin | 0.462 |
+| Linear SVM + Platt scaling | log loss 0.275, Brier 0.078 | 0.462 |
+| MLP (64, 32) | alpha 0.0001 / 0.01 / 0.1 | 0.477 / 0.476 / 0.476 |
+
+RBF SVM training time: 0.2 s at 2,000 rows, 0.8 s at 4,000, 5.7 s at 8,000, 16.2 s at 16,000.
+
+![Fit time of an RBF SVM versus number of training rows, on a log-log scale, against a linear SVM.](/series/classification/figures/ch09-svm-scaling.png)
+*Figure 1. Doubling the data multiplies RBF-SVM training time by 3–7×. The full 32,950-row training set would take a few minutes per fit, which is why the leaderboard uses the linear SVM only.*
+
+## Analysis and conclusion: what did we learn?
+
+- **Scaling is a guarantee, not a gain.** Unscaled k-NN lost only 0.006 AP because the dominant column (`nr.employed`) is also the most informative, and acts as a proxy for time. On other data it could be noise.
+- **Large k for rare positives.** With k=5 a probability can only be 0, 0.2, 0.4 and so on.
+- **SVMs rank well but do not output probabilities.** Platt scaling brought log loss to 0.275, essentially the same as logistic regression's 0.272.
+- **We leave the RBF SVM out of the leaderboard**, and say so, because doubling the rows costs 3 to 7 times in time.
+- **A small MLP reaches 0.477**, better than logistic regression, but it needs more care than the boosting models for no gain.
+
+### Summary: how each family behaves on this data
 
 | Family | What it needs | Output | Cost profile | Watch out for |
 |---|---|---|---|---|
@@ -170,6 +210,12 @@ The warning label for neural nets on tabular data: **they are competitive, not d
 | **RBF SVM** | Scaled features, subsampling if large | Raw margin | Quadratic in rows | Doesn't scale past ~50k rows |
 | **MLP** | Scaled features, early stopping | Probabilities | Seconds; sensitive to seed | Needs tuning; random-seed variance |
 
-None of these is obviously *wrong* for this data, and all of them land between 0.455 and 0.477. The interesting question — *by how much does a difference of that size matter, and is it stable?* — is answered in part 13.
+None of these is obviously *wrong* for this data, and all of them land between 0.455 and 0.477. The interesting question — *by how much does a difference of that size matter, and is it stable?* — is answered in [part 13](/series/classification/13-is-the-winner-real/).
 
 First, though, we need a fair way to tune all of them. [Part 10](/series/classification/10-hyperparameter-search/) sets the budget.
+
+### So what did we do?
+
+We ran k-NN, SVMs and a neural network on the same split. All of them land between 0.455 and 0.477 average precision. Each has a practical catch: scaling for k-NN, calibration for the SVM, and tuning for the network.
+
+### In the next part

@@ -4,7 +4,7 @@ description: "Log loss, Brier score and class weights, written by hand. We train
 series: "classification"
 order: 4
 date: 2026-09-30
-updated: 2026-10-01
+updated: 2026-10-02
 keywords: ["loss functions", "log loss", "brier score", "gradient descent", "class weights", "numpy"]
 readingTime: "15 min read"
 figure: "loss-and-impurity.png"
@@ -14,7 +14,27 @@ Every classifier in this series is an optimiser in disguise. `fit()` means: *fin
 
 This part is deliberately hands-on. We'll compute losses by hand on four customers, then write logistic regression from scratch in about fifteen lines of NumPy and swap the loss to see what changes.
 
-## Losses on four customers
+## Goals: what are we trying to achieve?
+
+Every `fit()` minimises a number. Our goal is to see what that number does to the model, using the smallest model we can write ourselves.
+
+By the end you will be able to:
+
+- **Compute log loss and Brier score by hand** and say why confident mistakes cost so much under log loss.
+- **Train logistic regression from scratch** in NumPy and swap its loss.
+- **Tell apart a change in ranking, in probabilities, and in decisions**, and know which one a loss really changes.
+
+## The work plan: how do we do it?
+
+We work in three steps, from four customers to the whole dataset:
+
+1. **Hand calculation**: log loss and Brier score on four customers, then on confident mistakes.
+2. **From scratch**: gradient descent with three objectives (plain log loss, class-weighted log loss, Brier) on the real data, with the same features, optimiser and number of steps.
+3. **Check against the library**: compare our weights with scikit-learn's `LogisticRegression`.
+
+## Implementation
+
+### Losses on four customers
 
 A classifier that outputs probabilities says, for each customer, "I think there's a *p* chance this person subscribes". A loss turns each (prediction, truth) pair into a penalty.
 
@@ -48,9 +68,6 @@ true=0, predicted 0.9: log loss 2.30   Brier 0.81
 true=0, predicted 0.99: log loss 4.61   Brier 0.98
 ```
 
-![Left: loss as a function of predicted probability for log loss and Brier. Right: Gini and entropy, the impurity measures trees use in part 6.](/series/classification/figures/loss-and-impurity.png)
-*Figure 1. Log loss grows without bound as a confident prediction turns out wrong; Brier saturates at 1. Right panel: trees use the same idea with "impurity" instead (part 6).*
-
 Log loss is brutal about over-confidence: saying 99% and being wrong costs 4.6, five times what Brier charges. That's a feature when you want honest probabilities and a hazard when a few mislabelled rows are in your data.
 
 <div class="callout">
@@ -59,7 +76,7 @@ Log loss is brutal about over-confidence: saying 99% and being wrong costs 4.6, 
 
 </div>
 
-## Logistic regression in fifteen lines
+### Logistic regression in fifteen lines
 
 Logistic regression says: probability = sigmoid(w · x). Training means finding *w* by gradient descent. The gradient of mean log loss has a famously tidy form: `Xᵀ(q − y) / n` where `q` is the current predictions. Let's build the design matrix from the bank data and do it.
 
@@ -129,11 +146,11 @@ Read the table carefully, because it contains the central lesson of this chapter
 
 <div class="callout gotcha">
 
-**Gotcha — "fixing" imbalance with class weights.** `class_weight="balanced"` is often the first thing people reach for. It can be useful (some algorithms rank better with it), but it destroys probability calibration and is equivalent, for a linear model, to shifting the threshold and intercept. If you need *probabilities* — for expected profit, for example — train with the natural weights and choose the threshold later (part 11).
+**Gotcha — "fixing" imbalance with class weights.** `class_weight="balanced"` is often the first thing people reach for. It can be useful (some algorithms rank better with it), but it destroys probability calibration and is equivalent, for a linear model, to shifting the threshold and intercept. If you need *probabilities* — for expected profit, for example — train with the natural weights and choose the threshold later ([part 11](/series/classification/11-probabilities-calibration-thresholds-costs/)).
 
 </div>
 
-## Checking our maths against scikit-learn
+### Checking our maths against scikit-learn
 
 Hand-written gradient descent is only trustworthy if it agrees with the library. Quick check (same data, `penalty=None` so there's no regularisation):
 
@@ -154,7 +171,29 @@ correlation of the two score vectors     : 0.9929
 
 The rankings agree almost perfectly (correlation 0.993). The worst single-customer gap of 0.20 is real, though, and it's instructive: the one-hot columns are collinear (each categorical's levels sum to one), so the unregularised optimum is a long, flat valley. scikit-learn's solver walks much further along it than our 1,500 fixed steps do, and rare category combinations end up with different extremes. This is precisely why real logistic regression adds an L2 penalty — it makes the valley bowl-shaped. That's the point of writing it by hand once: `fit()` is not magic, and its defaults (regularisation, convergence) matter.
 
-## Not every model uses these losses
+## What did we get? Results
+
+Three objectives, same features, same optimiser, same 1,500 steps:
+
+| Objective | AP | AUC | Log loss | Mean p | Calls at 0.5 |
+|---|---|---|---|---|---|
+| Log loss | 0.464 | 0.800 | 0.272 | 0.112 | 293 |
+| Weighted log loss | 0.460 | 0.801 | 0.515 | 0.391 | 1,662 |
+| Brier | 0.466 | 0.797 | 0.273 | 0.112 | 290 |
+
+Against scikit-learn: correlation of the two score vectors 0.9929, worst single-customer gap 0.201 in predicted probability.
+
+![Left: loss as a function of predicted probability for log loss and Brier. Right: Gini and entropy, the impurity measures trees use in part 6.](/series/classification/figures/loss-and-impurity.png)
+*Figure 1. Log loss grows without bound as a confident prediction turns out wrong; Brier saturates at 1. Right panel: trees use the same idea with "impurity" instead ([part 6](/series/classification/06-decision-trees/)).*
+
+## Analysis and conclusion: what did we learn?
+
+- **Ranking barely changes.** AP is 0.464, 0.460 and 0.466, and AUC is about 0.80 for all three.
+- **Probabilities change a lot.** The class-weighted model predicts 0.391 on average when only 11.3% subscribe, and its log loss doubles (0.272 to 0.515). It ranks as well as the others but is miscalibrated.
+- **Decisions change a lot.** At a cut-off of 0.5, the weighted model flags 1,662 customers instead of 293. We moved the threshold, we did not improve the model.
+- **`fit()` is not magic.** Our hand-built model matches scikit-learn on ranking (0.993 correlation) but not on every probability, because defaults like regularisation matter.
+
+### Not every model uses these losses
 
 | Model family | What `fit()` minimises | Output |
 |---|---|---|
@@ -167,5 +206,11 @@ The rankings agree almost perfectly (correlation 0.993). The worst single-custom
 | k-NN | None: memorises | Fraction of neighbours |
 
 Two takeaways for the leaderboard. **(1)** Models that optimise log loss (logistic regression, boosting) tend to produce better-calibrated probabilities out of the box than models that don't (Naive Bayes, SVM, k-NN). **(2)** Ranking quality and calibration are different skills; a model can be great at one and mediocre at the other. We'll measure both, separately.
+
+### So what did we do?
+
+We computed two losses by hand, trained logistic regression ourselves, and swapped the objective. The ranking stayed put, while probabilities and decisions moved. That is why we keep ranking quality and calibration as separate questions in the leaderboard.
+
+### In the next part
 
 [Part 5](/series/classification/05-logistic-regression-naive-bayes/) puts the real scikit-learn versions to work and learns to read what a linear model has learned.

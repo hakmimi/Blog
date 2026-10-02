@@ -4,7 +4,7 @@ description: "Compute Gini impurity by hand, watch an unrestricted tree score 0.
 series: "classification"
 order: 6
 date: 2026-09-30
-updated: 2026-10-01
+updated: 2026-10-02
 keywords: ["decision trees", "gini impurity", "overfitting", "min_samples_leaf", "interpretable models"]
 readingTime: "15 min read"
 figure: "ch06-tree-overfit.png"
@@ -14,7 +14,28 @@ Logistic regression draws one straight boundary through feature space. A decisio
 
 It is also the easiest model in this series to ruin. We'll build the intuition with a hand-computed split, then deliberately overfit a tree so you can see the damage in numbers.
 
-## How a tree decides where to split
+## Goals: what are we trying to achieve?
+
+A tree can capture interactions a linear model cannot, and it is the easiest model in this series to ruin. Our goal is to see exactly how it overfits, and how to stop it.
+
+By the end you will be able to:
+
+- **Compute a Gini split gain by hand** and see that fitting a tree is that calculation repeated.
+- **Spot overfitting in numbers**: the gap between training and cross-validated scores.
+- **Choose a stopping rule** (`max_depth` or `min_samples_leaf`) and read a small tree like a flowchart.
+
+## The work plan: how do we do it?
+
+We start from the split and end at the printed tree:
+
+1. **One split by hand**: Gini impurity and the gain from cutting `euribor3m`.
+2. **Depth sweep**: train and cross-validated AP for depths 2 to unlimited.
+3. **Leaf-size sweep**: `min_samples_leaf` as a better stopping rule.
+4. **Read a tree**: a depth-3 tree printed with `export_text`.
+
+## Implementation
+
+### How a tree decides where to split
 
 A tree is grown greedily. At every node it considers *every feature and every threshold*, picks the split that makes the two child groups as "pure" as possible, and recurses. "Pure" is measured by **Gini impurity**: for a node with positive fraction *p*, `gini = 2·p·(1−p)`. It's 0 for a node with only one class and peaks at 0.5 for a 50/50 mix.
 
@@ -54,7 +75,7 @@ split euribor3m <= 5.0: gain 0.0001
 
 The root impurity is 0.1999 (an 11.3% base rate). Splitting on the interest rate at 1.0 removes 0.0247 of it — about 12% — because when rates are very low, subscription rates are much higher. A cut at 5.0 does almost nothing. **A tree fitting algorithm is just this calculation, repeated for every feature and every candidate threshold, at every node.** scikit-learn does it in optimised Cython, but nothing more mysterious is happening.
 
-## The same tree, at different depths
+### The same tree, at different depths
 
 The one thing we have to decide is *when to stop*. Let's vary `max_depth` and measure average precision twice: on the data the tree was trained on, and with 3-fold cross-validation (data it hasn't seen).
 
@@ -88,9 +109,6 @@ max_depth=12    leaves=  753  train AP=0.657   CV AP=0.301
 max_depth=None  leaves= 4930  train AP=0.999   CV AP=0.176
 ```
 
-![Training average precision keeps rising with depth while cross-validated average precision peaks at depth 5 and then collapses.](/series/classification/figures/ch06-tree-overfit.png)
-*Figure 1. The overfitting gap. Train and validation scores agree for shallow trees and diverge once the tree has enough leaves to memorise individual customers.*
-
 This table is the clearest picture of overfitting you'll see:
 
 - At depth 2 or 3 train and CV scores match: the tree is **underfitting** — too simple to use the signal.
@@ -103,7 +121,7 @@ This table is the clearest picture of overfitting you'll see:
 
 </div>
 
-## Stopping rules that matter
+### Stopping rules that matter
 
 `max_depth` is a blunt instrument: it limits every branch equally. The more useful knob is **`min_samples_leaf`**: a split is only allowed if both children would contain at least that many customers. Rare-but-genuine patterns can have a deep branch; noise can't, because a leaf of 3 customers fails the test.
 
@@ -124,7 +142,7 @@ min_samples_leaf=500  CV AP=0.398
 
 A leaf size of 50–200 beats the best depth-limited tree (0.432 vs 0.408) — unlimited depth but each leaf must be statistically meaningful. There's another benefit: leaf values become *probabilities* (fraction of positives among ≥50 customers) rather than jumpy 0/1 guesses, which matters for ranking. A leaf with one customer says "100%"; a leaf of 50 says something like "34%".
 
-## Reading a tree
+### Reading a tree
 
 The biggest advantage of a small tree is that it doubles as documentation. Here's one with depth 3, printed:
 
@@ -164,11 +182,37 @@ The `weights` are `[no, yes]` counts in each leaf. Follow the first branch: *the
 
 <div class="callout tip">
 
-**Sanity check:** in that printed tree, `nr.employed ≤ 5087` splits the data at the root because it's a stand-in for *time* — low employment numbers only occur late in the dataset. Part 16 shows what that does to a model asked to predict the future.
+**Sanity check:** in that printed tree, `nr.employed ≤ 5087` splits the data at the root because it's a stand-in for *time* — low employment numbers only occur late in the dataset. [Part 16](/series/classification/16-when-time-breaks-the-model/) shows what that does to a model asked to predict the future.
 
 </div>
 
-## Why single trees aren't the destination
+## What did we get? Results
+
+Average precision by tree depth, trained on the training part and cross-validated (3 folds):
+
+| max_depth | Leaves | Train AP | CV AP |
+|---|---|---|---|
+| 2 | 4 | 0.346 | 0.345 |
+| 3 | 8 | 0.374 | 0.370 |
+| 5 | 32 | 0.435 | 0.408 |
+| 8 | 184 | 0.517 | 0.384 |
+| 12 | 753 | 0.657 | 0.301 |
+| None | 4,930 | 0.999 | 0.176 |
+
+- **Best by leaf size:** `min_samples_leaf` of 50 gives CV AP 0.432, and 200 gives 0.425, both above the best depth-limited tree (0.408).
+- **Best segment in the printed tree:** 205 no and 583 yes (74% conversion).
+
+![Training average precision keeps rising with depth while cross-validated average precision peaks at depth 5 and then collapses.](/series/classification/figures/ch06-tree-overfit.png)
+*Figure 1. The overfitting gap. Train and validation scores agree for shallow trees and diverge once the tree has enough leaves to memorise individual customers.*
+
+## Analysis and conclusion: what did we learn?
+
+- **Overfitting in one table.** The unlimited tree scores 0.999 on the data it memorised and 0.176 on new customers, barely above the 0.113 of random guessing.
+- **Depth 5 is the sweet spot for depth alone**, and leaf size does better: every leaf must be statistically meaningful.
+- **Small trees document the data.** The best segment (weak economy, contacted before within 16 days, not Monday) is an interaction a linear model would need by hand.
+- **`nr.employed` is a stand-in for time.** Low values only occur late in the file, which matters in [Part 16](/series/classification/16-when-time-breaks-the-model/).
+
+### Why single trees aren't the destination
 
 A single tuned tree gets a cross-validated AP of about 0.43 — competitive with logistic regression (0.45) on this data, which is itself a finding. But trees have three weaknesses:
 
@@ -177,3 +221,9 @@ A single tuned tree gets a cross-validated AP of about 0.43 — competitive with
 3. **Hard-edged thresholds.** A customer with `euribor3m=1.52` and one at `1.54` are treated as different species.
 
 The fix for all three is the same idea: don't trust one tree — average hundreds of them. [Part 7](/series/classification/07-bagging-random-forests/) builds exactly that, from scratch.
+
+### So what did we do?
+
+We computed a split by hand, watched a tree go from underfitting to memorising, and saw that leaf size is a better stopping rule than depth. A single tuned tree reaches a cross-validated AP of about 0.43, close to logistic regression, but it is unstable and coarse.
+
+### In the next part

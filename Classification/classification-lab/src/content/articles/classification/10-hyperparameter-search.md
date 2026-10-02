@@ -4,7 +4,7 @@ description: "A 1,800-combination search space, 40 random candidates, and a boot
 series: "classification"
 order: 10
 date: 2026-09-30
-updated: 2026-10-01
+updated: 2026-10-02
 keywords: ["hyperparameter tuning", "random search", "cross-validation", "overfitting", "scikit-learn", "histgradientboosting"]
 readingTime: "14 min read"
 figure: "ch10-budget.png"
@@ -12,9 +12,30 @@ figure: "ch10-budget.png"
 
 Every model so far has had knobs: `C`, `max_depth`, `min_samples_leaf`, `learning_rate`. Tuning them is where projects quietly burn days and where comparisons quietly become unfair. If model A got 200 tuning candidates and model B got 5, the winner tells you about budgets, not algorithms.
 
-This chapter does two things. It shows how to search sensibly, and, more importantly, it **measures what a tuning budget is worth**, so that the leaderboard in part 12 can use a small, equal one without apology.
+This chapter does two things. It shows how to search sensibly, and, more importantly, it **measures what a tuning budget is worth**, so that the leaderboard in [part 12](/series/classification/12-head-to-head-leaderboard/) can use a small, equal one without apology.
 
-## The setup
+## Goals: what are we trying to achieve?
+
+Tuning is where comparisons quietly become unfair. Our goal is to measure what a tuning budget is worth, so that the leaderboard can use a small, equal one without apology.
+
+By the end you will be able to:
+
+- **Score the defaults first**, and ask if tuning beats them by more than the noise.
+- **Run a random search** over a 1,800-combination space.
+- **Read a budget curve**, and spot the winner's curse in a cross-validation score.
+
+## The work plan: how do we do it?
+
+We use one model, `HistGradientBoostingClassifier`, and one search space:
+
+1. **Defaults**: score the library defaults with CV and on the test set.
+2. **Random search**: 40 random candidates from 1,800 combinations.
+3. **Budget experiment**: draw random subsets of the 40 and see what each budget would have found.
+4. **The real tool**: `RandomizedSearchCV`, and what is worth searching.
+
+## Implementation
+
+### The setup
 
 We'll tune scikit-learn's `HistGradientBoostingClassifier` (it has plenty of knobs and trains in seconds). The search space is deliberately large:
 
@@ -50,7 +71,7 @@ search space size: 1800 combinations
 
 1,800 combinations × 3 folds is 5,400 model fits. Nobody should run that grid. Here's the first reason **random search beats grid search**: with five parameters and, say, 3 values each, a grid spends 243 runs but only tries 3 distinct values of each parameter. Random sampling spends the same 243 runs on 243 *different* values of each. If only two of the five parameters matter (usually the case), random search explores those two much more densely.
 
-## Step zero: always score the defaults
+### Step zero: always score the defaults
 
 ```python
 cv = StratifiedKFold(3, shuffle=True, random_state=0)
@@ -67,7 +88,7 @@ Remember this number: **0.492**. Any tuning has to beat it, and if the gain is b
 
 (Cross-validation AP is lower than test AP here, 0.458 vs 0.492. Not a bug: each CV fold trains on only two thirds of the training rows, and the test set can be slightly easier or harder by chance. Compare CV numbers with CV numbers.)
 
-## Random search: 40 candidates
+### Random search: 40 candidates
 
 We evaluate 40 random draws from the space. For each we compute the cross-validated AP, which is what a real search would use to pick a winner. Just for this experiment, we also record the test AP, which a real search must never look at, so we can study the search itself:
 
@@ -100,7 +121,7 @@ Four things are worth noticing:
 3. **The winner by CV isn't the winner on test.** The best CV candidate (0.466) scores 0.495 on the test set; the fifth (CV 0.463) scores **0.497**. The differences here, ±0.003, are inside the noise of an 8,238-row test set.
 4. **Best tuned test AP ≈ 0.495 vs defaults 0.492.** Three thousandths.
 
-## What does a bigger budget actually buy?
+### What does a bigger budget actually buy?
 
 The 40 candidates give us a way to measure it. Draw a random subset of size *b* from the table, pick the candidate with the best CV score (what a real search of budget *b* would do), look up its test score, and repeat 200 times with different random subsets:
 
@@ -126,9 +147,6 @@ budget  best CV AP   test AP of the winner   spread(test AP)
    40   0.466        0.495                 +-0.000
 ```
 
-![Test average precision of the tuning winner as the number of random candidates grows, with the default-parameters score as a reference line.](/series/classification/figures/ch10-budget.png)
-*Figure 1. Diminishing returns: most of the benefit arrives by 4–8 candidates, and the variance between lucky and unlucky searches collapses.*
-
 This table is the justification for the rest of the series:
 
 - **One random candidate** (essentially "pick something plausible") averages 0.488 on test, with ±0.007 of luck either way.
@@ -144,7 +162,7 @@ This table is the justification for the rest of the series:
 
 </div>
 
-## Doing it for real: `RandomizedSearchCV`
+### Doing it for real: `RandomizedSearchCV`
 
 You don't need the manual loop outside of experiments. The library version of what the leaderboard script does:
 
@@ -163,11 +181,11 @@ print("test AP:", round(average_precision_score(yte, search.predict_proba(Xte)[:
 
 Three habits that matter more than the algorithm:
 
-1. **Search over a pipeline, not a pre-transformed matrix.** If preprocessing is inside the estimator, each CV fold refits it. (Part 5.)
+1. **Search over a pipeline, not a pre-transformed matrix.** If preprocessing is inside the estimator, each CV fold refits it. ([Part 5](/series/classification/05-logistic-regression-naive-bayes/).)
 2. **Optimise the metric you will be judged on**, here `average_precision`. The default `scoring=None` uses accuracy, which is useless for this problem.
 3. **Never tune on the test set**, and never peek at it to "decide whether to search more". Once you have looked at it, it is a validation set and you need a new test set.
 
-## Choosing what to search
+### Choosing what to search
 
 A practical priority list for tree ensembles:
 
@@ -183,12 +201,43 @@ Search **log-uniformly** over learning rates and regularisation strengths (0.02 
 
 Two refinements exist but are beyond this series: **successive halving** (`HalvingRandomSearchCV`) discards poor candidates early on small subsets, and Bayesian optimisers (Optuna, Hyperopt) pick the next candidate based on previous results. They help when single fits are expensive. At 3–30 seconds per fit, 8 random candidates are fine.
 
-## What to remember
+## What did we get? Results
+
+- **Search space:** 1,800 combinations, 40 random candidates.
+- **Defaults:** CV AP 0.458, test AP 0.492.
+- **Range of CV AP over all 40 candidates:** 0.439 to 0.466.
+
+| Budget | Best CV AP | Test AP of the winner | Spread |
+|---|---|---|---|
+| 1 | 0.459 | 0.488 | ±0.007 |
+| 2 | 0.462 | 0.491 | ±0.005 |
+| 4 | 0.463 | 0.493 | ±0.004 |
+| 8 | 0.465 | 0.494 | ±0.002 |
+| 16 | 0.465 | 0.495 | ±0.001 |
+| 40 | 0.466 | 0.495 | ±0.000 |
+
+![Test average precision of the tuning winner as the number of random candidates grows, with the default-parameters score as a reference line.](/series/classification/figures/ch10-budget.png)
+*Figure 1. Diminishing returns: most of the benefit arrives by 4–8 candidates, and the variance between lucky and unlucky searches collapses.*
+
+## Analysis and conclusion: what did we learn?
+
+- **Returns diminish fast.** Eight candidates reach 0.494, within 0.001 of forty. Beyond that you buy reliability (smaller spread), not accuracy.
+- **The defaults are a good start.** At 0.492 they sit between a budget of 2 and a budget of 4.
+- **The winner's CV score is optimistic.** Picking the best of 40 noisy numbers biases it upward (the winner's curse). Only an untouched test set tells the truth.
+- **So the leaderboard uses 8 random candidates and 3-fold CV for every model.** Equal budgets compare algorithms, unequal budgets compare effort.
+
+### What to remember
 
 1. Score the defaults first. Your tuned model has to beat them by more than the noise.
 2. Random search beats grid search at equal budget.
 3. **Returns diminish fast.** On this problem 8 candidates reach about 99% of what 40 do.
 4. Equal budgets make model comparisons fair. Unequal budgets compare effort.
 5. The winning CV score is biased upward; only an untouched test set tells the truth.
+
+### So what did we do?
+
+We scored the defaults, searched 40 candidates, and measured what a budget buys. Eight candidates are enough, and the winning CV score always flatters the model. That justifies the fixed budget used in the leaderboard.
+
+### In the next part
 
 [Part 11](/series/classification/11-probabilities-calibration-thresholds-costs/) deals with something tuning can't fix: a model that ranks well but outputs numbers that aren't probabilities.

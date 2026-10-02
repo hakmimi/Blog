@@ -4,8 +4,8 @@ description: "Build a proper preprocessing pipeline, tune regularisation, read t
 series: "classification"
 order: 5
 date: 2026-09-30
-updated: 2026-10-01
-keywords: ["logistic regression", "naive bayes", "baseline", "scikit-learn pipeline", "odds ratio", "regularization"]
+updated: 2026-10-02
+keywords: ["logistic regression", "naive bayes", "baseline", "scikit-learn pipeline", "odds ratio", "regularisation"]
 readingTime: "16 min read"
 figure: "ch05-odds-ratios.png"
 ---
@@ -14,7 +14,29 @@ If there's one habit that separates people who ship working models from people w
 
 It also has a bad habit of being hard to beat. Keep that in mind when we reach the leaderboard.
 
-## Step 1: a pipeline that can't leak
+## Goals: what are we trying to achieve?
+
+Before any clever model, we need a bar to beat. Our goal is to build the dumbest serious model, make it leak-proof, and learn what it tells us.
+
+By the end you will be able to:
+
+- **Build a pipeline** where preprocessing is fitted on training rows only.
+- **Tune the one knob**, regularisation, and recognise a plateau.
+- **Read odds ratios**, and know when a coefficient should not be trusted.
+- **Explain why Naive Bayes ranks decently but lies about probabilities.**
+
+## The work plan: how do we do it?
+
+Three steps for logistic regression, then a contrast:
+
+1. **A pipeline that can't leak**: one-hot encoding and scaling inside the model object.
+2. **The one knob**: sweep `C` with 3-fold cross-validation on the training part only.
+3. **Read the model**: odds ratios, then a correlation check on the economic columns.
+4. **Naive Bayes**: the same data, a completely different route, graded on the same metrics.
+
+## Implementation
+
+### Step 1: a pipeline that can't leak
 
 Every fitted number — category vocabulary, column means, column standard deviations — must come from *training rows only*. The way to guarantee it is to put preprocessing *inside* the model object, so `fit` learns it and `predict` merely applies it.
 
@@ -60,7 +82,7 @@ What each piece does:
 
 </div>
 
-## Step 2: the one knob — regularisation
+### Step 2: the one knob — regularisation
 
 Logistic regression minimises log loss plus a penalty, `λ · Σ wⱼ²`, that discourages large weights. In scikit-learn it's parameterised backwards: **`C` is the inverse of regularisation strength** — small C = heavy penalty = small, stable coefficients. Sweep it with cross-validation on the training part only:
 
@@ -81,7 +103,7 @@ C=10     CV average precision = 0.450 +- 0.014
 
 Two things to notice. Heavy regularisation hurts (0.428 at C=0.001), and once C is about 0.1 the curve is flat: differences of 0.002 are an order of magnitude smaller than the ±0.015 fold-to-fold noise. **This is what a well-posed tuning problem looks like — a plateau, not a peak.** Any C from 0.1 to 10 is a fine answer; we use 0.1 because when two settings tie, the more regularised one is safer.
 
-## Step 3: read the model
+### Step 3: read the model
 
 The killer feature of logistic regression is that the coefficient *w* for a feature tells you how the **log-odds** of subscribing change when that feature increases by one unit (one SD, for scaled columns). Exponentiate and you get an **odds ratio**: 2.0 means the odds double, 0.5 means they halve.
 
@@ -110,10 +132,7 @@ remainder__cons.price.idx    2.02
 cat__month_mar               2.81
 ```
 
-![Bar chart of the eight lowest and eight highest odds ratios from the logistic regression.](/series/classification/figures/ch05-odds-ratios.png)
-*Figure 1. Odds ratios on a log scale. Left of the line lowers the odds of subscribing; right raises them.*
-
-A story jumps out: May calls are bad, cellular beats landline, retirees and past-successes are good. All of it matches the raw rates from part 1. But look at the two *numeric* entries, because they should make you suspicious:
+A story jumps out: May calls are bad, cellular beats landline, retirees and past-successes are good. All of it matches the raw rates from [part 1](/series/classification/01-classification-is-a-decision/). But look at the two *numeric* entries, because they should make you suspicious:
 
 - `emp.var.rate` has odds ratio **0.26**: one SD higher employment-variation rate cuts the odds by 74%.
 - `cons.price.idx` has odds ratio **2.02**: one SD higher consumer-price index *doubles* the odds.
@@ -142,7 +161,7 @@ nr.employed             0.91            0.52       0.95         1.00
 
 That is a useful finding in itself: a model that looks transparent can still mislead. Transparency is necessary, not sufficient.
 
-## Naive Bayes: the confident guesser
+### Naive Bayes: the confident guesser
 
 Naive Bayes takes a completely different route. It estimates, for each class, the distribution of each feature separately (here a Gaussian per column), then multiplies the per-feature likelihoods *as if features were independent given the class* — that's the "naive" part. No optimisation loop; fitting is just computing means and variances.
 
@@ -172,9 +191,32 @@ Compare with logistic regression:
 
 Naive Bayes is worse at ranking, but the real damage is in the probabilities: log loss is nearly **5× worse**. The last line shows why. Some 12% of NB's predictions are above 0.9 and 83% below 0.1 — it's behaving like a model that's nearly certain about everyone, when the truth is an 11% base rate and a messy signal. The independence assumption counts the same evidence repeatedly (`emp.var.rate`, `euribor3m` and `nr.employed` each "vote" that the economy is weak, and Naive Bayes multiplies those three votes as if they were independent witnesses), so its confidence snowballs.
 
-That's a classic pattern: **a model can rank decently and still produce probabilities you must not use.** If the next stage is "estimate expected profit", NB's output is unusable without calibration (part 11).
+That's a classic pattern: **a model can rank decently and still produce probabilities you must not use.** If the next stage is "estimate expected profit", NB's output is unusable without calibration ([part 11](/series/classification/11-probabilities-calibration-thresholds-costs/)).
 
-## What to take from this chapter
+## What did we get? Results
+
+Same split, same 8,238 held-out customers:
+
+| | AP | AUC | Log loss | Brier |
+|---|---|---|---|---|
+| Logistic regression | **0.464** | **0.801** | **0.272** | **0.077** |
+| Gaussian Naive Bayes | 0.369 | 0.776 | 1.310 | 0.133 |
+
+- **Tuning `C`:** cross-validated AP goes 0.428, 0.443, 0.448, 0.450, 0.450 for C = 0.001 to 10. The plateau starts around C = 0.1, and the fold-to-fold noise is ±0.015.
+- **Collinearity:** `emp.var.rate` and `euribor3m` correlate at 0.97.
+- **Naive Bayes confidence:** 12% of its scores are above 0.9 and 83% below 0.1, against a true base rate of 11.3%.
+
+![Bar chart of the eight lowest and eight highest odds ratios from the logistic regression.](/series/classification/figures/ch05-odds-ratios.png)
+*Figure 1. Odds ratios on a log scale. Left of the line lowers the odds of subscribing; right raises them.*
+
+## Analysis and conclusion: what did we learn?
+
+- **Logistic regression is hard to beat.** AP 0.464 and AUC 0.80 are our bar for the rest of the series.
+- **A plateau is a good tuning result.** Differences of 0.002 are far smaller than the ±0.015 noise, so any `C` from 0.1 to 10 is fine. We pick the more regularised one.
+- **Coefficients mislead when features are collinear.** The two economic indicators with opposite odds ratios (0.26 and 2.02) are nearly the same variable. This is correlation, not a causal effect.
+- **Naive Bayes counts the same evidence several times**, so its probabilities are over-confident (log loss about 5 times worse). We fix that kind of problem in [Part 11](/series/classification/11-probabilities-calibration-thresholds-costs/).
+
+### What to take from this chapter
 
 1. **Always build the pipeline so preprocessing is fitted per training fold.**
 2. Logistic regression gives you a strong score, calibrated probabilities (log loss 0.272) and a readable model — in a few lines and a second of compute.
@@ -183,3 +225,9 @@ That's a classic pattern: **a model can rank decently and still produce probabil
 5. Naive Bayes is a good reminder that AUC and probability quality are separate: it's a useful *feature-selection sanity check* and a fast baseline, rarely a final model.
 
 Logistic regression's AP of 0.464 and AUC of 0.80 are now our bar. [Part 6](/series/classification/06-decision-trees/) asks whether a model that can capture interactions and non-linear effects does better — and how easily it cheats.
+
+### So what did we do?
+
+We built a leak-proof logistic regression, found that its tuning curve is a plateau, and learned to read its coefficients with care. Naive Bayes showed that a model can rank decently and still produce probabilities you must not use. Logistic regression's AP of 0.464 is now the bar to beat.
+
+### In the next part

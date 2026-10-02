@@ -4,6 +4,7 @@ description: "Permutation importance versus built-in importance, why shuffling c
 series: "classification"
 order: 15
 date: 2026-10-01
+updated: 2026-10-02
 keywords: ["feature importance", "permutation importance", "error analysis", "lightgbm", "model interpretation", "correlated features"]
 readingTime: "17 min read"
 figure: "leaderboard-importance.png"
@@ -13,7 +14,29 @@ A leaderboard answers "which model?". It doesn't answer the questions you get fr
 
 The conclusions here are about *this model on this data*. The more important thing is the method, because two of the three standard tools mislead if used carelessly, and we'll see exactly how.
 
-## Retrain the winner
+## Goals: what are we trying to achieve?
+
+A leaderboard answers "which model?". It does not answer "what is it looking at, and where does it fail?". Our goal is to open the winner and audit it, with methods that do not mislead.
+
+By the end you will be able to:
+
+- **Tell permutation importance from gain importance**, and say which one to trust.
+- **Test a group of correlated features** by shuffling them together and by retraining without them.
+- **Profile the errors**: calibration by segment, and who the model misses.
+
+## The work plan: how do we do it?
+
+We refit LightGBM with the leaderboard's parameters (test AP 0.496) and run five checks:
+
+1. **Two importance rankings**: permutation on held-out data against LightGBM's built-in gain.
+2. **Correlated columns**: shuffle the five macro columns as a block.
+3. **Drop-column retraining**: remove groups of columns and retrain.
+4. **Calibration by segment**: predicted against actual rate in slices.
+5. **Who do we miss?** Compare the subscribers the model caught with the ones it missed.
+
+## Implementation
+
+### Retrain the winner
 
 We refit LightGBM with the parameters the leaderboard search selected and confirm we're looking at the same model (AP 0.496):
 
@@ -43,7 +66,7 @@ print(f"LightGBM test AP = {base_ap:.3f}")
 LightGBM test AP = 0.496
 ```
 
-## Two importance rankings that disagree
+### Two importance rankings that disagree
 
 **Permutation importance** shuffles one column on the *test* data, breaking its relationship with the target, and measures how much AP drops. A big drop means the model relied on that column. It's model-agnostic and tied to the metric we care about.
 
@@ -82,9 +105,6 @@ month             0.052
 cons.price.idx    0.041
 ```
 
-![Permutation importance of the ten most important features for LightGBM, with standard deviations.](/series/classification/figures/leaderboard-importance.png)
-*Figure 1. Permutation importance on the test set (5 repeats, from the leaderboard run). Same ordering story as the table above: `pdays`, `nr.employed`, `euribor3m`, `contact` at the top.*
-
 They don't agree:
 
 | Feature | Permutation rank | Gain rank | What happened |
@@ -102,9 +122,9 @@ The most striking row is `age`. Gain importance gives it 6.7% of the total, the 
 
 </div>
 
-## Why shuffling one correlated column understates
+### Why shuffling one correlated column understates
 
-Now the second trap. In part 5 we saw that four macro-economic columns are correlated at 0.5–0.97. If you shuffle `euribor3m` alone, the model still has `emp.var.rate` and `nr.employed` carrying almost the same information. The drop is modest. What happens if we shuffle all the macro columns *together* (same shuffle for each, so the rows stay internally consistent among themselves)?
+Now the second trap. In [part 5](/series/classification/05-logistic-regression-naive-bayes/) we saw that four macro-economic columns are correlated at 0.5–0.97. If you shuffle `euribor3m` alone, the model still has `emp.var.rate` and `nr.employed` carrying almost the same information. The drop is modest. What happens if we shuffle all the macro columns *together* (same shuffle for each, so the rows stay internally consistent among themselves)?
 
 ```python
 macro = ["emp.var.rate", "cons.price.idx", "cons.conf.idx", "euribor3m", "nr.employed"]
@@ -124,7 +144,7 @@ Shuffled one at a time, the five columns look worth **0.068 AP in total**. Shuff
 
 (Careful with the reverse conclusion, though. Shuffling the block creates test rows with *internally consistent macro columns that don't match anything else about the customer*: a world the model never saw. The 0.293 is an upper bound on dependence, not a measurement of what we'd lose. For that, we need to *retrain without the columns*.)
 
-## How much does the model *need* each group? Drop-column retraining
+### How much does the model *need* each group? Drop-column retraining
 
 Retraining with a group of columns removed is the cleanest experiment, because the model gets a chance to compensate with what's left:
 
@@ -155,27 +175,7 @@ This table is the real story of the dataset:
 
 So: **this model barely knows who it is calling.** Almost all of its predictive power comes from *how and when* we call (history, economy, channel, season). That has practical consequences. The "personalisation" a project might have hoped for is nearly absent, and the model is exposed to whatever drives the economy and the campaign calendar, which is the subject of the next chapter.
 
-## Where does it do well and badly? Calibration by segment
-
-An aggregate ECE of 0.009 could hide a model that's honest on average and wrong for subgroups. We check calibration inside slices: the average predicted probability should match the actual subscription rate.
-
-| Segment | Customers | Actual rate | Mean score | Share we'd call |
-|---|---|---|---|---|
-| contact = cellular | 5,236 | 14.9% | 14.7% | 27% |
-| contact = telephone | 3,002 | 5.0% | 5.1% | 5% |
-| poutcome = success | 268 | 66.0% | 62.5% | 99% |
-| poutcome = nonexistent | 7,147 | 9.0% | 8.9% | 15% |
-| month = may | 2,758 | 6.8% | 6.3% | 10% |
-| month = mar | 110 | 53.6% | 51.6% | 100% |
-| job = retired | 354 | 24.3% | 27.1% | 53% |
-| job = student | 164 | 35.4% | 30.4% | 69% |
-| job = unknown | 65 | 6.2% | 11.0% | 22% |
-
-(Selected rows from `leaderboard_segments.csv`, which has every slice; "share we'd call" uses the model's frozen profit threshold.)
-
-The model is well calibrated in the large, high-volume slices: 14.9% vs 14.7% for cellular, 5.0% vs 5.1% for landline. Gaps appear in tiny groups: students are *under*-predicted (35% actual vs 30% scored), the 65 `unknown`-job customers are over-predicted (6% vs 11%). With 65–164 customers each, those deviations are well within sampling noise. We note them and don't act.
-
-## Who do we miss?
+### Who do we miss?
 
 The last diagnostic is the most practical: look at the subscribers the model *failed* to flag, and compare them with the ones it nailed. Take the 928 test-set subscribers: 143 score below the median and 448 are in the top decile.
 
@@ -223,12 +223,56 @@ In short, the model finds the customers who *look like* subscribers (previous su
 
 It does tell us where *new information* would pay off: anything that separates the May landline subscribers (a better channel history, an income proxy, a trigger event) would add recall exactly where the current features are blind. The right next step is a data conversation, not a bigger model.
 
-## Summary: an audit checklist you can reuse
+## What did we get? Results
+
+- **Permutation importance, top 3:** `pdays` 0.0380, `nr.employed` 0.0303, `euribor3m` 0.0258.
+- **Gain importance, top 3:** `euribor3m` 0.254, `nr.employed` 0.218, `pdays` 0.071. `age` is fourth by gain (6.7%) but tenth by permutation (0.004).
+- **Macro columns:** shuffled one at a time they sum to 0.068 AP, shuffled together 0.293.
+- **Drop-column retraining:** history with the customer −0.047, macro-economy −0.048, contact circumstances −0.015, customer profile −0.003.
+- **The misses:** 58% of missed subscribers were landline calls, 94% had never been contacted before, and 43% were in May.
+
+### Where does it do well and badly? Calibration by segment
+
+An aggregate ECE of 0.009 could hide a model that's honest on average and wrong for subgroups. We check calibration inside slices: the average predicted probability should match the actual subscription rate.
+
+| Segment | Customers | Actual rate | Mean score | Share we'd call |
+|---|---|---|---|---|
+| contact = cellular | 5,236 | 14.9% | 14.7% | 27% |
+| contact = telephone | 3,002 | 5.0% | 5.1% | 5% |
+| poutcome = success | 268 | 66.0% | 62.5% | 99% |
+| poutcome = nonexistent | 7,147 | 9.0% | 8.9% | 15% |
+| month = may | 2,758 | 6.8% | 6.3% | 10% |
+| month = mar | 110 | 53.6% | 51.6% | 100% |
+| job = retired | 354 | 24.3% | 27.1% | 53% |
+| job = student | 164 | 35.4% | 30.4% | 69% |
+| job = unknown | 65 | 6.2% | 11.0% | 22% |
+
+(Selected rows from `leaderboard_segments.csv`, which has every slice; "share we'd call" uses the model's frozen profit threshold.)
+
+The model is well calibrated in the large, high-volume slices: 14.9% vs 14.7% for cellular, 5.0% vs 5.1% for landline. Gaps appear in tiny groups: students are *under*-predicted (35% actual vs 30% scored), the 65 `unknown`-job customers are over-predicted (6% vs 11%). With 65–164 customers each, those deviations are well within sampling noise. We note them and don't act.
+
+![Permutation importance of the ten most important features for LightGBM, with standard deviations.](/series/classification/figures/leaderboard-importance.png)
+*Figure 1. Permutation importance on the test set (5 repeats, from the leaderboard run). Same ordering story as the table above: `pdays`, `nr.employed`, `euribor3m`, `contact` at the top.*
+
+## Analysis and conclusion: what did we learn?
+
+- **Built-in importance measures what the model used. Permutation importance measures what it needs.** `age` is the example: many splits, almost no predictive value.
+- **Redundancy hides importance.** Shuffle one correlated column and little changes. Shuffle the block and the drop is four times larger. Retraining without the group is the clean test.
+- **This model barely knows who it is calling.** Removing all seven customer-profile columns costs only 0.003 AP. The power comes from how and when we call.
+- **The misses point to missing information**, not to a bigger model. Landline calls in May to people never contacted look like everyone else. This is an observation about this model, not a causal claim.
+
+### Summary: an audit checklist you can reuse
 
 1. **Don't trust built-in importances alone.** Check against permutation importance on held-out data.
 2. **Shuffle correlated features as a group**, and *retrain without the group* to see what the model really needs.
 3. **Look at calibration by segment**, but weigh each gap by the sample size behind it.
 4. **Profile the misses.** The errors tell you which information is missing.
 5. **Importance is not causation.** Nothing here says changing the economy or calling on a different day changes anyone's behaviour. It describes what this model uses to predict.
+
+### So what did we do?
+
+We audited the winner. Its built-in importance and its real needs differ, correlated columns hide each other, and almost none of its power comes from who the customer is. The macro columns and `pdays` dominate, and they are proxies for time.
+
+### In the next part
 
 The macro columns and `pdays` dominate, and they have something in common: they're proxies for *time*. [Part 16](/series/classification/16-when-time-breaks-the-model/) asks what happens when the model has to predict a future that doesn't look like the past.

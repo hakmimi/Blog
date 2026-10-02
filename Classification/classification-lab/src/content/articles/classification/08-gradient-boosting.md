@@ -4,7 +4,7 @@ description: "Write gradient boosting in 15 lines of Python, see what the learni
 series: "classification"
 order: 8
 date: 2026-09-30
-updated: 2026-10-01
+updated: 2026-10-02
 keywords: ["gradient boosting", "learning rate", "early stopping", "histgradientboosting", "xgboost", "lightgbm", "catboost"]
 readingTime: "17 min read"
 figure: "ch08-boosting-lr.png"
@@ -12,9 +12,30 @@ figure: "ch08-boosting-lr.png"
 
 Random forests average many independent, fully-grown trees. **Gradient boosting does the opposite: it builds many small, weak trees in sequence, and each new tree is trained to fix what the ensemble so far is still getting wrong.**
 
-XGBoost, LightGBM and CatBoost are all industrial-strength versions of this one idea, and they dominate tabular-data competitions. Before we race them in part 12, let's build the core loop ourselves. It's shorter than you'd expect.
+XGBoost, LightGBM and CatBoost are all industrial-strength versions of this one idea, and they dominate tabular-data competitions. Before we race them in [part 12](/series/classification/12-head-to-head-leaderboard/), let's build the core loop ourselves. It's shorter than you'd expect.
 
-## The algorithm in plain words
+## Goals: what are we trying to achieve?
+
+Boosting builds many small trees in sequence, each fixing the mistakes of the ones before it. Our goal is to write the core loop ourselves and understand the knobs that XGBoost, LightGBM and CatBoost share.
+
+By the end you will be able to:
+
+- **Explain boosting in five steps**, and why the residual is the negative gradient of the loss.
+- **Read a learning-rate table** and know that `learning_rate` and `n_estimators` trade off.
+- **Use early stopping** to choose the number of trees, instead of guessing.
+
+## The work plan: how do we do it?
+
+From the algorithm to the library:
+
+1. **The algorithm in plain words**, then about fifteen lines of code with a `lr` switch.
+2. **Learning rate made visible**: the same model at 0.5, 0.1 and 0.02, scored at several stages.
+3. **Early stopping**: scikit-learn's `HistGradientBoostingClassifier` with a validation slice.
+4. **What the named libraries add**, and how boosting compares with bagging.
+
+## Implementation
+
+### The algorithm in plain words
 
 1. Start with a constant prediction: the log-odds of the base rate.
 2. Compute each customer's **residual**: how wrong is the current prediction? For log loss, the residual is simply `y − p`.
@@ -61,7 +82,7 @@ def boost(lr, n_stages=300, depth=3):
 
 That is gradient boosting. The loop body is five lines. (Real libraries also do a second-order Newton step to set the leaf values and add regularisation, but the skeleton is this.)
 
-## The learning rate, made visible
+### The learning rate, made visible
 
 Everything interesting is in `lr`. Let's train the same model with three learning rates and print the score at several stages:
 
@@ -105,12 +126,9 @@ learning rate 0.02
      300   0.451    0.289        0.435
 ```
 
-![Test average precision versus number of boosting stages for three learning rates.](/series/classification/figures/ch08-boosting-lr.png)
-*Figure 1. Smaller learning rates take many more trees to reach the same place, but the destination is at least as good.*
-
 What to see in these numbers:
 
-- **A very first tree already gets 0.388.** A depth-3 tree is weak, but not useless (recall part 6: shallow trees reach ~0.37).
+- **A very first tree already gets 0.388.** A depth-3 tree is weak, but not useless (recall [part 6](/series/classification/06-decision-trees/): shallow trees reach ~0.37).
 - **Learning rate is a speed dial.** At `lr=0.5` the model reaches 0.479 in 50 stages. At `lr=0.1` it needs 200 stages for 0.477. At `lr=0.02` it hasn't finished after 300: it's at 0.451 and still climbing.
 - **Test log loss tracks AP.** They improve together — boosting with log loss is directly optimising probability quality, and ranking improves as a by-product.
 - **Watch the train/test gap.** At `lr=0.5`, train AP reaches 0.517 after 300 stages while test AP is 0.486: it's starting to fit noise, and the test curve has flattened. Nothing in the algorithm says "stop now". *You* have to.
@@ -123,7 +141,7 @@ The standard rule of thumb: **use a small learning rate and many trees, and let 
 
 </div>
 
-## Early stopping: let validation data choose the number of trees
+### Early stopping: let validation data choose the number of trees
 
 Instead of guessing 300, hold out a slice of the training data, evaluate after each tree, and stop when the validation loss hasn't improved for `n_iter_no_change` rounds. scikit-learn's `HistGradientBoostingClassifier` has this built in, plus native categorical-feature support and multi-threaded histogram-based split search (the same trick LightGBM popularised):
 
@@ -153,15 +171,43 @@ Several things happened at once:
 
 1. **Early stopping replaced our guess.** We allowed 2,000 trees; the model stopped at 40, 63 and 138.
 2. **Smaller learning rates found a slightly better place.** lr = 0.3 ended at AP 0.483; lr = 0.1 and 0.03 both hit 0.496. After a point, making the step smaller yields no further benefit — the extra trees are pure cost.
-3. **It beat our from-scratch version (0.486).** Native categorical handling (no one-hot), leaf-value regularisation and histogram splits each contribute a little. This single-digit-second model is already ahead of everything in parts 5–7: logistic regression 0.464, tuned tree ~0.43, forest 0.491.
+3. **It beat our from-scratch version (0.486).** Native categorical handling (no one-hot), leaf-value regularisation and histogram splits each contribute a little. This single-digit-second model is already ahead of everything in [parts 5](/series/classification/05-logistic-regression-naive-bayes/)–[7](/series/classification/07-bagging-random-forests/): logistic regression 0.464, tuned tree ~0.43, forest 0.491.
 
 <div class="callout tip">
 
-**Early stopping and time.** The early-stopping slice here is a *random* 15% of the training rows, which is fine for this series' random split. If your deployment predicts the *future* (part 16), validate on the most recent slice instead; a random slice from the past will tell you to keep training long after the model has stopped generalising forward in time.
+**Early stopping and time.** The early-stopping slice here is a *random* 15% of the training rows, which is fine for this series' random split. If your deployment predicts the *future* ([part 16](/series/classification/16-when-time-breaks-the-model/)), validate on the most recent slice instead; a random slice from the past will tell you to keep training long after the model has stopped generalising forward in time.
 
 </div>
 
-## What the named libraries add
+## What did we get? Results
+
+From-scratch boosting, test AP and test log loss:
+
+| Learning rate | After 50 stages | After 300 stages |
+|---|---|---|
+| 0.5 | AP 0.479, log loss 0.270 | AP 0.486, log loss 0.265 |
+| 0.1 | AP 0.434, log loss 0.294 | AP 0.478, log loss 0.269 |
+| 0.02 | AP 0.394, log loss 0.333 | AP 0.451, log loss 0.289 |
+
+With early stopping (`HistGradientBoostingClassifier`):
+
+| Learning rate | Stopped at | Test AP | Log loss |
+|---|---|---|---|
+| 0.3 | 40 trees | 0.483 | 0.270 |
+| 0.1 | 63 trees | 0.496 | 0.263 |
+| 0.03 | 138 trees | 0.496 | 0.263 |
+
+![Test average precision versus number of boosting stages for three learning rates.](/series/classification/figures/ch08-boosting-lr.png)
+*Figure 1. Smaller learning rates take many more trees to reach the same place, but the destination is at least as good.*
+
+## Analysis and conclusion: what did we learn?
+
+- **The learning rate is a speed dial.** A smaller rate needs many more trees to reach the same place, and the destination is at least as good.
+- **Nothing in the algorithm says stop.** At `lr=0.5`, train AP climbs to 0.517 while test AP flattens at 0.486. You have to stop it, and early stopping does that.
+- **Do not grid over `learning_rate` and `n_estimators` together.** Fix a small rate and let early stopping choose the trees.
+- **Boosting is already ahead of [Parts 5](/series/classification/05-logistic-regression-naive-bayes/) to 7** (0.496 against 0.464, about 0.43 and 0.491), but the gap to a forest is tiny. [Part 13](/series/classification/13-is-the-winner-real/) tests whether it is real.
+
+### What the named libraries add
 
 Everything above is the core. The three famous libraries differ on engineering choices:
 
@@ -172,9 +218,9 @@ Everything above is the core. The three famous libraries differ on engineering c
 | **CatBoost** | Symmetric ("oblivious") trees | Level-wise, same split per level | Native, **ordered target statistics** | Strong defaults, best handling of high-cardinality categories |
 | scikit-learn `HistGB` | Histogram | Leaf-wise | Native | No extra dependency, good defaults |
 
-These are differences of engineering and inductive bias, not of idea. Whether they translate into better *test scores on this problem* is an empirical question — the subject of part 12, where all three race on identical data.
+These are differences of engineering and inductive bias, not of idea. Whether they translate into better *test scores on this problem* is an empirical question — the subject of [part 12](/series/classification/12-head-to-head-leaderboard/), where all three race on identical data.
 
-## Boosting vs bagging: which, when?
+### Boosting vs bagging: which, when?
 
 | | Random forest | Gradient boosting |
 |---|---|---|
@@ -185,6 +231,12 @@ These are differences of engineering and inductive bias, not of idea. Whether th
 | Probabilities | Compressed toward centre | Good when trained on log loss |
 | Best when | You want a strong, forgiving default | You want the last few points of accuracy and can validate properly |
 
-On this dataset, both land around 0.49 average precision. The gap between them is tiny; the gap between them and a single tree (0.43) or Naive Bayes (0.37) is large. **Part of the craft of applied ML is knowing which gaps matter** — and in part 13 we'll measure whether 0.496 versus 0.491 is a real difference at all.
+On this dataset, both land around 0.49 average precision. The gap between them is tiny; the gap between them and a single tree (0.43) or Naive Bayes (0.37) is large. **Part of the craft of applied ML is knowing which gaps matter** — and in [part 13](/series/classification/13-is-the-winner-real/) we'll measure whether 0.496 versus 0.491 is a real difference at all.
+
+### So what did we do?
+
+We wrote gradient boosting in five lines of loop, watched the learning rate trade speed for smoothness, and let early stopping pick the number of trees. A single scikit-learn model reached AP 0.496 in seconds.
+
+### In the next part
 
 [Part 9](/series/classification/09-other-classification-families/) goes through the remaining families — k-nearest neighbours, SVMs and neural nets — that need very different treatment of the same data.

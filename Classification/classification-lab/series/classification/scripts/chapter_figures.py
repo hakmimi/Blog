@@ -61,6 +61,21 @@ def ch02() -> None:
     save("ch02-duration-leak.png")
 
 
+def ch02_drift() -> None:
+    X, y = load_bank()
+    chunk = np.arange(len(X)) // 4119
+    rate = pd.Series(y).groupby(chunk).mean() * 100
+    euribor = X["euribor3m"].groupby(chunk).mean()
+    print("rate %:", rate.round(1).tolist()); print("euribor3m:", euribor.round(2).tolist())
+    fig, ax = plt.subplots(figsize=(7.2, 3.8))
+    ax.bar(rate.index + 1, rate.values, color=COLORS["teal"])
+    ax.set_xticks(rate.index + 1); ax.set_xlabel("Chunk of 4,119 calls, oldest to newest"); ax.set_ylabel("% who subscribed")
+    ax2 = ax.twinx(); ax2.plot(euribor.index + 1, euribor.values, color=COLORS["coral"], marker="o", lw=2)
+    ax2.set_ylabel("Mean euribor3m (%)", color=COLORS["coral"]); ax2.grid(False); ax2.spines["right"].set_visible(True)
+    ax.set_title("The subscription rate climbs as the interest rate falls")
+    save("ch02-drift.png")
+
+
 def ch03() -> None:
     X, y, tr, te = split()
     m = make_pipeline(linear_prep(X), LogisticRegression(max_iter=2000)).fit(X.iloc[tr], y[tr])
@@ -219,7 +234,7 @@ def ch16() -> None:
     save("ch16-time-shift.png")
 
 
-ALL = {"ch01": ch01, "ch02": ch02, "ch03": ch03, "ch05": ch05, "ch06": ch06, "ch07": ch07,
+ALL = {"ch01": ch01, "ch02": ch02, "ch02_drift": ch02_drift, "ch03": ch03, "ch05": ch05, "ch06": ch06, "ch07": ch07,
        "ch08": ch08, "ch09": ch09, "ch10": ch10, "ch11": ch11, "ch16": ch16}
 
 if __name__ == "__main__":
