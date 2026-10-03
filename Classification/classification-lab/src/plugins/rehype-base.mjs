@@ -6,6 +6,11 @@ export default function rehypeBase({ base = '/' } = {}) {
   const prefix = base.replace(/\/$/, '');
   return (tree) => {
     if (!prefix) return;
+    // Raw HTML written inside Markdown (e.g. <script src="/js/x.js">) is still an unparsed 'raw' node here.
+    // Only plain src/href are rewritten: data-src is left alone because the lab widgets add the base themselves.
+    visit(tree, 'raw', (node) => {
+      node.value = node.value.replace(/(\s(?:src|href)=")\/(?!\/)/g, (m, a) => a + prefix + '/');
+    });
     visit(tree, 'element', (node) => {
       for (const key of ['href', 'src']) {
         const v = node.properties?.[key];
