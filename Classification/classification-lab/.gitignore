@@ -7,3 +7,5 @@ __pycache__/
 .venv/
 series/*/data/raw/
 series/*/*.log
+
+print/
