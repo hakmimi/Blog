@@ -147,7 +147,7 @@ def main() -> int:
     args = ap.parse_args()
     out = args.out or Path("print") / f"{args.series}.html"
 
-    pages = sorted((args.dist / "series" / args.series).glob("[0-9][0-9]-*/index.html"))
+    pages = sorted((args.dist / "series" / args.series).glob("[0-9][0-9]*-*/index.html"))
     if not pages:
         print("no built pages found; run `npm run build` first", file=sys.stderr)
         return 1
