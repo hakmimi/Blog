@@ -53,7 +53,7 @@ const jsonLd = {
           {siblings.map((a: any) => <li class:list={{ current: a.id === entry.id }}><a href={articleUrl(a)}>{a.data.title}</a></li>)}
         </ol>
       </aside>
-      <div class="prose">{he && ui.notice && <p class="lang-notice" dir="rtl">{ui.notice}</p>}<slot /></div>
+      <div class="prose"><slot /></div>
     </div>
     <nav class="chapter-nav" aria-label="Adjacent parts">
       {prev ? <a href={articleUrl(prev)}><span>{ui.prev}</span>{prev.data.title}</a> : <span></span>}
