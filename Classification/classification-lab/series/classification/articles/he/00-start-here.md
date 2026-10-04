@@ -111,21 +111,37 @@ print(df.columns.tolist()[:6], "...")
 
 ## מא' ועד ת': שלבי בניית מודל
 
-כך בונים מודל קלסיפיקציה מההתחלה ועד הסוף, ובכל שלב מצוין החלק בסדרה שעוסק בו. לחצו כדי לקפוץ.
+כך בונים מודל קלסיפיקציה מההתחלה ועד הסוף. התרשים מראה את התהליך בחמש פאזות, ובכל שלב מצוין החלק בסדרה שעוסק בו. לחצו על שלב כדי לקפוץ אליו.
 
-<ol class="steps">
-<li><a href="/he/series/classification/01-classification-is-a-decision/"><b>1</b><span>מגדירים את ההחלטה העסקית</span><small>מה מחליטים, מי מחליט, מה עולה כל טעות · חלק 1</small></a></li>
-<li><a href="/series/classification/02-why-classification-is-hard/"><b>2</b><span>מבינים את הנתונים ומה מותר לקחת מהם</span><small>רק מה שידוע ברגע ההחלטה · חלק 2</small></a></li>
+<div class="proc" role="group" aria-label="תרשים תהליך: אחד-עשר שלבים בחמש פאזות, עם לולאת חזרה">
+<section class="proc-phase"><h4><span>א</span> הגדרה</h4><ol>
+<li><a href="/he/series/classification/01-classification-is-a-decision/"><b>1</b><span>מגדירים את ההחלטה העסקית</span><small>מה מחליטים, ומה עולה כל טעות · חלק 1</small></a></li>
+<li><a href="/series/classification/02-why-classification-is-hard/"><b>2</b><span>מבינים את הנתונים</span><small>רק מה שידוע ברגע ההחלטה · חלק 2</small></a></li>
+</ol></section>
+<div class="proc-arrow" aria-hidden="true"></div>
+<section class="proc-phase"><h4><span>ב</span> הכנה</h4><ol>
 <li><a href="/series/classification/03-what-does-good-performance-mean/"><b>3</b><span>קובעים איך מודדים הצלחה</span><small>דיוק, שלמות, AUC, AP · חלקים 3 ו-4</small></a></li>
-<li><a href="#כללי-המשחק-מפה-פשוטה"><b>4</b><span>מפרידים נתונים: פיתוח, השוואה, זמן</span><small>המפה שלמעלה · חלקים 10 ו-16</small></a></li>
+<li><a href="#כללי-המשחק-מפה-פשוטה"><b>4</b><span>מפרידים נתונים</span><small>פיתוח, השוואה, זמן · המפה שלמעלה</small></a></li>
+</ol></section>
+<div class="proc-arrow" aria-hidden="true"></div>
+<section class="proc-phase"><h4><span>ג</span> בנייה</h4><ol>
 <li><a href="/series/classification/05-logistic-regression-naive-bayes/"><b>5</b><span>בונים קו בסיס פשוט</span><small>מה שחייבים לנצח · חלק 5</small></a></li>
-<li><a href="/series/classification/06-decision-trees/"><b>6</b><span>מנסים משפחות מודלים</span><small>עצים, יערות, boosting, שכנים, רשתות · חלקים 6 עד 9</small></a></li>
+<li><a href="/series/classification/06-decision-trees/"><b>6</b><span>מנסים משפחות מודלים</span><small>עצים, יערות, boosting, רשתות · חלקים 6 עד 9</small></a></li>
 <li><a href="/series/classification/10-hyperparameter-search/"><b>7</b><span>מכווננים בהגינות</span><small>אותו מאמץ לכל מודל · חלק 10</small></a></li>
+</ol></section>
+<div class="proc-arrow" aria-hidden="true"></div>
+<section class="proc-phase"><h4><span>ד</span> החלטה</h4><ol>
 <li><a href="/series/classification/11-probabilities-calibration-thresholds-costs/"><b>8</b><span>הופכים ציון להחלטה</span><small>כיול, סף, עלויות · חלקים 11 ו-14</small></a></li>
-<li><a href="/series/classification/12-head-to-head-leaderboard/"><b>9</b><span>משווים ובודקים אם ההפרש אמיתי</span><small>ראש בראש ואי-ודאות · חלקים 12 ו-13</small></a></li>
-<li><a href="/series/classification/15-inside-the-winner/"><b>10</b><span>בודקים מבפנים ובזמן</span><small>על מה נשען, את מי מחמיץ, מה קורה בעתיד · חלקים 15 ו-16</small></a></li>
+<li><a href="/series/classification/12-head-to-head-leaderboard/"><b>9</b><span>משווים ובודקים אם ההפרש אמיתי</span><small>אם לא, בוחרים את המודל הפשוט · חלקים 12 ו-13</small></a></li>
+</ol></section>
+<div class="proc-arrow" aria-hidden="true"></div>
+<section class="proc-phase"><h4><span>ה</span> ביקורת והפעלה</h4><ol>
+<li><a href="/series/classification/15-inside-the-winner/"><b>10</b><span>בודקים מבפנים ובזמן</span><small>על מה נשען, את מי מחמיץ · חלקים 15 ו-16</small></a></li>
 <li><a href="/series/classification/16-when-time-breaks-the-model/"><b>11</b><span>מפעילים ומנטרים</span><small>סחיפה וחישוב מחדש · חלק 16</small></a></li>
-</ol>
+</ol></section>
+<div class="proc-loop"><b>↺ לולאת חזרה</b> אם הנתונים, המחירים או העולם משתנים, או שהבדיקה בשלב 10 מגלה בעיה, חוזרים לשלב 2 (מה מותר לקחת) או לשלב 4 (איך מפרידים) ובונים מחדש.</div></div>
+
+*איור: תהליך בניית מודל מא' ועד ת'. התהליך אינו קו ישר: ממצא בשלב מאוחר מחזיר אותנו לשלבים מוקדמים.*
 
 ## איך שישה-עשר החלקים מתחברים
 

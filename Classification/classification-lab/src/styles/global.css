@@ -316,3 +316,26 @@ a.series-card:hover { transform:translateY(-3px); border-color:color-mix(in srgb
 .steps li a:hover { border-color:var(--teal); } .steps b { grid-row:span 2; display:grid; place-items:center; width:2rem; height:2rem; border-radius:50%; background:var(--teal); color:var(--card); font-size:.85rem; }
 .steps span { font-weight:650; color:var(--ink); } .steps small { color:var(--muted); font-size:.78rem; }
 @media (max-width:700px) { .proto-row:not(.sep):not(:has(.all)):not(:has(.out)) { flex-direction:column; } .proto-row .proto-bar { flex:1 1 auto !important; } }
+
+/* part 0: process diagram (phases of building a model) */
+.proc { display:grid; grid-template-columns:1fr; gap:.2rem; margin:1.4rem 0 .4rem; }
+.proc a { color:inherit; text-decoration:none; }
+.proc-arrow { height:1.2rem; position:relative; } .proc-arrow:after { content:"↓"; position:absolute; left:50%; top:0; transform:translateX(-50%); color:var(--teal); font-size:1.2rem; }
+.proc-phase { border:1px solid var(--line); border-radius:14px; background:var(--card); padding:.8rem .9rem 1rem; box-shadow:var(--shadow); }
+.proc-phase h4 { margin:0 0 .6rem; font-size:.95rem; color:var(--ink); display:flex; align-items:center; gap:.5rem; }
+.proc-phase h4 span { display:inline-grid; place-items:center; width:1.5rem; height:1.5rem; border-radius:8px; background:var(--violet); color:var(--card); font-size:.8rem; font-weight:700; }
+.proc-phase ol { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
+.proc-phase li { position:relative; padding-bottom:1.1rem; } .proc-phase li:last-child { padding-bottom:0; }
+.proc-phase li:not(:last-child):after { content:"↓"; position:absolute; left:50%; bottom:.1rem; transform:translateX(-50%); color:var(--teal); font-size:.95rem; line-height:1; }
+.proc-phase li a { display:grid; grid-template-columns:1.8rem 1fr; gap:.05rem .5rem; align-items:center; padding:.45rem .55rem; border:1px solid var(--line); border-radius:10px; background:var(--soft); }
+.proc-phase li a:hover { border-color:var(--teal); } .proc-phase li b { grid-row:span 2; display:grid; place-items:center; width:1.8rem; height:1.8rem; border-radius:50%; background:var(--teal); color:var(--card); font-size:.78rem; }
+.proc-phase li span { font-weight:650; color:var(--ink); font-size:.84rem; line-height:1.3; } .proc-phase li small { color:var(--muted); font-size:.72rem; line-height:1.3; }
+.proc-loop { border:1px dashed var(--coral); border-radius:12px; padding:.6rem .9rem; background:color-mix(in srgb,var(--coral) 7%,var(--card)); font-size:.84rem; color:var(--muted); } .proc-loop b { color:var(--coral); margin-inline-end:.4rem; }
+@media (min-width:760px) {
+  .proc-phase { display:grid; grid-template-columns:9rem 1fr; gap:.8rem; align-items:center; }
+  .proc-phase h4 { margin:0; }
+  .proc-phase ol { flex-direction:row; align-items:stretch; gap:1.6rem; }
+  .proc-phase li { flex:1 1 0; padding-bottom:0; min-width:0; }
+  .proc-phase li:not(:last-child):after { content:"→"; left:auto; right:-1.3rem; bottom:50%; transform:translateY(50%); font-size:1.1rem; }
+  :root[dir="rtl"] .proc-phase li:not(:last-child):after { content:"←"; right:auto; left:-1.3rem; }
+}
