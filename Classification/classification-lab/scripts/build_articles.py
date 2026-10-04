@@ -104,15 +104,15 @@ def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     run = "--no-run" not in sys.argv
     cache = json.loads(CACHE_FILE.read_text(encoding="utf-8")) if CACHE_FILE.exists() else {}
-    for f in sorted(SRC.glob("[0-9][0-9]-*.md")):
-        if wanted and f.name[:2] not in wanted:
+    for f in sorted(SRC.glob("[0-9][0-9]*-*.md")):
+        if wanted and f.name.split("-")[0] not in wanted:
             continue
         out = render(f.read_text(encoding="utf-8")).replace("\r\n", "\n")
         if run:
             out = run_snippets(out, f.name, cache, force="--force" in sys.argv)
             write_retry(CACHE_FILE, json.dumps(cache, indent=0))
         # remove the previously rendered file for this part (the slug may have changed)
-        for old in OUT.glob(f"{f.name[:2]}-*.md"):
+        for old in OUT.glob(f"{f.name.split(chr(45))[0]}-*.md"):
             if old.name != f.name:
                 old.unlink()
         write_retry(OUT / f.name, out)

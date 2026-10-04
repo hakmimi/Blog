@@ -3,7 +3,7 @@ import BaseLayout from './BaseLayout.astro';
 import { site } from '../data/site';
 import { articleUrl, fmtDate, iso, seriesBySlug, seriesUrl, topicUrl } from '../lib/content';
 const { entry, prev, next, siblings } = Astro.props;
-const { title, description, order, readingTime, series, date, updated, keywords } = entry.data;
+const { title, description, order, label, readingTime, series, date, updated, keywords } = entry.data;
 const s = seriesBySlug[series];
 const jsonLd = {
   '@context': 'https://schema.org', '@type': 'TechArticle', headline: title, description,
@@ -17,7 +17,7 @@ const jsonLd = {
   <div class="progress" id="progress" aria-hidden="true"></div>
   <article class="article-shell">
     <header class="article-hero">
-      <p class="eyebrow"><a href={seriesUrl(series)}>{s.title}</a> · Part {order}</p>
+      <p class="eyebrow"><a href={seriesUrl(series)}>{s.title}</a> · Part {label ?? order}</p>
       <h1>{title}</h1>
       <p class="lede">{description}</p>
       <p class="byline">

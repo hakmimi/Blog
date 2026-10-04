@@ -107,23 +107,25 @@ def count_checks() -> None:
 
 
 def article_checks() -> None:
-    files = sorted(ARTICLES.glob("[0-9][0-9]-*.md"))
-    check(len(files) == 16, "sixteen rendered parts")
-    slugs = {f.name[:2]: f.stem for f in files}
+    files = sorted(ARTICLES.glob("[0-9][0-9]*-*.md"))
+    check(len(files) == 18, "eighteen rendered parts: Part 0, Part 0b and parts 1 to 16")
+    key = lambda f: f.name.split("-")[0]
+    slugs = {key(f): f.stem for f in files}
     for f in files:
         text = f.read_text(encoding="utf-8")
-        check("@@" not in text, f"{f.name[:2]}: no unrendered tokens")
-        check("(filled in by the build)" not in text, f"{f.name[:2]}: every output block was filled")
-        for m in re.finditer(r"\]\(/series/classification/(\d\d-[^/)]+)/\)", text):
-            check(m.group(1) in {s for s in slugs.values()}, f"{f.name[:2]}: link to part {m.group(1)[:2]} resolves")
+        check("@@" not in text, f"{key(f)}: no unrendered tokens")
+        check("(filled in by the build)" not in text, f"{key(f)}: every output block was filled")
+        for m in re.finditer(r"\]\(/series/classification/(\d\d[a-z]?-[^/)]+)/\)", text):
+            check(m.group(1) in set(slugs.values()), f"{key(f)}: link to part {m.group(1).split(chr(45))[0]} resolves")
         for m in re.finditer(r"/series/classification/figures/([\w.-]+\.png)", text):
-            check((FIG / m.group(1)).exists(), f"{f.name[:2]}: figure {m.group(1)} exists")
-        m = re.search(r'^order: (\d+)', text, re.M)
-        check(m is not None and int(m.group(1)) == int(f.name[:2]), f"{f.name[:2]}: order matches file number")
+            check((FIG / m.group(1)).exists(), f"{key(f)}: figure {m.group(1)} exists")
+        m = re.search(r'^order: ([\d.]+)', text, re.M)
+        want = {"00": 0.0, "00b": 0.5}.get(key(f), float(key(f)) if key(f).isdigit() else None)
+        check(m is not None and float(m.group(1)) == want, f"{key(f)}: order matches file number")
     bad = re.compile(r"\b(thirteen (?:classifiers|models) )", re.I)
     for f in files:
         t = f.read_text(encoding="utf-8")
-        check(not bad.search(t), f"{f.name[:2]}: no 'thirteen classifiers/models' wording")
+        check(not bad.search(t), f"{key(f)}: no 'thirteen classifiers/models' wording")
 
 
 def temporal_checks() -> None:
@@ -150,14 +152,14 @@ def render_consistency() -> None:
     import build_articles as B
     fence = "`" * 3
     strip = lambda t: re.sub(fence + r"output\n.*?\n" + fence, fence + "output\n" + fence, t, flags=re.S)
-    for src in sorted(B.SRC.glob("[0-9][0-9]-*.md")):
+    for src in sorted(B.SRC.glob("[0-9][0-9]*-*.md")):
         try:
             want = strip(B.render(src.read_text(encoding="utf-8")).replace("\r\n", "\n"))
         except (FileNotFoundError, KeyError, ValueError) as e:
-            check(False, f"{src.name[:2]}: template cannot be rendered ({type(e).__name__}: {e})")
+            check(False, f"{src.name.split(chr(45))[0]}: template cannot be rendered ({type(e).__name__}: {e})")
             continue
         got = strip((ARTICLES / src.name).read_text(encoding="utf-8"))
-        check(want == got, f"{src.name[:2]}: rendered article matches template and artifacts")
+        check(want == got, f"{src.name.split(chr(45))[0]}: rendered article matches template and artifacts")
 
 
 def main() -> int:

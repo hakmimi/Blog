@@ -34,7 +34,7 @@ Branch `upgrade/publication-quality`. Nothing is pushed. The per-claim list of c
 ## Remaining limitations
 
 - **Length target not met.** Core prose is about 9% longer than before, not 20 to 30% shorter. Code is folded but is not counted as removed.
-- **Not created.** A "Part 0" and the statistics/apple-grid post.
+- **Added after the first report.** Part 0 (series map) and Part 0b (sigmoid and the apple grid, with the Grid Lab widget and `export_apple_grid.py`). They are numbered 0 and 0b so parts 1 to 16 keep their numbers. Part 0b's apples are synthetic.
 - **Temporal.** There is one future block, so those results carry no intervals.
 - **Stability.** Three seeds were completed (five were planned). The run was stopped after seed 102 to keep the timing run clean. Part 13 reads the split count from `stability_notes.json`.
 - **Thread sensitivity.** XGBoost results depend on the OpenMP thread count; do not run with fewer than 6 threads.

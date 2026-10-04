@@ -17,6 +17,7 @@ HERE = Path(__file__).resolve().parent
 STEPS = {
     "download": ["download_data.py"],
     "protocol": ["protocol.py"],
+    "apples": ["export_apple_grid.py"],
     "data": ["exp_data.py"],
     "metrics": ["exp_metrics.py"],
     "linear": ["exp_linear.py"],

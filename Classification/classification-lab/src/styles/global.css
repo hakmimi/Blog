@@ -224,3 +224,21 @@ a.series-card:hover { transform:translateY(-3px); border-color:color-mix(in srgb
 .tl-dot { fill:var(--coral); stroke:var(--card); stroke-width:2; } .tl-best-dot { fill:var(--gold); stroke:var(--card); }
 .tl-cur-line { stroke:var(--coral); stroke-width:1.2; } .tl-be-line { stroke:var(--gold); stroke-width:1.2; stroke-dasharray:3 3; }
 .tl-h0 { fill:var(--muted); opacity:.55; } .tl-h1 { fill:var(--teal); }
+
+/* interactive grid lab (public/js/apple-grid-lab.js) */
+.ag { border:1px solid var(--line); border-radius:14px; background:var(--card); padding:1rem 1.1rem 1.2rem; margin:2rem 0; box-shadow:var(--shadow); font-size:.92rem; }
+.ag-controls { display:flex; flex-wrap:wrap; gap:.8rem 1.4rem; align-items:end; }
+.ag-controls label { display:flex; flex-direction:column; gap:.25rem; color:var(--muted); font-size:.8rem; }
+.ag-controls .ag-check { flex-direction:row; align-items:center; gap:.4rem; }
+.ag-controls select { font:inherit; padding:.3rem .5rem; border:1px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); }
+.ag-slider { flex:1 1 240px; } .ag-slider strong { color:var(--ink); font-variant-numeric:tabular-nums; } .ag-slider input { width:100%; accent-color:var(--teal); }
+.ag-body { display:grid; grid-template-columns:minmax(260px,380px) 1fr; gap:1.2rem 1.6rem; align-items:start; margin-top:1rem; }
+.ag-body svg { width:100%; height:auto; }
+.ag-frame { fill:none; stroke:var(--line); } .ag-cut { stroke:var(--line); stroke-width:.6; } .ag-axis { fill:var(--muted); font-size:10px; }
+.ag-pt { stroke:var(--card); stroke-width:.8; } .ag-pt.ag-g { fill:#2f8f55; } .ag-pt.ag-r { fill:#c94b46; } .ag-pt.ag-te { fill:none; stroke-width:1.4; } .ag-pt.ag-te.ag-g { stroke:#2f8f55; } .ag-pt.ag-te.ag-r { stroke:#c94b46; }
+.ag-line-d { stroke:var(--gold); stroke-width:2.2; stroke-dasharray:6 4; }
+.ag-stats { display:flex; gap:1.4rem; flex-wrap:wrap; margin:0 0 .8rem; }
+.ag-stats dt { font-size:.74rem; color:var(--muted); } .ag-stats dd { margin:0; font-size:1.5rem; font-weight:750; color:var(--ink); font-variant-numeric:tabular-nums; } .ag-stats .neg { color:var(--coral); }
+.ag-table { border-collapse:collapse; font-variant-numeric:tabular-nums; } .ag-table th,.ag-table td { padding:.3rem .8rem; text-align:right; border-bottom:1px solid var(--line); } .ag-table th:first-child { text-align:left; }
+.ag-note { color:var(--muted); font-size:.8rem; }
+@media (max-width:700px) { .ag-body { grid-template-columns:1fr; } }
