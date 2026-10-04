@@ -18,8 +18,6 @@ Fit a logistic regression on this data and look at the two economic indicators `
 
 **Work plan.** Put the preprocessing inside the model. Sweep the regularisation strength with cross-validation on the development rows. Read the coefficients as odds ratios against a stated reference. Then compare two Naive Bayes variants against it.
 
-**You will leave with** a baseline score for the rest of the series (cross-validated AP about 0.45) and a rule for reading coefficients.
-
 </div>
 
 ## Preprocessing inside the model
@@ -57,7 +55,7 @@ for C in (0.001, 0.01, 0.1, 1, 10):
 (filled in by the build)
 ```
 
-`OneHotEncoder` turns each category into 0/1 columns, and `handle_unknown="ignore"` lets a category unseen in training pass as all zeros. `StandardScaler` puts numeric columns on a common scale, which matters because the penalty below treats all coefficients alike. Does fitting the scaler on *all* development rows before cross-validating, instead of inside each fold, change the score? We measured it: for this logistic regression the difference is @@v:linear_pipeline_isolation.csv|model=Logistic regression|difference|.4f@@ AP, and for a k-nearest-neighbours model with k=50 it is @@v:linear_pipeline_isolation.csv|model=k-nearest neighbours (k=50)|difference|.4f@@. On this data the leak is negligible. We keep the pipeline anyway, because the habit costs nothing and the effect can be large for other models and datasets.
+`OneHotEncoder` makes 0/1 columns (a category unseen in training becomes all zeros) and `StandardScaler` puts numeric columns on a common scale, which matters for the penalty. Fitting the scaler on *all* development rows before cross-validating, instead of inside each fold, changed AP by @@v:linear_pipeline_isolation.csv|model=Logistic regression|difference|.4f@@ for logistic regression and @@v:linear_pipeline_isolation.csv|model=k-nearest neighbours (k=50)|difference|.4f@@ for k-NN: a negligible leak here. We keep the pipeline anyway, since the habit is free and the effect can be large elsewhere.
 
 ## The one setting that matters
 
@@ -69,7 +67,7 @@ The table above shows a **plateau**: from `C = 0.1` upward the mean scores (@@v:
 
 For this model the coefficient *w* of a feature is the change in the **log-odds** of a subscription for a one-unit change of that feature, with all other features held fixed. Exponentiate it to get an **odds ratio**: 2.0 means the odds double, 0.5 means they halve.
 
-One technical point matters before reading any of them. With every category one-hot encoded plus an intercept, the columns of each variable add up to a constant, so individual dummy coefficients are not identified on their own (part 4 measured the rank deficiency). Only *differences* between levels of the same variable mean something. So the table below uses an encoding with one reference level dropped per variable, the most frequent level (@@j:linear_notes.json|reference_levels.contact@@ contacts, `month = @@j:linear_notes.json|reference_levels.month@@`, and so on). A categorical odds ratio is then a ratio against that reference. Numeric columns are per standard deviation. The intervals come from refitting on 100 bootstrap resamples of the development rows.
+One technical point first. With every category one-hot encoded plus an intercept, each variable's columns add up to a constant, so single dummy coefficients are not identified (part 4 measured the rank deficiency); only *differences* between levels mean something. The table therefore uses one dropped reference level per variable, the most frequent (@@j:linear_notes.json|reference_levels.contact@@ contacts, `month = @@j:linear_notes.json|reference_levels.month@@`, and so on), so a categorical odds ratio is a ratio against that reference. Numeric columns are per standard deviation, and intervals come from 100 bootstrap refits of the development rows.
 
 @@table:linear_odds_ratios.csv|where=term~emp.var.rate;cons.price.idx;cons.conf.idx;euribor3m;nr.employed|cols=term,odds_ratio,or_lo,or_hi|rename=term:column,odds_ratio:odds ratio,or_lo:2.5%,or_hi:97.5%@@
 
@@ -82,7 +80,7 @@ Now the macro columns. Here is how correlated they are:
 
 @@table:linear_macro_correlation.csv|fmt=emp.var.rate:.2f;cons.price.idx:.2f;cons.conf.idx:.2f;euribor3m:.2f;nr.employed:.2f@@
 
-`emp.var.rate`, `euribor3m` and `nr.employed` are close to being the same variable (correlations 0.91 to 0.97). The model has to share credit between them, and the *combination* of coefficients, not any single one, carries the signal. "Holding the others fixed" then describes economies that never occurred, such as a high price index with a low employment-variation rate. So three different things are easy to confuse. An individual coefficient can be **unstable** when columns overlap, although here the bootstrap intervals are fairly narrow. It describes a **conditional association** (given the other columns), which differs from the raw association. And it is **not a causal effect**: nothing here says that changing the economy would change anyone's decision. Read correlated columns as a group.
+`emp.var.rate`, `euribor3m` and `nr.employed` are nearly the same variable (correlations 0.91 to 0.97), so the model shares credit between them and the *combination* of coefficients carries the signal. "Holding the others fixed" then describes economies that never occurred. Keep three things apart: an individual coefficient can be **unstable** when columns overlap (although the intervals here are fairly narrow), it is a **conditional association** given the other columns, and it is **not a causal effect**. Read correlated columns as a group.
 
 ## Naive Bayes: the same data, a different assumption
 
@@ -90,14 +88,14 @@ Naive Bayes models each feature separately within each class and multiplies the 
 
 @@table:linear_naive_bayes.csv|cols=model,average_precision,roc_auc,log_loss,ece_10_quantile,mean_score,share_above_0.9,share_below_0.1|rename=average_precision:AP,roc_auc:AUC,log_loss:log loss,ece_10_quantile:ECE,mean_score:mean p,share_above_0.9:share > 0.9,share_below_0.1:share < 0.1|fmt=share_above_0.9:.3f;share_below_0.1:.3f@@
 
-The share of records that subscribe is @@j:data_profile.json|prevalence|.3f@@. Gaussian Naive Bayes on one-hot columns, the version most tutorials show, ranks worse than logistic regression, and its probabilities are far off: log loss @@v:linear_naive_bayes.csv|model=Gaussian NB on one-hot columns|log_loss|.2f@@ against @@v:linear_naive_bayes.csv|model=Logistic regression (C=0.1)|log_loss|.2f@@, with @@v:linear_naive_bayes.csv|model=Gaussian NB on one-hot columns|share_above_0.9|.0%@@ of records scored above 0.9. Treating a 0/1 column as a Gaussian is a poor fit, so we treat this variant as a deliberately imperfect baseline, not as "what Naive Bayes can do". The categorical variant, with numerics cut into ten quantile bins, ranks better (AP @@v:linear_naive_bayes.csv|model=Categorical NB on binned numerics|average_precision|.3f@@) yet remains over-confident. In both cases the independence assumption lets correlated evidence be counted more than once: `emp.var.rate`, `euribor3m` and `nr.employed` each push the score the same way, and the model multiplies the pushes. Ranking and probability quality are separate skills, and part 11 shows what repairing the probabilities costs.
+The share of subscribers is @@j:data_profile.json|prevalence|.3f@@. Gaussian Naive Bayes on one-hot columns, the usual tutorial version, ranks worse than logistic regression and its probabilities are far off: log loss @@v:linear_naive_bayes.csv|model=Gaussian NB on one-hot columns|log_loss|.2f@@ against @@v:linear_naive_bayes.csv|model=Logistic regression (C=0.1)|log_loss|.2f@@, with @@v:linear_naive_bayes.csv|model=Gaussian NB on one-hot columns|share_above_0.9|.0%@@ of records above 0.9. Gaussians on 0/1 columns fit poorly, so this is a deliberately imperfect baseline, not what Naive Bayes can do. The categorical variant with ten quantile bins ranks better (AP @@v:linear_naive_bayes.csv|model=Categorical NB on binned numerics|average_precision|.3f@@) but stays over-confident: correlated evidence (`emp.var.rate`, `euribor3m`, `nr.employed`) is multiplied as if independent. Ranking and probability quality are separate skills (part 11).
 
 ## Analysis and conclusion: what we learned
 
-- **Baseline.** A cross-validated AP of about 0.45 with logistic regression. Everything later must beat this by more than the fold-to-fold spread.
+- **Baseline.** A cross-validated AP of about 0.45 with logistic regression. Later models should beat it by more than the fold-to-fold spread.
 - **Tuning.** `C` shows a plateau from 0.1 upward, so choose the more regularised setting among ties.
 - **Pipelines.** Putting preprocessing inside the model removed a leak that happened to be negligible here.
-- **Coefficients.** They are conditional associations relative to a stated reference level, and correlated columns must be read together.
+- **Coefficients.** They are conditional associations relative to a stated reference level, and correlated columns should be read together.
 - **Naive Bayes.** Its quality depends on the representation. The Gaussian-on-one-hot variant is a weak baseline, and either variant is over-confident because the independence assumption double-counts correlated evidence.
 
 [Part 6](/series/classification/06-decision-trees/) asks whether a model that can find interactions and thresholds does better, and how easily it overfits.

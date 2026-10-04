@@ -1,0 +1,26 @@
+model,calibration,average_precision,roc_auc,pr_auc_trapezoid,log_loss,brier,ece_10_quantile,prevalence,mean_score,distinct_scores,ece_10_uniform,records_at_or_above_break_even,contribution_at_break_even
+Logistic regression,none (raw),0.46077,0.78700,0.46033,0.27747,0.07808,0.00481,0.11265,0.11353,8024,0.00464,1592,2936.00000
+Logistic regression,"sigmoid, 5-fold ensemble around the pipeline",0.46078,0.78710,0.46035,0.27747,0.07810,0.00500,0.11265,0.11342,8024,0.00513,1592,2936.00000
+Logistic regression,"sigmoid, map fitted on out-of-fold scores, applied to one fixed score vector",0.46077,0.78700,0.46033,0.27747,0.07809,0.00475,0.11265,0.11343,8024,0.00461,1592,2936.00000
+Logistic regression,"isotonic, 5-fold ensemble around the pipeline",0.45686,0.78696,0.45930,0.28692,0.07825,0.00750,0.11265,0.11354,1093,0.00692,1501,2939.00000
+Logistic regression,"isotonic, map fitted on out-of-fold scores, applied to one fixed score vector",0.44151,0.78587,0.45972,0.28696,0.07842,0.00358,0.11265,0.11362,68,0.00655,1516,2948.00000
+Random forest (library default),none (raw),0.39384,0.76827,0.39400,0.37628,0.08657,0.03783,0.11265,0.11669,1769,0.03725,2089,2703.00000
+Random forest (library default),"sigmoid, 5-fold ensemble around the pipeline",0.41334,0.77285,0.41288,0.28988,0.08250,0.01302,0.11265,0.11310,7635,0.01587,1550,2770.00000
+Random forest (library default),"sigmoid, map fitted on out-of-fold scores, applied to one fixed score vector",0.39384,0.76827,0.39401,0.32874,0.09041,0.05655,0.11265,0.11230,1691,0.03560,2866,2478.00000
+Random forest (library default),"isotonic, 5-fold ensemble around the pipeline",0.41495,0.77287,0.41468,0.28823,0.08209,0.00481,0.11265,0.11315,3024,0.00564,1809,2759.00000
+Random forest (library default),"isotonic, map fitted on out-of-fold scores, applied to one fixed score vector",0.37822,0.76750,0.39745,0.29252,0.08365,0.00813,0.11265,0.11333,47,0.00621,1987,2749.00000
+Random forest (min_samples_leaf=10),none (raw),0.46732,0.79399,0.46683,0.27392,0.07709,0.00990,0.11265,0.11431,8023,0.00645,1573,3019.00000
+Random forest (min_samples_leaf=10),"sigmoid, 5-fold ensemble around the pipeline",0.46637,0.79407,0.46579,0.27426,0.07704,0.01146,0.11265,0.11409,8024,0.00815,1324,3028.00000
+Random forest (min_samples_leaf=10),"sigmoid, map fitted on out-of-fold scores, applied to one fixed score vector",0.46732,0.79399,0.46683,0.27392,0.07708,0.00968,0.11265,0.11417,8023,0.00620,1570,3022.00000
+Random forest (min_samples_leaf=10),"isotonic, 5-fold ensemble around the pipeline",0.46383,0.79264,0.46403,0.27423,0.07720,0.00792,0.11265,0.11416,2086,0.00654,1383,3057.00000
+Random forest (min_samples_leaf=10),"isotonic, map fitted on out-of-fold scores, applied to one fixed score vector",0.45050,0.79277,0.46745,0.27409,0.07710,0.00697,0.11265,0.11452,76,0.00564,1351,3041.00000
+Gaussian Naive Bayes,none (raw),0.35181,0.76426,0.43798,2.31137,0.18872,0.18931,0.11265,0.22983,7385,0.19036,2207,2585.00000
+Gaussian Naive Bayes,"sigmoid, 5-fold ensemble around the pipeline",0.35455,0.76509,0.43903,0.30659,0.08899,0.03920,0.11265,0.11406,7398,0.00410,1947,2605.00000
+Gaussian Naive Bayes,"sigmoid, map fitted on out-of-fold scores, applied to one fixed score vector",0.35181,0.76426,0.43798,0.29520,0.08424,0.01069,0.11265,0.11372,7385,0.00936,1555,2397.00000
+Gaussian Naive Bayes,"isotonic, 5-fold ensemble around the pipeline",0.35064,0.76529,0.43846,0.29442,0.08411,0.00676,0.11265,0.11390,445,0.00722,2010,2630.00000
+Gaussian Naive Bayes,"isotonic, map fitted on out-of-fold scores, applied to one fixed score vector",0.34254,0.76374,0.43889,0.29426,0.08404,0.00637,0.11265,0.11360,34,0.00805,2009,2631.00000
+LightGBM (library default),none (raw),0.45918,0.79863,0.45954,0.27466,0.07754,0.00949,0.11265,0.11501,2912,0.00975,1463,3009.00000
+LightGBM (library default),"sigmoid, 5-fold ensemble around the pipeline",0.46765,0.80150,0.46701,0.27505,0.07735,0.01564,0.11265,0.11398,7822,0.01226,1242,3046.00000
+LightGBM (library default),"sigmoid, map fitted on out-of-fold scores, applied to one fixed score vector",0.45918,0.79863,0.45954,0.27413,0.07741,0.00657,0.11265,0.11433,2912,0.00650,1443,3013.00000
+LightGBM (library default),"isotonic, 5-fold ensemble around the pipeline",0.46831,0.80156,0.46786,0.27242,0.07695,0.00727,0.11265,0.11399,3117,0.00562,1430,3066.00000
+LightGBM (library default),"isotonic, map fitted on out-of-fold scores, applied to one fixed score vector",0.44224,0.79744,0.46006,0.27425,0.07754,0.00681,0.11265,0.11413,47,0.00698,1281,3071.00000

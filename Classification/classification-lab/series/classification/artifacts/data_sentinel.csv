@@ -1,0 +1,7 @@
+pdays_representation,model,cv_ap_mean,cv_ap_sd
+raw value (999 = never contacted),Logistic regression,0.44764,0.01624
+raw value (999 = never contacted),k-nearest neighbours,0.31975,0.00725
+raw value (999 = never contacted),LightGBM,0.46271,0.01541
+flag + recency,Logistic regression,0.44734,0.01693
+flag + recency,k-nearest neighbours,0.31575,0.00826
+flag + recency,LightGBM,0.46220,0.01464

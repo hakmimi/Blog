@@ -20,8 +20,6 @@ That pair of facts is the reason for this series. The data come from a Portugues
 
 **Work plan.** Pin down what a row is, count the outcomes, score two baselines (do nothing, and a rule a human could write), look for signal in the raw rates, and fix the rules every later comparison follows.
 
-**You will leave with** two baselines to beat, a precise decision to model, and an evaluation protocol that says in advance what each number can and cannot show.
-
 </div>
 
 ## What one row is, and what it is not
@@ -34,7 +32,7 @@ Three words need care.
 - **Contact.** One call attempt. The documentation describes `contact`, `month`, `day_of_week` and `duration` as attributes of "the last contact of the current campaign", and `campaign` as the "number of contacts performed during this campaign and for this client (includes last contact)". `campaign` is above 1 in @@j:data_profile.json|campaign_gt1_share|.1%@@ of records and reaches @@j:data_profile.json|campaign_max|d@@. So a record looks like a summary of one client's campaign: the last contact plus a count of how many contacts it took.
 - **Decision.** Just before a planned contact, rank the planned contacts by how likely each is to end in a subscription, so the bank can choose which to make. Only information that exists at that moment may be a feature, and the schedule (channel, month, weekday) is assumed to be known. Part 2 checks every column against that rule.
 
-The label `y` says whether the client subscribed to the term deposit. It does not say how many calls it took, what each call cost, or whether the client would have subscribed without being called. We keep these limits in view because the price calculation in part 14 depends on them.
+The label `y` says whether the client subscribed. It does not say how many calls it took, what they cost, or whether the client would have subscribed anyway; part 14 depends on these limits.
 
 ## Two numbers before any model
 
@@ -110,15 +108,13 @@ success      0.651   1373
 
 ## Analysis and conclusion: what we learned
 
-- **Accuracy alone cannot grade this problem.** The do-nothing baseline scores 0.887 and finds nothing.
-- **A simple rule is already a real classifier**, with precision 0.65 and recall 0.19, and it shows the trade-off every later model faces.
-- **The raw rates show real structure**, but they are descriptive, and the bank's own choices shaped them.
+Accuracy alone cannot grade this problem (do-nothing scores 0.887 and finds nothing), a one-line rule is already a real classifier with a trade-off every model must face, and the raw rates are descriptive and shaped by the bank's own choices. Four rules hold for the rest of the series.
 
-Four rules hold for the rest of the series.
+1. **Records, not clients.** "Record" is a row, "contact" a call, "client" the person the documentation describes. We never claim records are distinct people.
+2. **An illustrative price list.** A contact costs 1 and a subscription is worth 8: teaching assumptions, not the bank's figures. On past records they give a retrospective policy simulation, not value created by calling (part 14).
+3. **A written protocol.** Records are split once, at random and stratified, into *development* (80%, seed 42) and *comparison* (20%). Every choice is made on development data with cross-validation; algorithms are compared on the comparison part with settings frozen. Earlier drafts did look at it while exploring, so it is a controlled benchmark, not an untouched test set. A chronological evaluation covers later records (part 16).
+4. **Uncertainty with every comparison.** A difference of 0.004 is not a result until we know how much it moves with a different sample.
 
-1. **Records, not clients.** We say "record" for a row, "contact" for a call, and "client" only for the person the documentation describes. We never claim that records are distinct people.
-2. **An illustrative price list.** A contact costs 1 unit and a subscription is worth 8. These are teaching assumptions, not figures from the bank. Applied to past records they give a retrospective policy simulation, not an estimate of the value created by calling (part 14 explains the difference).
-3. **A written evaluation protocol.** The records are split once, at random and stratified by outcome, into a *development* part (80%) and a *comparison* part (20%), with seed 42. Every choice (features, settings, early stopping, calibration, thresholds) is made on development data with cross-validation. Algorithms are then compared on the comparison part as a controlled benchmark, with their settings frozen. Earlier drafts of this series did look at the comparison part while exploring, so we do not call it untouched. A separate chronological evaluation asks what happens on later records (part 16).
-4. **Uncertainty comes with every comparison.** A difference of 0.004 in a metric is not a result until we have checked how much it moves with a different sample.
+*Sources.* Moro, Cortez and Rita (2014), [A data-driven approach to predict the success of bank telemarketing](https://doi.org/10.1016/j.dss.2014.03.001); the dataset and its documentation at the [UCI repository](https://doi.org/10.24432/C5K306).
 
 The races use twelve models plus a no-model baseline. [Part 2](/series/classification/02-why-classification-is-hard/) first asks which columns we are allowed to use at all, because one of them changes everything.

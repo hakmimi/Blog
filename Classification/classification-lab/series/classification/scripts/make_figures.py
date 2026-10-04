@@ -31,7 +31,13 @@ plt.rcParams.update({"figure.dpi": 140, "savefig.dpi": 180, "font.size": 10, "ax
                      "axes.spines.right": False, "axes.grid": True, "grid.alpha": .18, "axes.facecolor": "#fbfcfd"})
 
 
+READS: list[str] = []
+PROVENANCE: dict[str, list[str]] = {}
+
+
 def save(name):
+    PROVENANCE[name] = sorted(set(READS))
+    READS.clear()
     plt.tight_layout()
     plt.savefig(FIG / name, bbox_inches="tight")
     plt.close()
@@ -39,10 +45,12 @@ def save(name):
 
 
 def csv(name):
+    READS.append(name)
     return pd.read_csv(ART / name)
 
 
 def js(name):
+    READS.append(name)
     return json.loads((ART / name).read_text(encoding="utf-8"))
 
 
@@ -58,10 +66,11 @@ def ch01():
     for ax, col, title in zip(axs, ["contact", "poutcome", "month"], ["Contact channel", "Previous campaign outcome", "Month of the last contact"]):
         g = seg[seg["column"] == col].sort_values("rate")
         ax.barh(g.level, g.rate * 100, color=C["teal"], xerr=[(g.rate - g.rate_lo) * 100, (g.rate_hi - g.rate) * 100], error_kw={"lw": 1, "capsize": 2})
-        for y_, (r, n) in enumerate(zip(g.rate, g.records)):
-            ax.text(r * 100 + 1.5, y_, f"n={n:,}", va="center", fontsize=7, color="#555")
+        for y_, (hi, n) in enumerate(zip(g.rate_hi, g.records)):
+            ax.text(hi * 100 + 1.0, y_, f"n={n:,}", va="center", fontsize=7, color="#555")
+        ax.set_xlim(0, g.rate_hi.max() * 100 * 1.28)
         ax.axvline(prev, color=C["coral"], ls="--", lw=1.2)
-        ax.set_title(title); ax.set_xlabel("% of records ending in a subscription (95% interval)")
+        ax.set_title(title); ax.set_xlabel("% of records ending in a subscription")
     save("ch01-segments.png")
 
 
@@ -136,7 +145,8 @@ def ch05():
 
 
 def ch06():
-    d = csv("trees_sweeps.csv")
+    READS.append("trees_sweeps.csv")
+    d = pd.read_csv(ART / "trees_sweeps.csv", dtype={"value": str})
     fig, axs = plt.subplots(1, 2, figsize=(11, 3.9))
     for ax, setting, xl in ((axs[0], "max_depth", "max_depth"), (axs[1], "min_samples_leaf", "min_samples_leaf")):
         g = d[d.setting == setting].reset_index(drop=True)
@@ -200,7 +210,7 @@ def ch11():
     for ax, zoom in zip(axs, (False, True)):
         for (m, c), col in zip(sel, (C["blue"], C["coral"], C["green"], C["violet"], C["gold"])):
             g = r[(r.model == m) & (r.calibration == c)]
-            ax.errorbar(g.mean_score, g.rate, yerr=[g.rate - g.rate_lo, g.rate_hi - g.rate], fmt="o-", ms=4, lw=1, capsize=2, color=col, label=f"{m} ({c})" if not zoom else None)
+            ax.errorbar(g.mean_score, g.rate, yerr=[g.rate - g.rate_lo, g.rate_hi - g.rate], fmt="o-", ms=4, lw=1, capsize=2, color=col, label=(m if c.startswith("none") else f"{m}, sigmoid calibrated") if not zoom else None)
         lim = 0.4 if zoom else 1.0
         ax.plot([0, lim], [0, lim], "--", color="#999"); ax.set_xlim(0, lim); ax.set_ylim(0, lim)
         ax.axvline(P.BREAK_EVEN, color="#bbb", ls=":"); ax.set_xlabel("Mean predicted probability in the bin"); ax.set_ylabel("Observed rate (Wilson 95%)")
@@ -325,32 +335,34 @@ def ch15():
 
 def ch16():
     pol = csv("temporal_policies.csv")
-    fig, axs = plt.subplots(1, 2, figsize=(12, 4.8))
-    base = pol[(pol.policy == "break-even (1/8)")]
-    for ax, metric, ttl in ((axs[0], "ap", "Average precision on the future records"), (axs[1], "contribution", "Simulated contribution at break-even 1/8")):
-        pivot = base.pivot(index="model", columns="correction", values=metric)
-        order = pivot["none"].sort_values().index if metric == "ap" else pivot["none"].sort_values().index
-        for k, (c, col) in enumerate((("none", C["coral"]), ("EM on unlabelled scores", C["gold"]), ("oracle prevalence (diagnostic)", C["teal"]))):
-            if metric == "ap" and c != "none":
-                continue
-            ax.barh(np.arange(len(order)) + (k - 1) * .27, pivot.loc[order, c], .27, color=col, label=c)
-        ax.set_yticks(np.arange(len(order)), [short(m) for m in order], fontsize=8); ax.set_title(ttl)
-    ev = pol.call_everyone.iloc[0]
-    axs[1].axvline(ev, color="k", ls="--"); axs[1].text(ev, -.6, "call everyone", fontsize=8, rotation=90, va="bottom", ha="right")
-    axs[0].axvline(P.build_manifest()["blocks"][3]["prevalence"], color="#999", ls=":"); axs[0].set_xlabel("AP (dotted: prevalence of the future block)")
-    axs[1].legend(frameon=False, fontsize=7)
+    base = pol[pol.policy == "break-even (1/8)"]
+    fig, axs = plt.subplots(1, 2, figsize=(12.5, 5.2))
+    ap = base[base.correction == "none"].sort_values("ap")
+    order = list(ap.model)
+    axs[0].barh(np.arange(len(order)), ap.ap, color=C["teal"])
+    axs[0].axvline(js("temporal_shift.json")["prevalence_future"], color="#999", ls=":")
+    axs[0].set_yticks(np.arange(len(order)), [short(m) for m in order], fontsize=8)
+    axs[0].set_xlabel("AP on the future block (dotted: prevalence of the future block)"); axs[0].set_title("Ranking within the future block")
+    piv = base.pivot(index="model", columns="correction", values="contribution").loc[order]
+    cols = [("none", C["coral"]), ("last-window prevalence", C["gold"]), ("EM on unlabelled scores", C["violet"]), ("oracle prevalence (diagnostic)", C["teal"])]
+    for k, (c, col) in enumerate(cols):
+        axs[1].barh(np.arange(len(order)) + (k - 1.5) * .2, piv[c], .2, color=col, label=c)
+    ev = base.call_everyone.iloc[0]
+    axs[1].axvline(ev, color="k", ls="--"); axs[1].text(ev, len(order) - .3, " call everyone", fontsize=8, va="top")
+    axs[1].set_yticks(np.arange(len(order)), [short(m) for m in order], fontsize=8)
+    axs[1].set_xlabel("Simulated contribution at break-even 1/8 (cost 1, value 8; illustrative)"); axs[1].set_title("Contribution with each correction")
+    axs[1].legend(frameon=False, fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.13), ncol=2)
     save("ch16-time-shift.png")
-    f = pd.DataFrame(P.build_manifest()["blocks"])
-    f = f[f.block.str.contains("fold|future|development \\(first", regex=True)] if False else f
+    t = csv("temporal_blocks.csv")
+    v = t[t.block.str.endswith("validate")].reset_index(drop=True)
+    fut = t[t.block.str.startswith("future")].iloc[0]
+    labels = [f"validation {i + 1}" for i in range(len(v))] + ["future"]
+    prev = list(v.prevalence) + [fut.prevalence]; recs = list(v.records) + [fut.records]
     fig, ax = plt.subplots(figsize=(8.4, 3.8))
-    t = f[f.block.str.startswith("temporal fold") & f.block.str.endswith("validate")].reset_index(drop=True)
-    parts = [("training window", f[f.block == "temporal development (first 80% of rows)"].iloc[0]), ("future", f[f.block == "future (last 20% of rows)"].iloc[0])]
-    labels = [b.split(": ")[0] for b in t.block] + ["future"]
-    prev = list(t.prevalence) + [parts[1][1].prevalence]
-    ax.bar(labels, np.array(prev) * 100, color=[C["teal"]] * len(t) + [C["coral"]])
-    for i, (b, pr) in enumerate(zip(list(t.records) + [parts[1][1].records], prev)):
+    ax.bar(labels, np.array(prev) * 100, color=[C["teal"]] * len(v) + [C["coral"]])
+    for i, (b, pr) in enumerate(zip(recs, prev)):
         ax.text(i, pr * 100 + .8, f"{int(b):,} records", ha="center", fontsize=8)
-    ax.set_ylabel("% subscribed in the validation block"); ax.set_title("Prevalence of the temporal validation blocks and of the future")
+    ax.set_ylabel("% subscribed"); ax.set_title("Share of subscribers in the temporal validation blocks and in the future")
     save("ch16-folds.png")
 
 
@@ -360,7 +372,12 @@ ALL = {"ch01": ch01, "ch02": ch02, "ch02_drift": ch02_drift, "ch03": ch03, "ch04
 
 if __name__ == "__main__":
     for name in sys.argv[1:] or list(ALL):
+        READS.clear()
         try:
             ALL[name]()
         except FileNotFoundError as e:
             print(f"skipped {name}: missing {e.filename}")
+    path = ART / "figure_provenance.json"
+    old = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    old.update(PROVENANCE)
+    path.write_text(json.dumps(dict(sorted(old.items())), indent=1), encoding="utf-8")

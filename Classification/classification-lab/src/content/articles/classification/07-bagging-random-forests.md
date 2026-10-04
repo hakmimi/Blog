@@ -1,48 +1,35 @@
 ---
 title: "Bagging and Random Forests: Averaging Away the Noise"
-description: "Build bagging from scratch in ten lines, watch one tree at 0.365 average precision become 0.489 when averaged, then see what the 'random' in random forest adds."
+description: "Each tree overfits differently, so their average is better than any one of them. We build bagging by hand, measure how correlated the trees are, and test what randomness, tree count and out-of-bag scores actually do."
 series: "classification"
 order: 7
 date: 2026-09-30
-updated: 2026-10-02
-keywords: ["random forest", "bagging", "extra trees", "bootstrap", "out-of-bag", "ensemble methods"]
-readingTime: "15 min read"
+updated: 2026-10-04
+keywords: ["bagging", "random forest", "extra trees", "out-of-bag", "variance reduction"]
+readingTime: "11 min read"
 figure: "ch07-bagging.png"
 ---
 
-In [part 6](/series/classification/06-decision-trees/) we found that a single decision tree is an unstable learner: shuffle the training rows slightly and you get a different tree, with different splits and different predictions. That sounds like a flaw. **Bagging turns it into the whole strategy.**
+A single small tree scores about 0.38 average precision on rows it has not seen. Average 200 trees, each of them no better than before, and the score is about 0.46. Nothing in any individual tree improved. The average did, because the trees' mistakes are partly independent and cancel.
 
-The idea: if each tree makes errors that are partly *independent* of the other trees' errors, averaging many trees cancels the noise while keeping the signal. Let's implement it before using the library version, so that "random forest" stops being a black box.
+<div class="callout">
 
-## Goals: what are we trying to achieve?
+**Goal.** Understand why averaging many unstable trees works, what makes it work better, and what a forest costs.
 
-One tree is unstable. Our goal is to turn that weakness into a strength by averaging many trees, and to understand why it works instead of treating "random forest" as a black box.
+**Work plan.** Build bagging from scratch and score it on inner validation rows while the number of trees grows. Measure how correlated the trees are. Compare random forests and extra trees. Check how many trees are enough, and what the out-of-bag score tells you.
 
-By the end you will be able to:
+</div>
 
-- **Build bagging in about ten lines** and measure how many trees are enough.
-- **Explain the random-forest trick** (a random subset of features at each split) in terms of correlation between trees.
-- **Use out-of-bag scores** as a free validation set, and know what to tune.
+## Bagging from scratch
 
-## The work plan: how do we do it?
+**Bagging** (bootstrap aggregating) gives each tree its own sample of the training rows, drawn with replacement, and averages their predicted probabilities. A bootstrap sample contains about 63% of the distinct rows, some of them several times. All experiments in this chapter fit on 75% of the development rows (the *fit* rows) and score on the other 25% (the *validation* rows). The comparison split is not used.
 
-We build up from a hand-made ensemble to the library version:
-
-1. **Bagging from scratch**: 200 trees on bootstrap samples, averaged.
-2. **Measure the correlation** between trees, to see why more randomness helps.
-3. **Random forest and Extra Trees**: vary `max_features` and compare score and fit time.
-4. **Out-of-bag score and number of trees**: cheap checks that need no extra data.
-
-## Implementation
-
-### Bagging from scratch
-
-**B**ootstrap **agg**regat**ing**: give each tree its own random sample of the training rows, drawn *with replacement* (so each sample contains about 63% of the distinct rows, some duplicated), then average their predicted probabilities.
+**Implementation.** Fit 200 trees, one per bootstrap sample, and score the average of the first n.
 
 ```python
 import numpy as np
 import pandas as pd
-from sklearn.compose import ColumnTransformer
+from sklearn.compose import make_column_transformer
 from sklearn.metrics import average_precision_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
@@ -50,170 +37,115 @@ from sklearn.tree import DecisionTreeClassifier
 
 df = pd.read_csv("bank-additional-full.csv", sep=";")
 y = (df.pop("y") == "yes").astype(int).to_numpy()
-X = df.drop(columns="duration")
-Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
-cat = X.select_dtypes("object").columns.tolist()
-prep = ColumnTransformer([("cat", OneHotEncoder(handle_unknown="ignore", sparse_output=False), cat)],
-                         remainder="passthrough")
-A, B = prep.fit_transform(Xtr), prep.transform(Xte)
+X = df.drop(columns=["duration", "campaign"])
+dev, _ = train_test_split(np.arange(len(X)), test_size=0.2, stratify=y, random_state=42)
+dev = np.sort(dev)
+fit, val = train_test_split(dev, test_size=0.25, stratify=y[dev], random_state=42)
+
+cat = [c for c in X.columns if X[c].dtype == object]
+prep = make_column_transformer((OneHotEncoder(handle_unknown="ignore", sparse_output=False), cat), remainder="passthrough")
+A, B = prep.fit_transform(X.iloc[fit]), prep.transform(X.iloc[val])
+yf, yv = y[fit], y[val]
 
 rng = np.random.default_rng(0)
 votes = []
 for i in range(200):
-    rows = rng.integers(0, len(A), len(A))                      # sample WITH replacement
-    tree = DecisionTreeClassifier(min_samples_leaf=20, random_state=i).fit(A[rows], ytr[rows])
+    rows = rng.integers(0, len(A), len(A))                          # a bootstrap sample
+    tree = DecisionTreeClassifier(min_samples_leaf=20, random_state=i).fit(A[rows], yf[rows])
     votes.append(tree.predict_proba(B)[:, 1])
-votes = np.array(votes)                                          # shape (200 trees, 8238 customers)
+votes = np.array(votes)
+
+for n in (1, 5, 25, 100, 200):
+    print(f"average of {n:>3} trees: validation AP {average_precision_score(yv, votes[:n].mean(axis=0)):.3f}")
 ```
 
-That's the whole algorithm. Now the payoff — score the first tree alone, then the average of the first 5, 25, 100 and all 200:
+**Result.** The snippet runs one bootstrap seed. We repeated the whole experiment with five seeds, so the table shows how much the curve itself varies.
+
+| trees averaged | mean AP | sd | min | max |
+|---|---|---|---|---|
+| 1 | 0.379 | 0.007 | 0.370 | 0.386 |
+| 5 | 0.444 | 0.005 | 0.439 | 0.450 |
+| 10 | 0.452 | 0.003 | 0.448 | 0.457 |
+| 25 | 0.455 | 0.003 | 0.452 | 0.460 |
+| 50 | 0.458 | 0.002 | 0.455 | 0.459 |
+| 100 | 0.458 | 0.001 | 0.458 | 0.459 |
+| 200 | 0.459 | 0.001 | 0.458 | 0.460 |
+
+```output
+average of   1 trees: validation AP 0.374
+average of   5 trees: validation AP 0.446
+average of  25 trees: validation AP 0.456
+average of 100 trees: validation AP 0.459
+average of 200 trees: validation AP 0.460
+```
+
+![Validation average precision of a bagged ensemble as trees are added; line is the mean over five seeds, band the range.](/series/classification/figures/ch07-bagging.png)
+*Figure 1. Averaging helps quickly, then flattens.*
+
+**What it means.** Averaging lifts the score from about 0.38 for one tree to about 0.46 for 200, and more than half of the gain arrives with the first five trees; beyond 50 trees the mean moves by less than 0.001 per doubling. That is variance reduction: a one-time gain that saturates, with a seed-to-seed spread that also shrinks (sd 0.005 at 5 trees, 0.001 at 200).
+
+Each tree overfits differently, so part of their error is random and cancels in the mean, and how much cancels depends on how **correlated** the trees are (identical trees would gain nothing). The average correlation between pairs of tree scores is 0.68 for the first seed and 0.67 to 0.68 across all five: high, because all trees start from the same strong columns (`nr.employed`, `euribor3m`, `pdays`). There is room for less correlated trees to do better.
+
+## The random-forest idea
+
+A **random forest** adds one ingredient to bagging: at every split, only a random subset of the features is considered (`max_features`). Trees are forced to use different material, which lowers their correlation, at the price of each tree being slightly weaker. **Extra trees** go further and pick the split threshold at random as well. Here are the variants, each with 300 trees and a minimum leaf of 10, three fitting seeds:
+
+| variant | validation AP | sd over seeds | fit seconds |
+|---|---|---|---|
+| Extra trees sqrt | 0.465 | 0.001 | 3.8 |
+| RF max_features=0.5 | 0.461 | 0.001 | 9.2 |
+| RF max_features=1.0 (bagging) | 0.456 | 0.001 | 19.3 |
+| RF max_features=sqrt | 0.467 | 0.001 | 3.8 |
+
+`max_features = sqrt` (about 8 of the 62 one-hot columns per split) gives the best score among those tried and the shortest fit. Using all features, which is plain bagging of full-strength trees, gives the lowest AP and the longest fit. Extra trees land close to the forest. These timings come from a shared, busy machine, so trust the ordering, not the seconds (part 12 has timings from an idle machine). The ordering depends on this dataset: with other data a larger `max_features` can win.
+
+## How many trees?
+
+Trees are cheap to add, but is more always better? We scored forests of 10 to 600 trees with five fitting seeds each:
+
+| trees | mean AP | sd | min | max |
+|---|---|---|---|---|
+| 10 | 0.458 | 0.003 | 0.454 | 0.461 |
+| 50 | 0.464 | 0.003 | 0.461 | 0.468 |
+| 100 | 0.466 | 0.003 | 0.463 | 0.469 |
+| 300 | 0.468 | 0.001 | 0.467 | 0.469 |
+| 600 | 0.468 | 0.001 | 0.466 | 0.469 |
+
+The score rises from 0.458 with 10 trees to 0.468 with 300, then stops moving (0.468 at 600). A single run need not improve with every added tree, since the seed-to-seed spread (about 0.003 for small forests) is as large as late gains. Treat `n_estimators` as a resource and stability setting, not a tuning dimension: use enough trees that results stop changing with the seed, and tune `min_samples_leaf` and `max_features`.
+
+## Out-of-bag scores
+
+Each bootstrap sample leaves out about 37% of the rows, so every training row is "out of bag" for about a third of the trees. Averaging only those trees' predictions for each row gives an evaluation that needs no separate validation data.
 
 ```python
-print("one tree        AP:", round(average_precision_score(yte, votes[0]), 3))
-for n in (5, 25, 100, 200):
-    print(f"average of {n:>3} AP:", round(average_precision_score(yte, votes[:n].mean(axis=0)), 3))
+from sklearn.ensemble import RandomForestClassifier
+
+rf = RandomForestClassifier(300, min_samples_leaf=10, max_features="sqrt", oob_score=True, n_jobs=4, random_state=0).fit(A, yf)
+print(f"out-of-bag AP : {average_precision_score(yf, rf.oob_decision_function_[:, 1]):.3f}")
+print(f"validation AP : {average_precision_score(yv, rf.predict_proba(B)[:, 1]):.3f}")
 ```
 
 ```output
-one tree        AP: 0.365
-average of   5 AP: 0.469
-average of  25 AP: 0.488
-average of 100 AP: 0.489
-average of 200 AP: 0.489
+out-of-bag AP : 0.459
+validation AP : 0.467
 ```
 
-Look at what happened. None of the trees is any better than before — over the first 50, a single tree averages 0.391 (the first one, 0.365, was slightly unlucky) — but **their average is 0.489, a 25% improvement on the typical tree**, larger than anything tuning bought us for a single tree in [part 6](/series/classification/06-decision-trees/). And almost all of it arrives by 25 trees; going from 100 to 200 buys nothing. That's the signature of variance reduction: it's a one-time gain that saturates.
+The out-of-bag score is a little lower than the validation score. One tempting explanation is that out-of-bag predictions use only about a third of the trees. We tested it: random subsets of 100 of the 300 trees give a validation AP of 0.466 (sd 0.002 over 20 draws), almost the same as all 300 (0.467), so that does not explain the gap. We did not test other explanations. Out-of-bag evaluation also assumes exchangeable records and says nothing about later records when the data have a time structure (part 16).
 
-Why does it work? Each tree overfits, but *differently*. Their errors are partly random and cancel in the mean. The key quantity is how *correlated* the trees are. If they were identical, averaging would change nothing. Let's measure:
+## What a forest costs
 
-```python
-corr = np.corrcoef(votes[:20])
-print("mean correlation between two trees' scores:", round(corr[np.triu_indices(20, 1)].mean(), 3))
-```
+- **Bias.** Averaging reduces variance but each tree is still a greedy, fairly shallow piece. Boosting (part 8) corrects errors instead of averaging them.
+- **Probabilities.** Averaged leaf proportions can be compressed or over-spread depending on leaf size. Part 11 measures this for the default (minimum leaf 1) and for a leaf of 10.
+- **Size and prediction cost.** 300 trees with thousands of leaves mean a larger model file and slower scoring than a linear model. Part 12 reports measured timings.
+- **Interpretation.** You cannot read 300 trees. Importance scores exist, with caveats (part 15).
 
-```output
-mean correlation between two trees' scores: 0.661
-```
+## Analysis and conclusion: what we learned
 
-A correlation of 0.66 is high — the trees are still quite similar. They're all greedy, and they all start by splitting on the same strong features (`nr.employed`, `euribor3m`, `pdays`). To squeeze out more variance reduction we need *less* correlated trees.
+- **A forest is a variance-reduction machine.** Averaging raised validation AP from about 0.38 (one tree) to about 0.47 (a forest of 300 with random feature subsets), with most of the gain in the first few trees.
+- **Decorrelating trees helps on this data.** Random feature subsets scored 0.467 against 0.456 for plain bagging with the same leaf size.
+- **Treat the tree count as a resource.** It stabilises results; the settings worth tuning are the leaf size and the feature fraction.
+- **Check an out-of-bag score against a real validation set before trusting it**, and never as evidence about future periods.
 
-### The random forest trick
+*Further reading.* Breiman (1996), [Bagging predictors](https://doi.org/10.1007/BF00058655); Breiman (2001), [Random forests](https://doi.org/10.1023/A:1010933404324).
 
-Random forests add one idea to bagging: **at every split, only consider a random subset of the features** (`max_features`). Different trees are forced to build from different raw material, which decorrelates them. The price is that each individual tree is slightly weaker.
-
-```python
-from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
-import time
-
-for name, model in {
-    "RF  max_features=sqrt": RandomForestClassifier(300, min_samples_leaf=10, max_features="sqrt", n_jobs=-1, random_state=0),
-    "RF  max_features=0.5 ": RandomForestClassifier(300, min_samples_leaf=10, max_features=0.5, n_jobs=-1, random_state=0),
-    "RF  max_features=1.0 ": RandomForestClassifier(300, min_samples_leaf=10, max_features=1.0, n_jobs=-1, random_state=0),
-    "Extra trees          ": ExtraTreesClassifier(300, min_samples_leaf=10, max_features="sqrt", n_jobs=-1, random_state=0),
-}.items():
-    t0 = time.perf_counter(); model.fit(A, ytr); secs = time.perf_counter() - t0
-    print(f"{name}  AP={average_precision_score(yte, model.predict_proba(B)[:, 1]):.3f}  fit={secs:.1f}s")
-```
-
-```output
-RF  max_features=sqrt  AP=0.491  fit=2.5s
-RF  max_features=0.5   AP=0.490  fit=6.2s
-RF  max_features=1.0   AP=0.486  fit=17.1s
-Extra trees            AP=0.484  fit=4.4s
-```
-
-- `max_features=1.0` *is* plain bagging of full-strength trees. Its AP is the lowest of the three and it takes **7× longer** than `sqrt`, because every split evaluates every feature (there are 62 columns after one-hot encoding).
-- `sqrt` — about 8 features per split — is both the fastest and the best. This is why it's the library default for classification.
-- **Extra Trees** ("extremely randomised") go one step further: for each candidate feature they pick the split threshold *at random* instead of searching for the best one. Even less correlated, even faster per tree, at the price of a little more bias. It lands at 0.484 here — within noise of RF. It's a nice sanity check that your forest isn't winning on fine-grained threshold search.
-
-<div class="callout tip">
-
-**What to tune in a random forest.** In order of impact: `min_samples_leaf` (same story as [part 6](/series/classification/06-decision-trees/) — 5–30 works for imbalanced problems, never 1), then `max_features`. `n_estimators` is not a tuning parameter; it's a budget. More trees never hurt accuracy, they just cost time. Use 300–500 and stop thinking about it.
-
-</div>
-
-### A free validation set: out-of-bag scores
-
-Each bootstrap sample omits about 37% of the rows. Those rows are "out of bag" for that tree, which means **every training row was not seen by roughly a third of the trees**. Average only those trees' predictions for each row and you have an honest prediction with no separate validation set:
-
-```python
-rf = RandomForestClassifier(300, min_samples_leaf=10, max_features="sqrt", oob_score=True, n_jobs=-1, random_state=0).fit(A, ytr)
-print("OOB accuracy :", round(rf.oob_score_, 3))
-print("OOB-based AP :", round(average_precision_score(ytr, rf.oob_decision_function_[:, 1]), 3))
-print("test AP      :", round(average_precision_score(yte, rf.predict_proba(B)[:, 1]), 3))
-```
-
-```output
-OOB accuracy : 0.9
-OOB-based AP : 0.466
-test AP      : 0.491
-```
-
-OOB AP (0.466) lands within 0.025 of the test score (0.491) without touching the test set. It's a convenient smoke test. It's also slightly pessimistic, because each OOB prediction uses only ~100 of the 300 trees. We'll still use cross-validation for model selection, because OOB doesn't generalise to other model families, but it's good to know it exists.
-
-### How many trees?
-
-```python
-for n in (10, 50, 100, 300, 600):
-    m = RandomForestClassifier(n, min_samples_leaf=10, max_features="sqrt", n_jobs=-1, random_state=0).fit(A, ytr)
-    print(f"n_estimators={n:<4} test AP={average_precision_score(yte, m.predict_proba(B)[:, 1]):.3f}")
-```
-
-```output
-n_estimators=10   test AP=0.487
-n_estimators=50   test AP=0.489
-n_estimators=100  test AP=0.490
-n_estimators=300  test AP=0.491
-n_estimators=600  test AP=0.492
-```
-
-Ten trees already reach 0.487; the next 590 add 0.005. Don't spend your tuning budget here.
-
-## What did we get? Results
-
-Test average precision, same split as every chapter:
-
-| Model | AP |
-|---|---|
-| One tree | 0.365 |
-| Average of 5 trees | 0.469 |
-| Average of 25 trees | 0.488 |
-| Average of 200 trees | 0.489 |
-| Random forest, `max_features="sqrt"` | 0.491 (fit 2.5 s) |
-| Random forest, `max_features=1.0` | 0.486 (fit 17.1 s) |
-| Extra Trees | 0.484 |
-
-- **Correlation between two trees' scores:** 0.661.
-- **Out-of-bag AP** 0.466 against test AP 0.491.
-- **Number of trees:** 10 trees reach 0.487, and 600 reach 0.492.
-
-![Test average precision of a bagged ensemble as the number of trees grows.](/series/classification/figures/ch07-bagging.png)
-*Figure 1. Averaging is worth +0.10 to +0.12 average precision, and most of it arrives in the first 25 trees. After that the curve is flat.*
-
-## Analysis and conclusion: what did we learn?
-
-- **Averaging is a one-time gain.** The first 25 trees give almost all of it, and 100 to 200 trees add nothing. That is the signature of variance reduction.
-- **Less correlated trees do better.** A correlation of 0.661 means the trees are still similar. Picking about 8 features per split (`sqrt`) gives the best AP and is 7 times faster than using all 62 columns.
-- **Do not tune `n_estimators`.** It is a budget, not a parameter. Spend tuning effort on `min_samples_leaf` and `max_features`.
-- **A forest reduces variance, not bias.** If a single tree is stable but too simple, a forest will not help. Boosting ([Part 8](/series/classification/08-gradient-boosting/)) attacks the other half.
-
-### Strengths, weaknesses, what to remember
-
-**Strengths.** Excellent out-of-the-box performance, almost no tuning, handles mixed feature types, no scaling needed, parallel training, robust to outliers.
-
-**Weaknesses.**
-
-- **Bias.** Averaging cuts variance but each tree is still a shallow-ish, greedy piece. Forests can't fit very sharp signals as well as boosting, which *corrects* errors rather than averaging them.
-- **Probabilities can be compressed.** Averaging leaf proportions pulls scores toward the centre, and forests with tiny leaves rarely output extreme values even for near-certain cases. With `min_samples_leaf=10` on this data the damage is small (we'll measure it in [part 11](/series/classification/11-probabilities-calibration-thresholds-costs/)), but don't assume it: always check calibration.
-- **Size and speed at inference.** 300 trees × thousands of leaves means a model file of tens of megabytes and millisecond-scale prediction, compared with microseconds for logistic regression.
-- **Interpretability.** You can't read 300 trees. Importance scores exist, but see [part 15](/series/classification/15-inside-the-winner/) for why to be careful with them.
-
-**Mental model:** a forest is a *variance-reduction* machine. If your single tree is unstable, a forest will help a lot; if your single tree is stable but too simple, it won't.
-
-The next part attacks the other half of the problem. [Part 8](/series/classification/08-gradient-boosting/) builds boosting from scratch: instead of averaging independent trees, it trains each new tree to fix the mistakes of the ones before it.
-
-### So what did we do?
-
-We built bagging by hand, saw it lift AP from 0.365 to 0.489, and found that decorrelating the trees with random feature subsets gets a little more, much faster. A forest is a variance-reduction machine that needs almost no tuning.
-
-### In the next part
+[Part 8](/series/classification/08-gradient-boosting/) attacks the other side of the problem: instead of averaging independent trees, each new tree learns from the mistakes of the ones before it.

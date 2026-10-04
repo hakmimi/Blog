@@ -1,0 +1,11 @@
+feature_set,n_features,model,cv_ap_mean,cv_ap_sd,cv_auc_mean
+main,18,Logistic regression,0.44764,0.01624,0.78803
+main,18,LightGBM,0.46271,0.01541,0.79902
+main + campaign,19,Logistic regression,0.44915,0.01674,0.78924
+main + campaign,19,LightGBM,0.46453,0.01281,0.80053
+"no schedule (profile, history, macro)",15,Logistic regression,0.42295,0.01266,0.76288
+"no schedule (profile, history, macro)",15,LightGBM,0.44441,0.00879,0.79456
+profile + history only,10,Logistic regression,0.33817,0.01789,0.69865
+profile + history only,10,LightGBM,0.34423,0.01357,0.70585
+main + duration (not eligible; benchmark only),19,Logistic regression,0.58876,0.00431,0.93325
+main + duration (not eligible; benchmark only),19,LightGBM,0.66232,0.02177,0.94884

@@ -1,0 +1,9 @@
+column,standardised_difference
+age,-0.00
+pdays,-0.59
+previous,0.79
+emp.var.rate,-2.96
+cons.price.idx,-1.13
+cons.conf.idx,0.12
+euribor3m,-3.50
+nr.employed,-3.04

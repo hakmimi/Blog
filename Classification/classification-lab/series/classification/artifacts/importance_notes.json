@@ -1,0 +1,11 @@
+{
+  "audited_model": "LightGBM",
+  "selection_rule": "highest mean cross-validated AP on development data",
+  "cv_ap": 0.4645933360281508,
+  "comparison_ap": 0.4908743962709648,
+  "threshold_oof": 0.1681179156785419,
+  "rank_cutoffs": {
+    "median_score": 0.05724761096628786,
+    "top10pct_score": 0.33090078107294063
+  }
+}

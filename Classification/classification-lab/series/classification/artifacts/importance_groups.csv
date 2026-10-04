@@ -1,0 +1,5 @@
+group,grouped_ap_drop_mean,grouped_ap_drop_sd,sum_of_single_column_drops,retrained_ap_mean,retrained_ap_sd,ap_drop_vs_full
+macro (5 columns),0.28545,0.00753,0.07712,0.44348,0.00045,0.04739
+"history (pdays, previous, poutcome)",0.06607,0.00717,0.04857,0.43949,0.00176,0.05139
+"schedule (contact, month, day_of_week)",0.05422,0.00332,0.05350,0.47113,0.00219,0.01974
+customer profile (7 columns),0.00666,0.00259,0.00399,0.48591,0.00275,0.00496

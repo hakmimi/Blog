@@ -1,8 +1,0 @@
-{
-  "model": "Random forest",
-  "capacity": 1000,
-  "positives_captured": 634,
-  "precision_at_capacity": 0.634,
-  "recall_at_capacity": 0.24960629921259841,
-  "hypothetical_cost_definition": "FP + 5*FN"
-}

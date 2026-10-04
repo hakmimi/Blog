@@ -1,0 +1,12 @@
+model,candidates,selected,cv_ap_expanding,cv_ap_default,params,seconds
+Logistic regression,8,candidate 7,0.1028182165401698,0.10100826222166213,"{""m__C"": 0.0017073967431528124}",16.444943799986504
+Gaussian Naive Bayes,8,candidate 7,0.12485246086402009,0.12063898865218776,"{""m__var_smoothing"": 0.008499808989182987}",9.055508199962787
+k-nearest neighbours,8,candidate 3,0.08884008327717956,0.08451509175868034,"{""m__n_neighbors"": 111, ""m__weights"": ""distance""}",46.451919300016016
+Small neural net (MLP),8,candidate 2,0.10193399423699752,0.09161645065619295,"{""m__alpha"": 0.008471801418819975, ""m__learning_rate_init"": 0.002447966870418659}",125.41696170007344
+Decision tree,8,candidate 5,0.09398623558415027,0.08459000503949299,"{""m__max_depth"": 8, ""m__min_samples_leaf"": 92}",14.470734099973924
+Random forest,8,candidate 1,0.1061463075443946,0.09740577254262404,"{""m__max_features"": 0.2872700594236812, ""m__min_samples_leaf"": 29}",146.86328990000766
+Extra trees,8,candidate 5,0.09672249238037532,0.09119553745297687,"{""m__max_features"": 0.12904180608409974, ""m__min_samples_leaf"": 24}",183.49964160006493
+sklearn HistGradientBoosting,8,candidate 2,0.10049381646464062,0.09875819352460802,"{""m__l2_regularization"": 0.4789240251631179, ""m__learning_rate"": 0.030515616964102342, ""m__max_leaf_nodes"": 24, ""m__min_samples_leaf"": 84}",120.56298629997764
+XGBoost,8,candidate 2,0.1193618448937751,0.11136948854203861,"{""m__colsample_bytree"": 0.7229163764267956, ""m__learning_rate"": 0.02621860739064525, ""m__max_depth"": 4, ""m__min_child_weight"": 29.621516588303486, ""m__subsample"": 0.8404460046972835}",41.98941689997446
+LightGBM,8,candidate 2,0.11692112205566668,0.09376644486418756,"{""m__colsample_bytree"": 0.5780093202212182, ""m__learning_rate"": 0.03051362379613698, ""m__min_child_samples"": 84, ""m__num_leaves"": 14, ""m__subsample"": 0.9464704583099741}",29.272941900067963
+CatBoost,8,candidate 5,0.1363645161663512,0.1074448314115003,"{""m__depth"": 6, ""m__l2_leaf_reg"": 24.341994231042282, ""m__learning_rate"": 0.03005384349946412}",959.420740099973

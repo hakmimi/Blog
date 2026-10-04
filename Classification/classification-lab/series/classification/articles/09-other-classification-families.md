@@ -18,8 +18,6 @@ A k-nearest-neighbours classifier at its library default of k = 5 scores @@v:lea
 
 **Work plan.** Look at what distance responds to and how k changes k-NN. Compare linear SVM scores with probabilities, and test how Platt scaling can go wrong. Measure what an RBF SVM costs. Check how much a small neural network's score moves with its seed.
 
-**You will leave with** the practical catch for each family, with numbers from this data.
-
 </div>
 
 All experiments here fit on 75% of the development rows and score on the other 25% (inner validation). The comparison split is not used.
@@ -63,7 +61,7 @@ An RBF-kernel SVM can draw curved boundaries. Its training cost grows quickly wi
 ![Fit time of the RBF SVM against the number of training records on log-log axes.](/series/classification/figures/ch09-svm-scaling.png)
 *Figure 1. Measured fit time of one RBF SVM. The slope between 2,000 and 16,000 records is about @@j:families_notes.json|svm_loglog_slope_up_to_16000_rows|.1f@@ on these axes.*
 
-Between 2,000 and 16,000 records, the time grows a little faster than quadratically. One fit on all @@j:families_notes.json|svm_full_development_rows|d@@ fitting rows took @@v:families_svm_timing.csv|rows=24712|fit_seconds_min|.0f@@ seconds. Under our search protocol (8 candidates, 3 folds, about 22,000 records per fold) that is 24 fits of that order, many times the search cost of the other models in part 12, which finish whole searches in seconds to minutes. So the RBF SVM is excluded from the common search for **cost under this protocol**, not because it cannot be fitted. A smaller, separate protocol for it would be a different comparison and we say so instead of quietly training it on a subsample.
+Between 2,000 and 16,000 records the time grows a little faster than quadratically, and one fit on all @@j:families_notes.json|svm_full_development_rows|d@@ fitting rows took @@v:families_svm_timing.csv|rows=24712|fit_seconds_min|.0f@@ seconds. Our search protocol (8 candidates, 3 folds of about 22,000 records) is 24 fits of that order, many times the search cost of the other models in part 12. So the RBF SVM is excluded for **cost under this protocol**, not because it cannot be fitted; a separate, smaller protocol would be a different comparison, and we say so instead of quietly training it on a subsample.
 
 ## A small neural network: a fussy learner
 
@@ -71,7 +69,7 @@ A multilayer perceptron stacks layers of weighted sums and non-linearities, trai
 
 @@table:families_mlp_seeds.csv|cols=seed,val_ap,epochs|fmt=seed:d;epochs:d|rename=val_ap:validation AP@@
 
-Over five seeds the validation AP ranges from @@v:families_mlp_seeds.csv|seed=2|val_ap|.3f@@ to @@v:families_mlp_seeds.csv|seed=3|val_ap|.3f@@. A single-seed difference of a few thousandths between this network and another model is therefore not informative. The network is competitive on this data (comparison-split AP @@v:leaderboard_selected.csv|model=Small neural net (MLP)|cmp_average_precision|.3f@@) and needs more care than a booster in return: scaled inputs, a seed policy and early stopping. As a quick baseline it is fine. As a final answer, it needs a reason (part 12).
+Over five seeds the validation AP ranges from @@v:families_mlp_seeds.csv|seed=2|val_ap|.3f@@ to @@v:families_mlp_seeds.csv|seed=3|val_ap|.3f@@, so a single-seed difference of a few thousandths against another model is not informative. The network is competitive here (comparison-split AP @@v:leaderboard_selected.csv|model=Small neural net (MLP)|cmp_average_precision|.3f@@) and needs more care than a booster: scaled inputs, a seed policy and early stopping. A quick baseline is fine; as a final answer it needs a reason (part 12).
 
 ## Analysis and conclusion: what we learned
 

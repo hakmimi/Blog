@@ -1,0 +1,13 @@
+feature,gd_1500,reference,abs_ref
+cat__default_yes,-0.0052,-7.9055,7.9055
+cat__default_no,-0.1681,3.2733,3.2733
+cat__default_unknown,-0.4406,3.0115,3.0115
+num__emp.var.rate,-0.7453,-2.5137,2.5137
+num__cons.price.idx,0.3938,1.3392,1.3392
+cat__contact_telephone,-0.5524,-1.1656,1.1656
+cat__month_jun,-0.1343,-1.1227,1.1227
+cat__month_mar,0.7047,1.1067,1.1067
+cat__poutcome_failure,-0.5011,-0.8723,0.8723
+cat__month_may,-0.6776,-0.7277,0.7277
+cat__month_nov,-0.3550,-0.6954,0.6954
+num__nr.employed,-0.2799,0.6902,0.6902

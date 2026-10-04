@@ -1,0 +1,23 @@
+policy,model,contribution,reference,reference_contribution,diff,ci95_lo,ci95_hi,simultaneous95_lo,simultaneous95_hi
+break-even (1/8),Linear SVM (Platt scaled),3229.000,Logistic regression,3157.000,72.000,9.000,134.000,-16.356,160.356
+break-even (1/8),Gaussian Naive Bayes,2965.000,Logistic regression,3157.000,-192.000,-315.025,-67.000,-367.299,-16.701
+break-even (1/8),k-nearest neighbours,3214.000,Logistic regression,3157.000,57.000,-29.000,141.000,-59.749,173.749
+break-even (1/8),Small neural net (MLP),3241.000,Logistic regression,3157.000,84.000,34.000,130.000,15.841,152.159
+break-even (1/8),Decision tree,3141.000,Logistic regression,3157.000,-16.000,-132.000,103.050,-184.129,152.129
+break-even (1/8),Random forest,3356.000,Logistic regression,3157.000,199.000,99.975,297.025,59.239,338.761
+break-even (1/8),Extra trees,3264.000,Logistic regression,3157.000,107.000,20.000,198.000,-19.749,233.749
+break-even (1/8),sklearn HistGradientBoosting,3324.000,Logistic regression,3157.000,167.000,82.000,254.000,46.236,287.764
+break-even (1/8),XGBoost,3326.000,Logistic regression,3157.000,169.000,108.975,234.000,82.000,256.000
+break-even (1/8),LightGBM,3334.000,Logistic regression,3157.000,177.000,100.000,251.000,71.594,282.406
+break-even (1/8),CatBoost,3306.000,Logistic regression,3157.000,149.000,90.000,208.000,66.389,231.611
+out-of-fold threshold,Linear SVM (Platt scaled),3238.000,Logistic regression,3186.000,52.000,-0.025,106.000,-22.016,126.016
+out-of-fold threshold,Gaussian Naive Bayes,2952.000,Logistic regression,3186.000,-234.000,-346.000,-118.975,-388.700,-79.300
+out-of-fold threshold,k-nearest neighbours,3202.000,Logistic regression,3186.000,16.000,-61.025,90.025,-89.972,121.972
+out-of-fold threshold,Small neural net (MLP),3243.000,Logistic regression,3186.000,57.000,4.000,114.000,-20.211,134.211
+out-of-fold threshold,Decision tree,3239.000,Logistic regression,3186.000,53.000,-46.000,154.025,-87.421,193.421
+out-of-fold threshold,Random forest,3387.000,Logistic regression,3186.000,201.000,108.975,298.000,70.344,331.656
+out-of-fold threshold,Extra trees,3291.000,Logistic regression,3186.000,105.000,28.975,185.025,-7.002,217.002
+out-of-fold threshold,sklearn HistGradientBoosting,3329.000,Logistic regression,3186.000,143.000,62.000,227.000,25.255,260.745
+out-of-fold threshold,XGBoost,3314.000,Logistic regression,3186.000,128.000,71.975,190.000,44.691,211.309
+out-of-fold threshold,LightGBM,3345.000,Logistic regression,3186.000,159.000,84.975,236.025,52.586,265.414
+out-of-fold threshold,CatBoost,3288.000,Logistic regression,3186.000,102.000,36.000,170.025,8.084,195.916

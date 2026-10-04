@@ -1,0 +1,4 @@
+positives_group,positives,share_of_positives
+high-ranked (top 10% of scores),441,0.4752
+middle,346,0.3728
+low-ranked (below the median score),141,0.1519

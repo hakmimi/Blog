@@ -18,8 +18,6 @@ Fit a boosting model with a learning rate of 0.5 and its score on rows it has no
 
 **Work plan.** Write gradient boosting with log loss in a few lines. Run it at three learning rates and score each stage on inner validation rows. Then let early stopping choose the number of trees, and place the named libraries in context.
 
-**You will leave with** the mechanism behind XGBoost, LightGBM and CatBoost, and a way to set the tree count that does not use test data.
-
 </div>
 
 ## The algorithm in plain words
@@ -95,8 +93,8 @@ The table runs the same loop for 1,000 stages at three learning rates (validatio
 
 What the numbers say:
 
-- **Large steps are fast, then risky.** With a learning rate of 0.5 the validation AP is @@v:boosting_scratch_peaks.csv|learning_rate=0.5|best_val_ap|.3f@@ at @@v:boosting_scratch_peaks.csv|learning_rate=0.5|best_stages|d@@ trees and @@v:boosting_scratch_peaks.csv|learning_rate=0.5|val_ap_at_1000|.3f@@ at 1,000. Over the same range the AP on the fitted rows climbs from 0.493 to 0.586, so the model is increasingly describing noise.
-- **Small steps need more trees, and compute decides whether you get there.** A learning rate of 0.1 peaks at @@v:boosting_scratch_peaks.csv|learning_rate=0.1|best_stages|d@@ trees (@@v:boosting_scratch_peaks.csv|learning_rate=0.1|best_val_ap|.3f@@). At 0.02 the validation score is still rising at 1,000 trees (@@v:boosting_scratch_peaks.csv|learning_rate=0.02|val_ap_at_1000|.3f@@) and is far behind at 300 trees (0.421). Smaller rates often reach a similar or slightly better place, but only if you can afford the extra trees.
+- **Large steps are fast, then risky.** At a learning rate of 0.5 the validation AP is @@v:boosting_scratch_peaks.csv|learning_rate=0.5|best_val_ap|.3f@@ at @@v:boosting_scratch_peaks.csv|learning_rate=0.5|best_stages|d@@ trees and @@v:boosting_scratch_peaks.csv|learning_rate=0.5|val_ap_at_1000|.3f@@ at 1,000, while the AP on the fitted rows climbs from 0.493 to 0.586: the model increasingly describes noise.
+- **Small steps need more trees, and compute decides whether you get there.** A rate of 0.1 peaks at @@v:boosting_scratch_peaks.csv|learning_rate=0.1|best_stages|d@@ trees (@@v:boosting_scratch_peaks.csv|learning_rate=0.1|best_val_ap|.3f@@). At 0.02 the score is still rising at 1,000 trees (@@v:boosting_scratch_peaks.csv|learning_rate=0.02|val_ap_at_1000|.3f@@) and far behind at 300 (0.421). Smaller rates often end similar or slightly better, but only if you can afford the trees.
 - **The learning rate and the number of trees interact.** Halving the rate roughly doubles the trees you need to reach the same place. That does not make a joint search invalid, but it makes it wasteful, which is why the usual routine is to fix a small learning rate and choose the tree count by early stopping.
 - **The best scores of the three runs are within 0.003 of each other**, so on this data the choice of learning rate mostly changes how many trees you need and how carefully you must stop.
 
@@ -131,11 +129,11 @@ for lr in (0.3, 0.1, 0.03):
 (filled in by the build)
 ```
 
-**What it means.** We allowed 2,000 trees and the models stopped at between 36 and about 120 trees, depending on the learning rate. The two smaller rates end at almost the same validation AP and log loss, and the largest is worse on both. Early stopping needs a validation slice that looks like the future you care about. Here a random 15% slice of the training rows is appropriate, because the comparison is a random split. If the deployment question is about *later* records (part 16), validate on the most recent part of the training data. A random slice from the past will keep rewarding extra trees long after the model stopped generalising forward in time.
+**What it means.** We allowed 2,000 trees and the models stopped between 36 and about 120. The two smaller rates end at almost the same validation AP and log loss; the largest is worse on both. The validation slice must look like the future you care about: a random 15% slice suits a random split, but if the question is about *later* records (part 16), validate on the most recent training data, because a random slice from the past keeps rewarding extra trees long after the model stopped generalising forward in time.
 
 ## The named libraries
 
-Everything above is the core. XGBoost, LightGBM and CatBoost are engineering and design variants of it, and many of their differences are configurable, so read this table as defaults for the versions used in this series (XGBoost @@j:protocol_manifest.json|environment.xgboost@@, LightGBM @@j:protocol_manifest.json|environment.lightgbm@@, CatBoost @@j:protocol_manifest.json|environment.catboost@@, scikit-learn @@j:protocol_manifest.json|environment.scikit-learn@@).
+Everything above is the core. XGBoost, LightGBM and CatBoost are engineering variants of it, and many differences are configurable, so read the table as defaults for the versions used here (XGBoost @@j:protocol_manifest.json|environment.xgboost@@, LightGBM @@j:protocol_manifest.json|environment.lightgbm@@, CatBoost @@j:protocol_manifest.json|environment.catboost@@, scikit-learn @@j:protocol_manifest.json|environment.scikit-learn@@).
 
 | | Tree growth by default | Categorical columns | Known for |
 |---|---|---|---|
@@ -162,5 +160,7 @@ Whether any of these differences matters for *this* problem is an empirical ques
 - **Nothing in boosting says stop.** A large learning rate overfits within a hundred trees on this data. Choose the tree count on validation data.
 - **Small steps are not automatically better.** They are smoother and often at least as good, but under a finite budget a small learning rate may simply not have run long enough.
 - **Early stopping must validate the right thing.** Use random validation rows for a random split and the latest rows for a time-ordered one.
+
+*Further reading.* Friedman (2001), [Greedy function approximation: a gradient boosting machine](https://doi.org/10.1214/aos/1013203451); Chen and Guestrin (2016), [XGBoost](https://doi.org/10.1145/2939672.2939785); Ke et al. (2017), LightGBM, NeurIPS; Prokhorenkova et al. (2018), [CatBoost](https://arxiv.org/abs/1706.09516).
 
 [Part 9](/series/classification/09-other-classification-families/) goes through the remaining families, k-nearest neighbours, support vector machines and neural networks, which need very different treatment of the same data.

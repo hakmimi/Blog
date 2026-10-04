@@ -1,0 +1,93 @@
+{
+  "rows": 41188,
+  "positives": 4640,
+  "prevalence": 0.11265417111780131,
+  "always_no_accuracy": 0.8873458288821987,
+  "max_possible_accuracy_gain_points": 11.265417111780131,
+  "exact_duplicate_rows": 12,
+  "pdays_999_share": 0.9632174419733903,
+  "previous_gt0_share": 0.1365689035641449,
+  "campaign_gt1_share": 0.5716713605904632,
+  "campaign_max": 56,
+  "rows_with_unknown_label": 0.25978440322424007,
+  "unknown_share_by_column": {
+    "job": 0.008012042342429833,
+    "marital": 0.0019423132951345051,
+    "education": 0.042026803923472855,
+    "default": 0.20872584247839177,
+    "housing": 0.0240361270272895,
+    "loan": 0.0240361270272895
+  },
+  "poutcome_levels": [
+    "failure",
+    "nonexistent",
+    "success"
+  ],
+  "rate_by_chunk": [
+    0.0277,
+    0.0352,
+    0.0422,
+    0.0663,
+    0.0624,
+    0.0546,
+    0.1017,
+    0.1197,
+    0.1573,
+    0.4596
+  ],
+  "euribor3m_by_chunk": [
+    4.857,
+    4.859,
+    4.941,
+    4.961,
+    4.965,
+    4.845,
+    3.369,
+    1.354,
+    1.26,
+    0.801
+  ],
+  "chunk_size": 4119,
+  "rate_by_campaign": [
+    {
+      "campaign": 1,
+      "mean": 0.1304,
+      "size": 17642
+    },
+    {
+      "campaign": 2,
+      "mean": 0.1146,
+      "size": 10570
+    },
+    {
+      "campaign": 3,
+      "mean": 0.1075,
+      "size": 5341
+    },
+    {
+      "campaign": 4,
+      "mean": 0.0939,
+      "size": 2651
+    },
+    {
+      "campaign": 5,
+      "mean": 0.075,
+      "size": 1599
+    },
+    {
+      "campaign": 6,
+      "mean": 0.0766,
+      "size": 979
+    },
+    {
+      "campaign": 7,
+      "mean": 0.0604,
+      "size": 629
+    },
+    {
+      "campaign": 8,
+      "mean": 0.0411,
+      "size": 1777
+    }
+  ]
+}

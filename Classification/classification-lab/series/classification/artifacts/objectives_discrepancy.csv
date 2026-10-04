@@ -1,0 +1,6 @@
+fit,train_mean_log_loss,grad_inf_norm,max_abs_prob_diff_vs_reference,mean_abs_prob_diff,spearman_with_reference,pearson_with_reference,validation_ap,validation_log_loss
+"gradient descent, 1,500 steps (the chapter's version)",0.277642,0.0006148,0.18937,0.0083999,0.987289,0.990856,0.443094,0.281083
+"gradient descent, 20,000 steps",0.276585,3.43872e-05,0.0306229,0.000792788,0.999745,0.999922,0.445011,0.280467
+"L-BFGS on our own objective, no penalty",0.276566,5.56346e-09,1.36845e-05,1.5279e-07,1,1,0.444832,0.280508
+"scikit-learn, penalty=None, tol 1e-10 (reference)",0.276566,6.09294e-08,0,0,1,1,0.444832,0.280508
+full-rank design (one level dropped per variable): L-BFGS vs scikit-learn,0.276566,9.7154e-08,8.87898e-06,1.27058e-07,1,1,0.444831,0.280508

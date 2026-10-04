@@ -1,0 +1,8 @@
+model,setting,val_ap
+kNN scaled,k=5,0.31205
+kNN scaled,k=15,0.39254
+kNN scaled,k=50,0.42623
+kNN scaled,k=150,0.42799
+kNN scaled,k=400,0.42754
+kNN unscaled,k=50,0.42643
+"kNN scaled, pdays as flag + recency",k=50,0.42216

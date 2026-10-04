@@ -1,242 +1,189 @@
 ---
-title: "Gradient Boosting, Built From Scratch"
-description: "Write gradient boosting in 15 lines of Python, see what the learning rate really does to the learning curve, then let early stopping pick the number of trees for you."
+title: "Gradient Boosting: Learning From the Last Tree's Mistakes"
+description: "Boosting builds many small trees in sequence, each fitted to what the ensemble so far gets wrong. We write the loop in a few lines, watch the learning rate trade speed against how long you can run, and see why early stopping exists."
 series: "classification"
 order: 8
 date: 2026-09-30
-updated: 2026-10-02
-keywords: ["gradient boosting", "learning rate", "early stopping", "histgradientboosting", "xgboost", "lightgbm", "catboost"]
-readingTime: "17 min read"
+updated: 2026-10-04
+keywords: ["gradient boosting", "learning rate", "early stopping", "xgboost", "lightgbm", "catboost"]
+readingTime: "12 min read"
 figure: "ch08-boosting-lr.png"
 ---
 
-Random forests average many independent, fully-grown trees. **Gradient boosting does the opposite: it builds many small, weak trees in sequence, and each new tree is trained to fix what the ensemble so far is still getting wrong.**
+Fit a boosting model with a learning rate of 0.5 and its score on rows it has not seen peaks after about 100 trees and then falls. Meanwhile its score on the rows it was fitted on keeps rising. Nothing in the algorithm tells it to stop. That one observation explains most of the practical advice about boosting.
 
-XGBoost, LightGBM and CatBoost are all industrial-strength versions of this one idea, and they dominate tabular-data competitions. Before we race them in [part 12](/series/classification/12-head-to-head-leaderboard/), let's build the core loop ourselves. It's shorter than you'd expect.
+<div class="callout">
 
-## Goals: what are we trying to achieve?
+**Goal.** Understand the boosting loop, what the learning rate does to it, and how to choose the number of trees without guessing.
 
-Boosting builds many small trees in sequence, each fixing the mistakes of the ones before it. Our goal is to write the core loop ourselves and understand the knobs that XGBoost, LightGBM and CatBoost share.
+**Work plan.** Write gradient boosting with log loss in a few lines. Run it at three learning rates and score each stage on inner validation rows. Then let early stopping choose the number of trees, and place the named libraries in context.
 
-By the end you will be able to:
+</div>
 
-- **Explain boosting in five steps**, and why the residual is the negative gradient of the loss.
-- **Read a learning-rate table** and know that `learning_rate` and `n_estimators` trade off.
-- **Use early stopping** to choose the number of trees, instead of guessing.
+## The algorithm in plain words
 
-## The work plan: how do we do it?
+Random forests average many independent, deep trees. Boosting does the opposite: it adds many small trees one after another, and each new tree is trained to fix what the ensemble so far still gets wrong.
 
-From the algorithm to the library:
-
-1. **The algorithm in plain words**, then about fifteen lines of code with a `lr` switch.
-2. **Learning rate made visible**: the same model at 0.5, 0.1 and 0.02, scored at several stages.
-3. **Early stopping**: scikit-learn's `HistGradientBoostingClassifier` with a validation slice.
-4. **What the named libraries add**, and how boosting compares with bagging.
-
-## Implementation
-
-### The algorithm in plain words
-
-1. Start with a constant prediction: the log-odds of the base rate.
-2. Compute each customer's **residual**: how wrong is the current prediction? For log loss, the residual is simply `y − p`.
-3. Fit a small tree (depth 3) to predict those residuals.
-4. Add that tree's output, **multiplied by a small learning rate**, to the running score.
+1. Start with a constant score: the log-odds of the overall rate.
+2. For each record compute the **residual**: outcome minus current predicted probability. For log loss this is exactly the negative gradient of the loss with respect to the current score.
+3. Fit a small tree to predict those residuals.
+4. Add that tree's output, multiplied by a small **learning rate**, to the running score.
 5. Repeat.
 
-Score = `F₀ + η·tree₁ + η·tree₂ + …`, and the probability is `sigmoid(score)`. "Gradient" comes from the fact that the residual is the negative gradient of the loss with respect to the current score — each tree is a step of gradient descent, *in function space*.
+The prediction is `sigmoid(F₀ + η·tree₁ + η·tree₂ + …)`. Each step is a gradient-descent step, taken in the space of functions instead of the space of weights. As before we fit on 75% of the development rows and score on the other 25%.
+
+**Implementation.**
 
 ```python
 import numpy as np
 import pandas as pd
-from sklearn.compose import ColumnTransformer
-from sklearn.metrics import average_precision_score, log_loss
+from sklearn.compose import make_column_transformer
+from sklearn.metrics import average_precision_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.tree import DecisionTreeRegressor
 
 df = pd.read_csv("bank-additional-full.csv", sep=";")
 y = (df.pop("y") == "yes").astype(int).to_numpy()
-X = df.drop(columns="duration")
-Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
-cat = X.select_dtypes("object").columns.tolist()
-prep = ColumnTransformer([("cat", OneHotEncoder(handle_unknown="ignore", sparse_output=False), cat)],
-                         remainder="passthrough")
-A, B = prep.fit_transform(Xtr), prep.transform(Xte)
+X = df.drop(columns=["duration", "campaign"])
+dev, _ = train_test_split(np.arange(len(X)), test_size=0.2, stratify=y, random_state=42)
+dev = np.sort(dev)
+fit, val = train_test_split(dev, test_size=0.25, stratify=y[dev], random_state=42)
+cat = [c for c in X.columns if X[c].dtype == object]
+prep = make_column_transformer((OneHotEncoder(handle_unknown="ignore", sparse_output=False), cat), remainder="passthrough")
+A, B = prep.fit_transform(X.iloc[fit]), prep.transform(X.iloc[val])
+yf, yv = y[fit], y[val]
 sigmoid = lambda z: 1 / (1 + np.exp(-z))
 
-def boost(lr, n_stages=300, depth=3):
-    base = np.log(ytr.mean() / (1 - ytr.mean()))             # stage 0: predict the base rate
-    F_tr, F_te = np.full(len(A), base), np.full(len(B), base)
-    history = []
-    for m in range(1, n_stages + 1):
-        residual = ytr - sigmoid(F_tr)                        # negative gradient of log loss
-        tree = DecisionTreeRegressor(max_depth=depth, min_samples_leaf=20).fit(A, residual)
-        F_tr += lr * tree.predict(A)
-        F_te += lr * tree.predict(B)
-        if m in (1, 10, 25, 50, 100, 200, 300):
-            q = sigmoid(F_te)
-            history.append((m, average_precision_score(yte, q), log_loss(yte, q),
-                            average_precision_score(ytr, sigmoid(F_tr))))
-    return history
+def boost(lr, stages):
+    start = np.log(yf.mean() / (1 - yf.mean()))                     # stage 0: the base rate
+    F_fit, F_val = np.full(len(A), start), np.full(len(B), start)
+    curve = {}
+    for m in range(1, stages + 1):
+        residual = yf - sigmoid(F_fit)                              # negative gradient of log loss
+        tree = DecisionTreeRegressor(max_depth=3, min_samples_leaf=20).fit(A, residual)
+        F_fit += lr * tree.predict(A)
+        F_val += lr * tree.predict(B)
+        if m in (1, 10, 50, 100, 300):
+            curve[m] = (average_precision_score(yv, F_val), average_precision_score(yf, F_fit))
+    return curve
+
+for lr in (0.5, 0.1):
+    print(f"learning rate {lr}")
+    for m, (v, f) in boost(lr, 300).items():
+        print(f"  {m:>4} trees: validation AP {v:.3f}   fitted rows AP {f:.3f}")
 ```
 
-That is gradient boosting. The loop body is five lines. (Real libraries also do a second-order Newton step to set the leaf values and add regularisation, but the skeleton is this.)
-
-### The learning rate, made visible
-
-Everything interesting is in `lr`. Let's train the same model with three learning rates and print the score at several stages:
-
-```python
-for lr in (0.5, 0.1, 0.02):
-    print(f"\nlearning rate {lr}")
-    print("  stages   test AP  test logloss  train AP")
-    for m, ap, ll, tap in boost(lr):
-        print(f"  {m:>6}   {ap:.3f}    {ll:.3f}        {tap:.3f}")
-```
+**Result.**
 
 ```output
 learning rate 0.5
-  stages   test AP  test logloss  train AP
-       1   0.388    0.342        0.374
-      10   0.426    0.293        0.409
-      25   0.464    0.276        0.451
-      50   0.479    0.270        0.473
-     100   0.484    0.266        0.491
-     200   0.484    0.265        0.505
-     300   0.486    0.265        0.517
-
+     1 trees: validation AP 0.374   fitted rows AP 0.374
+    10 trees: validation AP 0.408   fitted rows AP 0.409
+    50 trees: validation AP 0.458   fitted rows AP 0.472
+   100 trees: validation AP 0.461   fitted rows AP 0.493
+   300 trees: validation AP 0.454   fitted rows AP 0.527
 learning rate 0.1
-  stages   test AP  test logloss  train AP
-       1   0.388    0.350        0.374
-      10   0.388    0.333        0.374
-      25   0.405    0.313        0.392
-      50   0.434    0.294        0.418
-     100   0.461    0.280        0.446
-     200   0.477    0.272        0.470
-     300   0.478    0.269        0.477
-
-learning rate 0.02
-  stages   test AP  test logloss  train AP
-       1   0.388    0.352        0.374
-      10   0.388    0.348        0.374
-      25   0.393    0.342        0.378
-      50   0.394    0.333        0.381
-     100   0.395    0.319        0.383
-     200   0.410    0.300        0.395
-     300   0.451    0.289        0.435
+     1 trees: validation AP 0.374   fitted rows AP 0.374
+    10 trees: validation AP 0.378   fitted rows AP 0.382
+    50 trees: validation AP 0.413   fitted rows AP 0.417
+   100 trees: validation AP 0.452   fitted rows AP 0.451
+   300 trees: validation AP 0.457   fitted rows AP 0.476
 ```
 
-What to see in these numbers:
+That loop is gradient boosting. Real libraries add a second-order step to set the leaf values, regularisation and much faster split finding, but the skeleton is this.
 
-- **A very first tree already gets 0.388.** A depth-3 tree is weak, but not useless (recall [part 6](/series/classification/06-decision-trees/): shallow trees reach ~0.37).
-- **Learning rate is a speed dial.** At `lr=0.5` the model reaches 0.479 in 50 stages. At `lr=0.1` it needs 200 stages for 0.477. At `lr=0.02` it hasn't finished after 300: it's at 0.451 and still climbing.
-- **Test log loss tracks AP.** They improve together — boosting with log loss is directly optimising probability quality, and ranking improves as a by-product.
-- **Watch the train/test gap.** At `lr=0.5`, train AP reaches 0.517 after 300 stages while test AP is 0.486: it's starting to fit noise, and the test curve has flattened. Nothing in the algorithm says "stop now". *You* have to.
+## Learning rate, made visible
 
-The standard rule of thumb: **use a small learning rate and many trees, and let early stopping choose the number.** Small steps rarely overshoot, so the final model is smoother. The price is compute.
+The table runs the same loop for 1,000 stages at three learning rates (validation AP; the snippet above shows the first 300 stages for two of them).
 
-<div class="callout gotcha">
+| trees | 0.5 | 0.1 | 0.02 |
+|---|---|---|---|
+| 1 | 0.374 | 0.374 | 0.374 |
+| 10 | 0.408 | 0.378 | 0.374 |
+| 25 | 0.456 | 0.391 | 0.376 |
+| 50 | 0.458 | 0.413 | 0.378 |
+| 100 | 0.461 | 0.452 | 0.381 |
+| 200 | 0.456 | 0.458 | 0.409 |
+| 300 | 0.454 | 0.457 | 0.421 |
+| 500 | 0.450 | 0.460 | 0.453 |
+| 1,000 | 0.447 | 0.456 | 0.458 |
 
-**Gotcha — `learning_rate` and `n_estimators` are not independent.** Halving the learning rate roughly doubles the number of trees you need. If you tune them together you waste budget. Fix a small learning rate (0.03–0.1) and tune `n_estimators` via early stopping, or fix `n_estimators` and tune the learning rate — never a grid over both.
+![Validation average precision against boosting stages for three learning rates.](/series/classification/figures/ch08-boosting-lr.png)
+*Figure 1. A large learning rate learns fast and then overfits. A small one is slower and still improving at 1,000 trees.*
 
-</div>
+What the numbers say:
 
-### Early stopping: let validation data choose the number of trees
+- **Large steps are fast, then risky.** At a learning rate of 0.5 the validation AP is 0.461 at 100 trees and 0.447 at 1,000, while the AP on the fitted rows climbs from 0.493 to 0.586: the model increasingly describes noise.
+- **Small steps need more trees, and compute decides whether you get there.** A rate of 0.1 peaks at 500 trees (0.460). At 0.02 the score is still rising at 1,000 trees (0.458) and far behind at 300 (0.421). Smaller rates often end similar or slightly better, but only if you can afford the trees.
+- **The learning rate and the number of trees interact.** Halving the rate roughly doubles the trees you need to reach the same place. That does not make a joint search invalid, but it makes it wasteful, which is why the usual routine is to fix a small learning rate and choose the tree count by early stopping.
+- **The best scores of the three runs are within 0.003 of each other**, so on this data the choice of learning rate mostly changes how many trees you need and how carefully you must stop.
 
-Instead of guessing 300, hold out a slice of the training data, evaluate after each tree, and stop when the validation loss hasn't improved for `n_iter_no_change` rounds. scikit-learn's `HistGradientBoostingClassifier` has this built in, plus native categorical-feature support and multi-threaded histogram-based split search (the same trick LightGBM popularised):
+## Early stopping
+
+Instead of guessing a number of trees, hold out a slice of the training data, score it after every tree, and stop when it has not improved for a set number of rounds. scikit-learn's `HistGradientBoostingClassifier` has this built in, along with native handling of categorical columns and fast histogram-based split search.
+
+**Implementation.**
 
 ```python
 from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.metrics import log_loss
 
-Xc = X.copy()
-for c in cat:
-    Xc[c] = Xc[c].astype("category")                          # tell the model which columns are categorical
-Xctr, Xcte = Xc.loc[Xtr.index], Xc.loc[Xte.index]
+cats = {c: sorted(X.iloc[fit][c].unique()) for c in cat}
+def as_category(rows):
+    Z = X.iloc[rows].copy()
+    for c in cat:
+        Z[c] = pd.Categorical(Z[c], categories=cats[c])
+    return Z
 
+Zf, Zv = as_category(fit), as_category(val)
 for lr in (0.3, 0.1, 0.03):
-    h = HistGradientBoostingClassifier(learning_rate=lr, max_iter=2000, early_stopping=True,
-                                       validation_fraction=0.15, n_iter_no_change=30,
-                                       categorical_features="from_dtype", random_state=0).fit(Xctr, ytr)
-    q = h.predict_proba(Xcte)[:, 1]
-    print(f"HistGB lr={lr}: stopped at {h.n_iter_} trees  test AP={average_precision_score(yte, q):.3f}  logloss={log_loss(yte, q):.3f}")
+    h = HistGradientBoostingClassifier(learning_rate=lr, max_iter=2000, early_stopping=True, validation_fraction=0.15,
+                                       n_iter_no_change=30, categorical_features="from_dtype", random_state=42).fit(Zf, yf)
+    q = h.predict_proba(Zv)[:, 1]
+    print(f"learning rate {lr}: stopped at {h.n_iter_:>3} trees, validation AP {average_precision_score(yv, q):.3f}, log loss {log_loss(yv, q):.3f}")
 ```
+
+**Result.**
 
 ```output
-HistGB lr=0.3: stopped at 40 trees  test AP=0.483  logloss=0.270
-HistGB lr=0.1: stopped at 63 trees  test AP=0.496  logloss=0.263
-HistGB lr=0.03: stopped at 138 trees  test AP=0.496  logloss=0.263
+learning rate 0.3: stopped at  36 trees, validation AP 0.440, log loss 0.283
+learning rate 0.1: stopped at  61 trees, validation AP 0.454, log loss 0.275
+learning rate 0.03: stopped at 123 trees, validation AP 0.454, log loss 0.274
 ```
 
-Several things happened at once:
+**What it means.** We allowed 2,000 trees and the models stopped between 36 and about 120. The two smaller rates end at almost the same validation AP and log loss; the largest is worse on both. The validation slice must look like the future you care about: a random 15% slice suits a random split, but if the question is about *later* records (part 16), validate on the most recent training data, because a random slice from the past keeps rewarding extra trees long after the model stopped generalising forward in time.
 
-1. **Early stopping replaced our guess.** We allowed 2,000 trees; the model stopped at 40, 63 and 138.
-2. **Smaller learning rates found a slightly better place.** lr = 0.3 ended at AP 0.483; lr = 0.1 and 0.03 both hit 0.496. After a point, making the step smaller yields no further benefit — the extra trees are pure cost.
-3. **It beat our from-scratch version (0.486).** Native categorical handling (no one-hot), leaf-value regularisation and histogram splits each contribute a little. This single-digit-second model is already ahead of everything in [parts 5](/series/classification/05-logistic-regression-naive-bayes/)–[7](/series/classification/07-bagging-random-forests/): logistic regression 0.464, tuned tree ~0.43, forest 0.491.
+## The named libraries
 
-<div class="callout tip">
+Everything above is the core. XGBoost, LightGBM and CatBoost are engineering variants of it, and many differences are configurable, so read the table as defaults for the versions used here (XGBoost 3.4.1, LightGBM 4.7.0, CatBoost 1.2.10, scikit-learn 1.8.0).
 
-**Early stopping and time.** The early-stopping slice here is a *random* 15% of the training rows, which is fine for this series' random split. If your deployment predicts the *future* ([part 16](/series/classification/16-when-time-breaks-the-model/)), validate on the most recent slice instead; a random slice from the past will tell you to keep training long after the model has stopped generalising forward in time.
-
-</div>
-
-## What did we get? Results
-
-From-scratch boosting, test AP and test log loss:
-
-| Learning rate | After 50 stages | After 300 stages |
-|---|---|---|
-| 0.5 | AP 0.479, log loss 0.270 | AP 0.486, log loss 0.265 |
-| 0.1 | AP 0.434, log loss 0.294 | AP 0.478, log loss 0.269 |
-| 0.02 | AP 0.394, log loss 0.333 | AP 0.451, log loss 0.289 |
-
-With early stopping (`HistGradientBoostingClassifier`):
-
-| Learning rate | Stopped at | Test AP | Log loss |
+| | Tree growth by default | Categorical columns | Known for |
 |---|---|---|---|
-| 0.3 | 40 trees | 0.483 | 0.270 |
-| 0.1 | 63 trees | 0.496 | 0.263 |
-| 0.03 | 138 trees | 0.496 | 0.263 |
+| XGBoost | Level by level, depth-limited | Native support available (`enable_categorical`) | Regularised objective, second-order gradients, a very large ecosystem |
+| LightGBM | Leaf by leaf (best leaf first), controlled by `num_leaves` | Native support | Speed on large data |
+| CatBoost | Symmetric ("oblivious") trees | Native, with ordered target statistics | Strong defaults for categorical-heavy data |
+| scikit-learn `HistGradientBoosting` | Leaf by leaf | Native support | No extra dependency, early stopping built in |
 
-![Test average precision versus number of boosting stages for three learning rates.](/series/classification/figures/ch08-boosting-lr.png)
-*Figure 1. Smaller learning rates take many more trees to reach the same place, but the destination is at least as good.*
+Whether any of these differences matters for *this* problem is an empirical question, answered under one protocol in part 12.
 
-## Analysis and conclusion: what did we learn?
+## Boosting and bagging side by side
 
-- **The learning rate is a speed dial.** A smaller rate needs many more trees to reach the same place, and the destination is at least as good.
-- **Nothing in the algorithm says stop.** At `lr=0.5`, train AP climbs to 0.517 while test AP flattens at 0.486. You have to stop it, and early stopping does that.
-- **Do not grid over `learning_rate` and `n_estimators` together.** Fix a small rate and let early stopping choose the trees.
-- **Boosting is already ahead of [Parts 5](/series/classification/05-logistic-regression-naive-bayes/) to 7** (0.496 against 0.464, about 0.43 and 0.491), but the gap to a forest is tiny. [Part 13](/series/classification/13-is-the-winner-real/) tests whether it is real.
-
-### What the named libraries add
-
-Everything above is the core. The three famous libraries differ on engineering choices:
-
-| | Split search | Trees grow | Categorical handling | Known for |
-|---|---|---|---|---|
-| **XGBoost** | Histogram (`hist`) or exact | Level-wise (depth-limited) | Native (`enable_categorical`) in recent versions | Regularised objective, 2nd-order gradients, huge ecosystem |
-| **LightGBM** | Histogram, gradient-based sampling | Leaf-wise (best leaf first) | Native, optimal partitioning of categories | Speed on large data; needs `num_leaves` care |
-| **CatBoost** | Symmetric ("oblivious") trees | Level-wise, same split per level | Native, **ordered target statistics** | Strong defaults, best handling of high-cardinality categories |
-| scikit-learn `HistGB` | Histogram | Leaf-wise | Native | No extra dependency, good defaults |
-
-These are differences of engineering and inductive bias, not of idea. Whether they translate into better *test scores on this problem* is an empirical question — the subject of [part 12](/series/classification/12-head-to-head-leaderboard/), where all three race on identical data.
-
-### Boosting vs bagging: which, when?
-
-| | Random forest | Gradient boosting |
+| | Random forest (part 7) | Gradient boosting |
 |---|---|---|
 | Trees | Deep, independent, averaged | Shallow, sequential, summed |
-| Reduces | Variance | Bias (and variance, with small lr) |
-| Tuning sensitivity | Low | Medium (lr, depth/leaves, regularisation) |
-| Overfits with more trees? | No | Yes — needs early stopping |
-| Probabilities | Compressed toward centre | Good when trained on log loss |
-| Best when | You want a strong, forgiving default | You want the last few points of accuracy and can validate properly |
+| Mainly reduces | Variance | Bias, and variance too at small learning rates |
+| Sensitivity to settings | Usually low | Moderate: learning rate, tree size, regularisation, stopping |
+| More trees | Rarely hurts, stabilises | Can overfit, so stop on validation data |
+| Probabilities | Depend on leaf size | Reasonable when trained on log loss, still worth checking (part 11) |
 
-On this dataset, both land around 0.49 average precision. The gap between them is tiny; the gap between them and a single tree (0.43) or Naive Bayes (0.37) is large. **Part of the craft of applied ML is knowing which gaps matter** — and in [part 13](/series/classification/13-is-the-winner-real/) we'll measure whether 0.496 versus 0.491 is a real difference at all.
+## Analysis and conclusion: what we learned
 
-### So what did we do?
+- **The loop is short.** Residual, small tree, small step, repeat. Everything else in the libraries is speed, regularisation and convenience.
+- **Nothing in boosting says stop.** A large learning rate overfits within a hundred trees on this data. Choose the tree count on validation data.
+- **Small steps are not automatically better.** They are smoother and often at least as good, but under a finite budget a small learning rate may simply not have run long enough.
+- **Early stopping must validate the right thing.** Use random validation rows for a random split and the latest rows for a time-ordered one.
 
-We wrote gradient boosting in five lines of loop, watched the learning rate trade speed for smoothness, and let early stopping pick the number of trees. A single scikit-learn model reached AP 0.496 in seconds.
+*Further reading.* Friedman (2001), [Greedy function approximation: a gradient boosting machine](https://doi.org/10.1214/aos/1013203451); Chen and Guestrin (2016), [XGBoost](https://doi.org/10.1145/2939672.2939785); Ke et al. (2017), LightGBM, NeurIPS; Prokhorenkova et al. (2018), [CatBoost](https://arxiv.org/abs/1706.09516).
 
-### In the next part
-
-[Part 9](/series/classification/09-other-classification-families/) goes through the remaining families — k-nearest neighbours, SVMs and neural nets — that need very different treatment of the same data.
+[Part 9](/series/classification/09-other-classification-families/) goes through the remaining families, k-nearest neighbours, support vector machines and neural networks, which need very different treatment of the same data.

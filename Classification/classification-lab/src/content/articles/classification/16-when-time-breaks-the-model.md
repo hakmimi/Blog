@@ -1,222 +1,207 @@
 ---
-title: "When Time Breaks the Model: Train on the Past, Predict the Future"
-description: "Re-run the race with a chronological split. The subscription rate jumps from 6% to 31%, the boosters fall to the bottom, logistic regression wins, and a one-line base-rate correction recovers almost all the lost profit."
+title: "When Time Breaks the Model: Train on the Past, Decide on the Future"
+description: "Train on the first 80% of the file and score the last 20%, where the share of subscribers jumps from 6.4% to 30.8%. Every choice stays inside the past; we compare corrections that could be applied and one that could not, then describe how to run such a policy for real."
 series: "classification"
 order: 16
-date: 2026-10-01
-updated: 2026-10-02
-keywords: ["distribution shift", "temporal validation", "prior shift", "concept drift", "model robustness", "time series split"]
-readingTime: "18 min read"
+date: 2026-09-30
+updated: 2026-10-04
+keywords: ["distribution shift", "prior shift", "temporal validation", "concept drift", "monitoring", "deployment"]
+readingTime: "14 min read"
 figure: "ch16-time-shift.png"
 ---
 
-Everything in [parts 12](/series/classification/12-head-to-head-leaderboard/)–[15](/series/classification/15-inside-the-winner/) used a random 80/20 split. It's the standard way to compare algorithms, and in [part 2](/series/classification/02-why-classification-is-hard/) we justified it: it isolates *model* differences from *data-era* differences. But it answers a question nobody is asking in production. A deployed model scores tomorrow's customers, who weren't in last year's data.
+Train on the first 80% of the file and 6.4% of the training records are subscribers. Score the last 20% and the share is 30.8%. Under the illustrative prices, contacting *every* record in that last block earns 12,082 units. So the question is not only "which model ranks best on later records?" but "what does a model add to a baseline that is already strong?"
 
-The file is in date order, which gives us a free experiment: **train on the first 80% of rows (the past) and test on the last 20% (the future).** Same models, same features, same tuned hyperparameters from the leaderboard. Only the split changes.
+<div class="callout">
 
-## Goals: what are we trying to achieve?
+**Goal.** Evaluate models the way they would be used, on records that come after their training data.
 
-[Parts 12](/series/classification/12-head-to-head-leaderboard/) to 15 used a random 80/20 split. A deployed model scores tomorrow's customers, who were not in last year's data. Our goal is to test the way we would deploy: train on the past, test on the future.
-
-By the end you will be able to:
-
-- **Explain prior shift**: why a model's probabilities go wrong when the base rate moves.
-- **Compare a random and a chronological split**, and see which claims survive.
-- **Repair a model with a base-rate correction**, in one line.
-
-## The work plan: how do we do it?
-
-The file is in date order, so we cut it by time instead of at random:
-
-1. **The cut**: train on the first 80% of rows (6.4% subscribe), test on the last 20% (30.8% subscribe).
-2. **The race, re-run**: seven models with the same hyperparameters as the leaderboard.
-3. **Diagnose**: compare mean predicted probability and the number of calls at the 1/8 threshold.
-4. **Repair**: the base-rate correction, and two other ideas that do not work as well.
-
-## Implementation
-
-### The future is a different place
-
-```python
-df = pd.read_csv("bank-additional-full.csv", sep=";")           # the file is in chronological order
-y = (df.pop("y") == "yes").astype(int).to_numpy()
-X = df.drop(columns="duration")
-
-cut = int(len(X) * 0.8)                                          # train on the past, test on the future
-tr, te = np.arange(cut), np.arange(cut, len(X))
-print(f"train rows 0-{cut - 1}: {y[tr].mean():.1%} subscribe   |   test rows {cut}-{len(X) - 1}: {y[te].mean():.1%} subscribe")
-```
-
-```output
-train rows 0-32949: 6.4% subscribe   |   test rows 32950-41187: 30.8% subscribe
-```
-
-The training period has **6.4% subscribers; the test period has 30.8%**. That's the "prior shift" we foreshadowed in [part 2](/series/classification/02-why-classification-is-hard/): the rate climbs through the file because the economy (and the campaign) changed. In the training era the 12.5% break-even threshold was an unusual customer. In the test era it's *a below-average one*:
-
-```python
-COST, VALUE = 1.0, 8.0
-def profit(p, t=1 / 8):
-    call = p >= t
-    return VALUE * y[te][call].sum() - COST * call.sum()
-print(f"call everyone: profit {profit(np.ones(len(te)), 0.5):.0f}")
-```
-
-```output
-call everyone: profit 12082
-```
-
-Remember [part 14](/series/classification/14-pricing-the-models/): on the random split, calling everyone *lost* 814. In the future period, calling everyone **earns 12,082**. Any model we train on the past has to beat a "no-model" strategy that is suddenly extremely strong.
-
-### The race, re-run
-
-Seven of the leaderboard models, trained on the past, with the same hyperparameters selected earlier, scored on the future:
-
-```python
-candidates = {
-    "LightGBM":                     (LGBMClassifier(**params), "cat"),
-    "sklearn HistGradientBoosting": (HistGradientBoostingClassifier(max_leaf_nodes=15, learning_rate=0.1, l2_regularization=1,
-                                         categorical_features="from_dtype", early_stopping=True, random_state=42), "cat"),
-    "XGBoost":                      (XGBClassifier(n_estimators=400, learning_rate=0.02, max_depth=4, subsample=0.7,
-                                         colsample_bytree=0.6, tree_method="hist", enable_categorical=True, random_state=42), "cat"),
-    "Random forest":                (make_pipeline(dense, RandomForestClassifier(300, min_samples_leaf=10, max_features=0.3, n_jobs=-1, random_state=42)), "raw"),
-    "Decision tree":                (make_pipeline(dense, DecisionTreeClassifier(min_samples_leaf=100, random_state=42)), "raw"),
-    "Logistic regression":          (make_pipeline(prep, LogisticRegression(C=1, max_iter=2000)), "raw"),
-    "k-nearest neighbors":          (make_pipeline(dense, KNeighborsClassifier(120, n_jobs=-1)), "raw"),
-}
-for name, (est, view) in candidates.items():
-    F = Xc if view == "cat" else X                      # categorical dtype for the boosters, raw strings otherwise
-    p = est.fit(F.iloc[tr], y[tr]).predict_proba(F.iloc[te])[:, 1]
-    ...
-```
-
-```output
-model                              AP    AUC  mean p  calls@1/8  profit@1/8
-k-nearest neighbors             0.537  0.703   0.170       3634        9430
-Logistic regression             0.527  0.748   0.257       4692       12332
-Random forest                   0.510  0.728   0.143       3765       10179
-LightGBM                        0.503  0.694   0.100       1988        7004
-Decision tree                   0.476  0.662   0.101       1640        6280
-XGBoost                         0.472  0.672   0.125       2167        6617
-sklearn HistGradientBoosting    0.456  0.648   0.110       1679        5129
-```
-
-The leaderboard has been reshuffled:
-
-- **k-NN goes from 11th of 12 on the random split to first of these seven** by average precision (0.456 → 0.537). The model that was near the bottom is now at the top.
-- **Logistic regression has the best AUC** (0.748 vs 0.694 for LightGBM) and **the best profit by a mile**: 12,332, beating the no-model "call everyone" benchmark (12,082) while every tree-based booster earns *less than call-everyone*.
-- **All three boosters finish in the bottom four** on AP, and their AUCs (0.65–0.69) collapse from the 0.81–0.82 they scored on the random split. A likely culprit is the macro-economic columns: flexible tree models can carve them into fine cells that describe the training era exactly ([part 15](/series/classification/15-inside-the-winner/) showed LightGBM leans on them), and in the test era the economy sits in a range the training data barely covers.
-- **Random forest** holds up better than boosting (AP 0.510, AUC 0.728).
-
-<div class="callout gotcha">
-
-**Gotcha — "best on a random split" is not "best in production".** The random split taught us that boosting beats logistic regression by 0.03 AP. The chronological split says logistic regression beats the best booster by 0.024 AP. Both statements are true. They answer different questions: *which algorithm learns this relationship best?* versus *which one still works when the relationship moves?* A deployed system lives in the second world.
+**Work plan.** Cut the file by row order and keep every choice inside the past. Diagnose what shifted. Compare models and corrections within the future block and against call-everyone. Then describe how to test, monitor and maintain such a policy.
 
 </div>
 
-### Why the boosters lose the profit race: they don't know the base rate moved
+## The design
 
-Look at `mean p` and `calls@1/8`. The test period has 30.8% subscribers. Logistic regression's *average predicted probability* is 0.257, closest to the truth: it noticed the world got better. LightGBM's is 0.100, barely above its training-era base rate of 6.4%. At threshold 1/8, LightGBM calls 1,988 customers; logistic regression calls 4,692; the truth is that 2,540 of the 8,238 test customers would have subscribed.
+The file has no dates, so **row position is a proxy for time**: the first 80% of rows is the *past*, the last 20% the *future*. Settings are chosen with **expanding-window folds** inside the past (train on everything before a block, validate on the next).
 
-LightGBM isn't ranking customers terribly (AUC 0.694); it's calling too few of them because **its probabilities are calibrated to a world with 6% subscribers.** At a break-even of 12.5%, the model thinks most customers fall below the line, when in the new world most are above it.
+| block | first row | last row | records | positives | prevalence |
+|---|---|---|---|---|---|
+| temporal development (first 80% of rows) | 0 | 32,949 | 32,950 | 2,100 | 0.064 |
+| future (last 20% of rows) | 32,950 | 41,187 | 8,238 | 2,540 | 0.308 |
+| temporal fold 1: train | 0 | 16,474 | 16,475 | 706 | 0.043 |
+| temporal fold 2: train | 0 | 21,910 | 21,911 | 1,028 | 0.047 |
+| temporal fold 3: train | 0 | 27,347 | 27,348 | 1,325 | 0.048 |
+| temporal fold 1: validate | 16,475 | 21,910 | 5,436 | 322 | 0.059 |
+| temporal fold 2: validate | 21,911 | 27,347 | 5,437 | 297 | 0.055 |
+| temporal fold 3: validate | 27,348 | 32,949 | 5,602 | 775 | 0.138 |
 
-That diagnosis suggests a cheap fix. The model outputs `p` for the training prior (6.4%); if we know the new prior is 30.8%, Bayes' rule says to multiply the odds by the ratio of prior odds:
+Prevalence already drifts inside the past (5.9% to 13.8%), so AP is compared *within* a block, never across. Models and search spaces are those of part 12, with candidates scored by mean AP over the three validation blocks, early stopping on a random 10% of the training data (still the past), and one threshold policy chosen on the validation-block predictions. The Platt-scaled SVM is left out because its calibration folds would need an ordered design. The future block is scored once.
 
-```python
-def shift(p, old, new):
-    odds = p / (1 - p) * (new / (1 - new)) / (old / (1 - old))
-    return odds / (1 + odds)
-report("LightGBM + base-rate correction", shift(np.clip(p_l, 1e-6, 1 - 1e-6), y[tr].mean(), y[te].mean()))
-```
+![Share of subscribers in each temporal validation block and in the future block, with record counts.](/series/classification/figures/ch16-folds.png)
+*Figure 1. The blocks differ in prevalence even inside the past.*
 
-```output
-LightGBM, trained on the past      AP=0.503  AUC=0.694  mean p=0.100  calls@1/8= 1988  profit@1/8=  7004  (best possible 12258)
-LightGBM + base-rate correction    AP=0.503  AUC=0.694  mean p=0.360  calls@1/8= 7936  profit@1/8= 12240  (best possible 12258)
-```
+## What shifted?
 
-**One line of arithmetic takes LightGBM from 7,004 to 12,240, 99.9% of the best profit that *any* threshold could have achieved** on this test set (12,258). AP and AUC are identical because a monotone transformation can't change a ranking; only the *decisions* changed. This is the cleanest demonstration in the series of why ranking and decision-making are separate problems.
+"The data changed" can mean different things with different remedies. **Prevalence** rose from 6.4% to 30.8%. The **inputs** moved: the macroeconomic columns are several standard deviations from their past values, and a classifier that tells past from future using only the inputs scores an AUC of 0.9999.
 
-The catch is the argument `new`: we used the test set's actual 30.8%, which you won't know in advance. In production you must estimate it from recent data, e.g. from the last few weeks of outcomes, or from a small randomly-sampled holdout where calls aren't selected by the model. If you can't estimate it, the next best option is to monitor the *mean predicted probability* vs observed subscription rate in a rolling window and recalibrate when they diverge.
+| column | future minus past in pooled SDs |
+|---|---|
+| age | -0.000 |
+| pdays | -0.590 |
+| previous | 0.790 |
+| emp.var.rate | -2.960 |
+| cons.price.idx | -1.130 |
+| cons.conf.idx | 0.120 |
+| euribor3m | -3.500 |
+| nr.employed | -3.040 |
 
-### Other things we tried
+The **relationship between inputs and outcome** may also have changed, but we cannot see it, because both moved together. A **prior (label) shift** correction assumes something much narrower: that the *class-conditional* input distributions are stable and only the class proportions move. The near-perfect separability above is evidence against that.
 
-```python
-macro = ["emp.var.rate", "cons.price.idx", "cons.conf.idx", "euribor3m", "nr.employed"]
-m2 = LGBMClassifier(**params).fit(Xc.iloc[tr].drop(columns=macro), y[tr])        # (a) without macro columns
+## Ranking within the future block
 
-recent = tr[len(tr) // 2:]                                                       # (b) newest half of training only
-m3 = LGBMClassifier(**params).fit(Xc.iloc[recent], y[recent])
-```
+All comparisons here use the same 8,238 future records. A random ranking scores the prevalence, 0.308. Do not compare these APs with part 12's: AP depends on prevalence, which is now five times higher.
 
-```output
-LightGBM without macro columns     AP=0.477  AUC=0.669  mean p=0.147  calls@1/8= 2290  profit@1/8= 7542  (best possible 12128)
-LightGBM, recent half only         AP=0.525  AUC=0.711  mean p=0.109  calls@1/8= 2309  profit@1/8= 7595  (best possible 12352)
-```
+| model | AP | AUC | mean score | ECE |
+|---|---|---|---|---|
+| Extra trees | 0.547 | 0.748 | 0.151 | 0.157 |
+| k-nearest neighbours | 0.538 | 0.706 | 0.168 | 0.141 |
+| CatBoost | 0.527 | 0.742 | 0.197 | 0.111 |
+| Random forest | 0.514 | 0.735 | 0.144 | 0.164 |
+| Gaussian Naive Bayes | 0.499 | 0.714 | 0.757 | 0.455 |
+| Small neural net (MLP) | 0.492 | 0.664 | 0.118 | 0.190 |
+| Logistic regression | 0.485 | 0.641 | 0.137 | 0.171 |
+| sklearn HistGradientBoosting | 0.477 | 0.672 | 0.124 | 0.184 |
+| LightGBM | 0.456 | 0.651 | 0.091 | 0.217 |
+| Decision tree | 0.444 | 0.630 | 0.107 | 0.201 |
+| XGBoost | 0.434 | 0.624 | 0.109 | 0.199 |
 
-- **(a) Dropping the macro columns** hurts ranking (AP 0.503 → 0.477) rather than helping. Those columns carry *real* signal even when their relationship shifts. Throwing out time-proxies isn't a free fix.
-- **(b) Training on only the newest half of the training data** helps the ranking (AP 0.525, AUC 0.711): more weight on data closer to the future. But profit stays near 7,600; the base-rate problem remains until you correct it.
+![Left: average precision on the future block. Right: simulated contribution at break-even 1/8 for each model with each correction; the dashed line is call-everyone.](/series/classification/figures/ch16-time-shift.png)
+*Figure 2. Same models, same future records.*
 
-Neither alternative is as effective as the base-rate correction, and none rescues the booster's AUC to logistic regression's 0.748.
+The ordering is not the random-split one: extra trees, k-NN, CatBoost and the random forest lead on AP; logistic regression is in the middle; and scikit-learn's booster, LightGBM, the single tree and XGBoost come last, with XGBoost, the single tree and logistic regression lowest on AUC. It is one future block with no interval, so do not read differences of a few hundredths as an ordering. The robust point is that **the leaders of a random-split comparison are not guaranteed to lead on later records**, and that mean scores (about 0.09 for LightGBM) sit far below the true rate: the scores belong to the past.
 
-## What did we get? Results
+## What a correction can and cannot do
 
-Same models, same features, same tuned hyperparameters. Only the split changes. Calling everyone earns 12,082 on the future test set.
+Under an assumed label shift, a model's probabilities can be re-weighted by multiplying the odds by the ratio of new to old prior odds. A monotone correction cannot change AP or AUC; it changes *who crosses the threshold*. We try four priors, three of them available at decision time:
 
-- **k-NN:** AP 0.537, profit 9,430. It was 11th of 12 on the random split.
-- **Logistic regression:** AP 0.527, AUC 0.748, profit 12,332, the best of the seven.
-- **LightGBM:** AP 0.503, AUC 0.694, profit 7,004, with mean predicted probability 0.100 against a true rate of 30.8%.
-- **LightGBM with the base-rate correction:** profit 12,240 (best possible 12,258), mean p 0.360.
-- **Other ideas:** dropping the macro columns gives AP 0.477, and training on only the newest half gives AP 0.525 with profit still about 7,600.
+| Correction | Prior used | Available at decision time? |
+|---|---|---|
+| None | The past prevalence | Yes |
+| Last window | Prevalence of the last validation block (13.8%) | Yes: a lagged estimate |
+| EM | Estimated from the future block's scores alone (Saerens, Latinne and Decaestecker, 2002) | In principle: no labels needed, but it assumes label shift and calibrated scores |
+| Oracle | The future's true prevalence (30.8%) | **No**: a diagnostic only |
 
-![Left: average precision under a random split and under the chronological split, per model. Right: profit at threshold 1/8 on the future test set, with the call-everyone benchmark.](/series/classification/figures/ch16-time-shift.png)
-*Figure 1. The same models, two splits. The ranking from [part 12](/series/classification/12-head-to-head-leaderboard/) doesn't survive.*
+Simulated contribution at the break-even threshold 1/8:
 
-Try it yourself. Tell the model what base rate to assume and watch profit at the 1/8 threshold. At the training-era rate nothing changes; as you slide toward the real 30.8% the booster's profit climbs to its best, and past it the model over-calls again.
+| model | none | last window | EM | oracle (not deployable) |
+|---|---|---|---|---|
+| Logistic regression | 7,665 | 11,802 | 12,082 | 12,088 |
+| Gaussian Naive Bayes | 12,092 | 12,120 | 12,082 | 12,107 |
+| k-nearest neighbours | 9,369 | 11,637 | 12,094 | 12,045 |
+| Small neural net (MLP) | 7,083 | 10,999 | 12,082 | 12,005 |
+| Decision tree | 6,722 | 10,037 | 11,965 | 11,025 |
+| Random forest | 10,960 | 12,493 | 12,082 | 12,093 |
+| Extra trees | 11,538 | 12,392 | 12,082 | 12,084 |
+| sklearn HistGradientBoosting | 7,151 | 9,728 | 12,082 | 12,105 |
+| XGBoost | 4,753 | 9,260 | 12,082 | 12,033 |
+| LightGBM | 5,375 | 9,314 | 12,082 | 11,947 |
+| CatBoost | 11,642 | 12,513 | 12,082 | 12,085 |
+
+The yardstick is **call-everyone, 12,082**.
+
+**Try it.** Pick a model, then tell it a base rate with the slider or the buttons (training period, last validation block, the EM estimate, the oracle). The widget shows how many records cross the threshold, the simulated contribution and the gain over call-everyone. Ranking never changes; only who is selected does.
 
 <div class="prior-shift-lab" data-src="/series/classification/artifacts/prior_shift_lab.json" data-cost="1" data-value="8"></div>
 <script src="/js/prior-shift-lab.js"></script>
 
-## Analysis and conclusion: what did we learn?
+- **Uncorrected, almost every model earns less.** Scores tuned to a 6% world leave most future records below 1/8: LightGBM selects 21% of records and earns 5,375. Naive Bayes is the exception because its inflated probabilities select 93%.
+- **The oracle brings most models to about call-everyone**, because with the true prevalence the corrected probabilities of nearly every record exceed 1/8: LightGBM selects 96% of records, logistic regression 100%. A correction that "restores the profit" has turned the policy into "contact (almost) everyone", and its advantage over call-everyone is a few units, not thousands. The first edition of this series reported 12,240 for a corrected LightGBM against 12,082 for call-everyone (+158). Recomputed with past-only development, the oracle-corrected LightGBM earns 11,947.
+- **The last-window correction is a deployable middle path.** With a lagged prevalence of 13.8%, the random forest, extra trees and CatBoost earn 12,493, 12,392 and 12,513, about 300 to 430 (2.5% to 3.5%) above call-everyone. Naive Bayes ends within 40 units of it and the other models stay below it. The lagged estimate is itself too low.
+- **EM fails here.** For seven of eleven models the iteration drifts to a prevalence near 1 and selects every record. That is what an unmet assumption looks like: the class-conditional input distributions did *not* stay put, so the estimator absorbs the shift in the inputs.
 
-- **The ranking does not survive the move to the future.** Boosting beat logistic regression by 0.031 AP on the random split. On the chronological split, logistic regression is ahead of the best booster by 0.024 AP.
-- **Both statements are true.** They answer different questions: which algorithm learns this relationship best, and which one still works when the relationship moves.
-- **The boosters lose the profit race because their probabilities belong to the old world.** The correction changes decisions, not rankings (AP and AUC are identical), so it cannot be done by a ranking metric.
-- **The correction needs the new base rate.** We used the test set's real 30.8%. In production you must estimate it from recent outcomes, or monitor the mean predicted probability against the observed rate.
+| model | EM prevalence estimate |
+|---|---|
+| Logistic regression | 1.000 |
+| Gaussian Naive Bayes | 1.000 |
+| k-nearest neighbours | 0.995 |
+| Small neural net (MLP) | 1.000 |
+| Decision tree | 0.624 |
+| Random forest | 1.000 |
+| Extra trees | 1.000 |
+| sklearn HistGradientBoosting | 0.831 |
+| XGBoost | 0.831 |
+| LightGBM | 0.595 |
+| CatBoost | 1.000 |
 
-### What this means for model selection
+A simpler policy skips the prior correction: choose the contribution-maximising threshold on the past validation blocks and apply it unchanged.
 
-| Question | Random split | Chronological split |
-|---|---|---|
-| Best ranker by AP | LightGBM (0.496) | k-NN (0.537), logistic (0.527) |
-| Best AUC | LightGBM (0.816) | Logistic regression (0.748) |
-| Boosting vs logistic | +0.031 AP | **−0.024 AP** |
-| Profit at t = 1/8 | ~3,350 for the top models | Logistic 12,332; LightGBM 7,004 |
-| Base rate | 11.3% (stable) | 6.4% → 30.8% |
+| model | selected | share of records | contribution | gain over call-everyone |
+|---|---|---|---|---|
+| Extra trees | 5,857 | 71% | 12,687 | +605 |
+| Random forest | 4,687 | 57% | 11,985 | -97 |
+| Logistic regression | 7,567 | 92% | 11,289 | -793 |
+| CatBoost | 3,753 | 46% | 10,823 | -1,259 |
+| Gaussian Naive Bayes | 3,563 | 43% | 9,845 | -2,237 |
+| LightGBM | 3,589 | 44% | 8,443 | -3,639 |
+| k-nearest neighbours | 2,289 | 28% | 7,847 | -4,235 |
+| Small neural net (MLP) | 2,594 | 31% | 7,470 | -4,612 |
+| XGBoost | 3,235 | 39% | 7,093 | -4,989 |
+| sklearn HistGradientBoosting | 2,001 | 24% | 6,879 | -5,203 |
+| Decision tree | 2,446 | 30% | 6,722 | -5,360 |
 
-A defensible conclusion is *not* "logistic regression is better than boosting". It's that **our evidence for deploying boosting rests on an evaluation that doesn't resemble deployment**, and an evaluation that does resemble it says the opposite. In a real project you would:
+Only extra trees beats call-everyone, by about +605 (5%). With a break-even of 12.5% and a rate of 30.8%, "contact almost everyone" is already a strong policy and a ranking has little left to add.
 
-1. **Evaluate on a forward-in-time split** whenever the data has an order, and treat it as the primary estimate of performance. Use random splits only to compare algorithms *given* the era.
-2. **Run several forward folds** (train on rows 0–50%, test 50–66%; train 0–66%, test 66–83%; …) rather than one cut, so you see how the gap varies. We used one cut here because of the file's dramatic shift; the repository's `run_experiments.py` includes a three-fold expanding-window version.
-3. **Monitor the base rate and the mean predicted probability in production** and recalibrate. It is cheap and catches the failure that cost LightGBM 5,000 units.
-4. **Prefer models whose failure mode you understand.** Logistic regression degraded more gracefully here: its average probability (0.257) moved toward the new base rate, plausibly because it extrapolates smoothly in the economy variables instead of carving them into leaf-shaped cells.
-5. **Keep a simple baseline in the race.** A model that's 0.03 AP ahead in a random split is not safe to deploy if a 3-microsecond logistic regression is 0.024 ahead of it in the future.
+## Why did the leaders change? Hypotheses and ablations
 
-### Where we've ended up
+It is tempting to say boosting failed because it leaned on the macroeconomic columns while logistic regression extrapolates smoothly. The data support less. We refitted three models with their chosen settings under two changes, each using only the past:
 
-Sixteen parts, one dataset, thirteen classifiers. If you remember six things:
+| model | variant | AP | AUC | mean score | contribution at 1/8 | selected |
+|---|---|---|---|---|---|---|
+| Logistic regression | as trained | 0.485 | 0.641 | 0.137 | 7,665 | 3,311 |
+| Logistic regression | without the five macro columns | 0.554 | 0.725 | 0.109 | 5,901 | 1,347 |
+| Logistic regression | trained on the more recent half of the past | 0.523 | 0.677 | 0.150 | 9,133 | 4,027 |
+| LightGBM | as trained | 0.456 | 0.651 | 0.091 | 5,375 | 1,689 |
+| LightGBM | without the five macro columns | 0.473 | 0.666 | 0.143 | 7,574 | 2,202 |
+| LightGBM | trained on the more recent half of the past | 0.521 | 0.707 | 0.118 | 7,900 | 2,372 |
+| Random forest | as trained | 0.514 | 0.735 | 0.144 | 10,960 | 4,088 |
+| Random forest | without the five macro columns | 0.454 | 0.672 | 0.143 | 8,485 | 2,707 |
+| Random forest | trained on the more recent half of the past | 0.495 | 0.728 | 0.151 | 10,844 | 4,156 |
 
-1. A classifier supports a **decision**; define the prediction moment, the cost table and the capacity before choosing a model.
-2. Check for **leakage** (`duration`) and **drift** (6% → 31%) before any algorithm comparison.
-3. **Average precision, log loss and profit** answer different questions than accuracy; use the one that matches the decision.
-4. On this data gradient boosting and random forests form a **statistically tied top tier**, about 0.03 AP above logistic regression, on a random split.
-5. **The threshold matters more than the model**: derive it from costs (`p* = cost/value`), choose it on out-of-fold data, and re-check it when the base rate moves.
-6. **The winner depends on the split.** Test the way you will deploy.
+Removing the macro columns raises the AP and AUC of logistic regression and LightGBM but lowers the forest's, and the contribution at 1/8 moves in different directions (down for logistic regression and the forest, up for LightGBM). Training on the more recent half of the past raises AP for LightGBM and logistic regression and lowers it slightly for the forest. No single column group or training window explains the reordering, so treat the macro-column story as a hypothesis these experiments do not confirm.
 
-All code, data checksums and outputs are in the repository. Every number in this series was printed by a script in `series/classification/`, and every figure was produced by one of them. If a number in a post doesn't reproduce, that's a bug, and I'd like to hear about it.
+One diagnostic separates two kinds of failure. After the oracle prior correction LightGBM's calibration error falls from 0.22 to 0.06: for that model the base rate was the main problem. For logistic regression it barely moves (0.17 to 0.17), which points to a changed input-outcome relationship or to the covariate shift.
 
-### So what did we do?
+## Running this policy for real
 
-We trained on the past and tested on the future. The base rate went from 6.4% to 30.8%, the model ranking changed, and a one-line base-rate correction brought LightGBM from 7,004 to 12,240 profit. Test the way you will deploy.
+None of this is specific to this dataset.
 
-### What next
+- **Test it prospectively.** Fix the metric before the test and compare the model policy with current practice, call-everyone and a random selection of the same size on a *random split of the planned contacts*. Judge incremental subscriptions net of cost, not AP.
+- **Keep an exploration or control sample.** Treat a small random share of planned contacts regardless of score and, where acceptable, leave a small share uncontacted. The first gives unbiased estimates of the base rate and of calibration. The second is the only way to learn what happens *without* a contact, which separates response propensity from uplift (part 14).
+- **Expect delayed, selective feedback.** Outcomes arrive late, so recent windows are incomplete. The prevalence among the contacts the model chose is not the prevalence among all candidates: a model that selects well makes its own base rate look high.
+- **Monitor four things separately.** Ranking (AP and AUC on recent labelled records against the prevalence), calibration (mean score against observed rate, overall and near the threshold, with counts), policy (records selected and contribution against call-everyone and random) and economics (has the price list changed?). A past-versus-recent classifier on the inputs is a cheap early warning.
+- **Recalibrate or retrain.** If ranking holds but mean score and rate diverge, and an updated base rate restores reliability near the threshold (as for LightGBM here), re-weight the prior using the control sample or a recent window. If ranking degrades against the baseline, or a base-rate update does not help (as for logistic regression here), retrain on recent records and rerun the protocol. Recent-half training helped two of three models in this chapter.
+- **Capacity changes** change how many records are contacted, not the threshold. Keep the guard: up to capacity, highest scores first, never below the break-even score.
+- **Simple model or booster?** Decide on evidence gathered the way you will deploy. In part 12 the boosted models led a random split; here they did not, and a simple baseline plus call-everyone were hard to beat. Keep a simple model in every comparison.
+- **Scope.** This series covers binary classification on a table. Multiclass problems produce a vector of class probabilities (softmax, or one-vs-rest) and need per-class metrics and a choice of averaging, as in part 3. Multilabel problems are usually one binary problem per label, each with its own threshold.
 
-This is the last part of the series. Go back to the [series index](/series/classification/) to revisit any part.
+## Analysis and conclusion: what we learned
+
+- **Test the way you will deploy.** The leaders of the random split were not the leaders on later records, and the ordering within the future block rests on one sample.
+- **Name what shifted.** Prevalence rose, the inputs moved far, and the relationship between them is unknown. A prior correction addresses only the first, and EM's assumptions failed visibly.
+- **Compare with call-everyone.** Under these prices it earns 12,082; the best deployable policies beat it by about 2.5% to 5%.
+- **Scores fail in different ways.** For LightGBM it was the base rate; for logistic regression it was not.
+
+## Where the series ends up
+
+1. A classifier supports a **decision**: fix the prediction moment, cost assumptions and capacity first (parts 1 and 14).
+2. Check eligibility and the file's codes before comparing algorithms (part 2).
+3. AP, log loss and simulated contribution answer different questions from accuracy (parts 3, 11, 14).
+4. Under one written protocol, boosting and bagging models scored highest on a random split by a modest margin over logistic regression, and their order is not established (parts 12 and 13).
+5. A cut-off should come from the economics and be checked, and scores must be calibrated near it to be read as probabilities (part 11).
+6. Models can reorder on later records and a simple baseline can be hard to beat. Test the way you will deploy.
+
+Every number in this series is written by a script in `series/classification/scripts` and read back by the article that cites it. If a number does not reproduce, that is a bug.
+
+*Further reading.* Saerens, Latinne and Decaestecker (2002), [Adjusting the outputs of a classifier to new a priori probabilities](https://doi.org/10.1162/089976602753284446).
+
+[Back to the series index](/series/classification/)

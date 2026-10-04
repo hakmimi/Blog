@@ -124,7 +124,8 @@ def run() -> None:
                 pol.append({"model": name, "correction": vname, "policy": pname,
                             "estimated_prevalence": {"none": pi_train, "last-window prevalence": pi_last, "EM on unlabelled scores": em,
                                                      "oracle prevalence (diagnostic)": pi_fut}[vname],
-                            "ap": K.ap(yf, p), "roc_auc": K.auc_roc(yf, p), "mean_score": float(p.mean()),
+                            "ap": K.ap(yf, raw), "roc_auc": K.auc_roc(yf, raw),   # a monotone correction cannot change the ranking: score the raw scores
+                             "mean_score": float(p.mean()),
                             "ece_10_quantile": K.ece(yf, p), "records_selected": count, "share_selected": count / len(yf),
                             "precision": prec, "recall": rec, "contribution": K.contribution(yf, selected),
                             "call_everyone": everyone, "gain_vs_call_everyone": K.contribution(yf, selected) - everyone})
@@ -173,7 +174,8 @@ def run() -> None:
             est = [s for s in M.registry(Xs) if s.name == name][0].build()
             est = clone(est).set_params(**params).fit(Xs.iloc[rows], y[rows])
             p = est.predict_proba(Xs.iloc[fut])[:, 1]
-            abl.append({"model": name, "variant": label, "ap": K.ap(yf, p), "roc_auc": K.auc_roc(yf, p), "mean_score": float(p.mean()),
+            abl.append({"model": name, "variant": label, "ap": K.ap(yf, raw), "roc_auc": K.auc_roc(yf, raw),   # a monotone correction cannot change the ranking: score the raw scores
+                             "mean_score": float(p.mean()),
                         "contribution_break_even": K.contribution(yf, p >= P.BREAK_EVEN), "selected": int((p >= P.BREAK_EVEN).sum())})
     pd.DataFrame(abl).to_csv(P.ART / "temporal_ablations.csv", index=False, float_format="%.5f")
     pd.set_option("display.width", 250); pd.set_option("display.max_columns", 30)

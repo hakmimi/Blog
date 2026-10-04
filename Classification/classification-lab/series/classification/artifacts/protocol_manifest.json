@@ -1,0 +1,375 @@
+{
+  "environment": {
+    "python": "3.13.13",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "processor": "Intel64 Family 6 Model 165 Stepping 2, GenuineIntel",
+    "logical_cpus": 12,
+    "worker_threads_used": 6,
+    "numpy": "2.4.4",
+    "pandas": "2.3.3",
+    "scipy": "1.17.1",
+    "scikit-learn": "1.8.0",
+    "xgboost": "3.4.1",
+    "lightgbm": "4.7.0",
+    "catboost": "1.2.10",
+    "seed": 42,
+    "tuning_folds": 3,
+    "max_search_candidates": 8,
+    "cost_per_contact": 1.0,
+    "value_per_subscription": 8.0
+  },
+  "rows": 41188,
+  "positives": 4640,
+  "prevalence": 0.11265417111780131,
+  "exact_duplicate_rows": 12,
+  "blocks": [
+    {
+      "block": "development (random 80%)",
+      "first_row": 0,
+      "last_row": 41187,
+      "records": 32950,
+      "positives": 3712,
+      "prevalence": 0.11265553869499241
+    },
+    {
+      "block": "comparison (random 20%)",
+      "first_row": 1,
+      "last_row": 41178,
+      "records": 8238,
+      "positives": 928,
+      "prevalence": 0.11264870114105366
+    },
+    {
+      "block": "temporal development (first 80% of rows)",
+      "first_row": 0,
+      "last_row": 32949,
+      "records": 32950,
+      "positives": 2100,
+      "prevalence": 0.0637329286798179
+    },
+    {
+      "block": "future (last 20% of rows)",
+      "first_row": 32950,
+      "last_row": 41187,
+      "records": 8238,
+      "positives": 2540,
+      "prevalence": 0.3083272638990046
+    },
+    {
+      "block": "temporal fold 1: train",
+      "first_row": 0,
+      "last_row": 16474,
+      "records": 16475,
+      "positives": 706,
+      "prevalence": 0.042852807283763276
+    },
+    {
+      "block": "temporal fold 2: train",
+      "first_row": 0,
+      "last_row": 21910,
+      "records": 21911,
+      "positives": 1028,
+      "prevalence": 0.04691707361599197
+    },
+    {
+      "block": "temporal fold 3: train",
+      "first_row": 0,
+      "last_row": 27347,
+      "records": 27348,
+      "positives": 1325,
+      "prevalence": 0.04844961240310078
+    },
+    {
+      "block": "temporal fold 1: validate",
+      "first_row": 16475,
+      "last_row": 21910,
+      "records": 5436,
+      "positives": 322,
+      "prevalence": 0.05923473142016188
+    },
+    {
+      "block": "temporal fold 2: validate",
+      "first_row": 21911,
+      "last_row": 27347,
+      "records": 5437,
+      "positives": 297,
+      "prevalence": 0.05462571270921464
+    },
+    {
+      "block": "temporal fold 3: validate",
+      "first_row": 27348,
+      "last_row": 32949,
+      "records": 5602,
+      "positives": 775,
+      "prevalence": 0.13834344876829704
+    }
+  ],
+  "random_split": {
+    "seed": 42,
+    "test_size": 0.2,
+    "stratified": true,
+    "development_rows_sha1": "3ea9bb78ace04136860bb0ce10587f513eb61fdd",
+    "comparison_rows_sha1": "5b057fd2363ce6e012b3c99e3bff2a8975f7b586"
+  },
+  "feature_sets": {
+    "main": [
+      "age",
+      "job",
+      "marital",
+      "education",
+      "default",
+      "housing",
+      "loan",
+      "contact",
+      "month",
+      "day_of_week",
+      "pdays",
+      "previous",
+      "poutcome",
+      "emp.var.rate",
+      "cons.price.idx",
+      "cons.conf.idx",
+      "euribor3m",
+      "nr.employed"
+    ],
+    "main + campaign": [
+      "age",
+      "job",
+      "marital",
+      "education",
+      "default",
+      "housing",
+      "loan",
+      "contact",
+      "month",
+      "day_of_week",
+      "pdays",
+      "previous",
+      "poutcome",
+      "emp.var.rate",
+      "cons.price.idx",
+      "cons.conf.idx",
+      "euribor3m",
+      "nr.employed",
+      "campaign"
+    ],
+    "no schedule (profile, history, macro)": [
+      "age",
+      "job",
+      "marital",
+      "education",
+      "default",
+      "housing",
+      "loan",
+      "pdays",
+      "previous",
+      "poutcome",
+      "emp.var.rate",
+      "cons.price.idx",
+      "cons.conf.idx",
+      "euribor3m",
+      "nr.employed"
+    ],
+    "profile + history only": [
+      "age",
+      "job",
+      "marital",
+      "education",
+      "default",
+      "housing",
+      "loan",
+      "pdays",
+      "previous",
+      "poutcome"
+    ],
+    "main + duration (not eligible; benchmark only)": [
+      "age",
+      "job",
+      "marital",
+      "education",
+      "default",
+      "housing",
+      "loan",
+      "contact",
+      "month",
+      "day_of_week",
+      "pdays",
+      "previous",
+      "poutcome",
+      "emp.var.rate",
+      "cons.price.idx",
+      "cons.conf.idx",
+      "euribor3m",
+      "nr.employed",
+      "duration"
+    ]
+  },
+  "feature_table": [
+    {
+      "feature": "age",
+      "group": "profile",
+      "role": "customer",
+      "available": "before",
+      "in_main_set": true,
+      "note": ""
+    },
+    {
+      "feature": "job",
+      "group": "profile",
+      "role": "customer",
+      "available": "before",
+      "in_main_set": true,
+      "note": "'unknown' is a documented missing-value label"
+    },
+    {
+      "feature": "marital",
+      "group": "profile",
+      "role": "customer",
+      "available": "before",
+      "in_main_set": true,
+      "note": "'unknown' is a documented missing-value label"
+    },
+    {
+      "feature": "education",
+      "group": "profile",
+      "role": "customer",
+      "available": "before",
+      "in_main_set": true,
+      "note": "'unknown' is a documented missing-value label"
+    },
+    {
+      "feature": "default",
+      "group": "profile",
+      "role": "customer",
+      "available": "before",
+      "in_main_set": true,
+      "note": "'unknown' is a documented missing-value label"
+    },
+    {
+      "feature": "housing",
+      "group": "profile",
+      "role": "customer",
+      "available": "before",
+      "in_main_set": true,
+      "note": "'unknown' is a documented missing-value label"
+    },
+    {
+      "feature": "loan",
+      "group": "profile",
+      "role": "customer",
+      "available": "before",
+      "in_main_set": true,
+      "note": "'unknown' is a documented missing-value label"
+    },
+    {
+      "feature": "contact",
+      "group": "schedule",
+      "role": "policy",
+      "available": "when scheduled",
+      "in_main_set": true,
+      "note": "documented as an attribute of the last contact; assumed known when the contact is planned"
+    },
+    {
+      "feature": "month",
+      "group": "schedule",
+      "role": "policy",
+      "available": "when scheduled",
+      "in_main_set": true,
+      "note": "documented as the month of the last contact; assumed known when the contact is planned"
+    },
+    {
+      "feature": "day_of_week",
+      "group": "schedule",
+      "role": "policy",
+      "available": "when scheduled",
+      "in_main_set": true,
+      "note": "documented as the weekday of the last contact; assumed known when the contact is planned"
+    },
+    {
+      "feature": "duration",
+      "group": "call outcome",
+      "role": "outcome of the contact",
+      "available": "after",
+      "in_main_set": false,
+      "note": "length of the last contact; documentation says to discard it for any realistic predictive model"
+    },
+    {
+      "feature": "campaign",
+      "group": "contact count",
+      "role": "policy",
+      "available": "unclear",
+      "in_main_set": false,
+      "note": "number of contacts in this campaign including the last one; a record is the last contact, so the count is tied to when the bank stopped calling, which can depend on the outcome. Excluded from the main set and re-added in a sensitivity run"
+    },
+    {
+      "feature": "pdays",
+      "group": "history",
+      "role": "customer",
+      "available": "before",
+      "in_main_set": true,
+      "note": "999 is a code for 'not previously contacted'"
+    },
+    {
+      "feature": "previous",
+      "group": "history",
+      "role": "customer",
+      "available": "before",
+      "in_main_set": true,
+      "note": "contacts before this campaign"
+    },
+    {
+      "feature": "poutcome",
+      "group": "history",
+      "role": "customer",
+      "available": "before",
+      "in_main_set": true,
+      "note": "outcome of the previous campaign"
+    },
+    {
+      "feature": "emp.var.rate",
+      "group": "macro",
+      "role": "context",
+      "available": "before (as published)",
+      "in_main_set": true,
+      "note": "quarterly indicator"
+    },
+    {
+      "feature": "cons.price.idx",
+      "group": "macro",
+      "role": "context",
+      "available": "before (as published)",
+      "in_main_set": true,
+      "note": "monthly indicator"
+    },
+    {
+      "feature": "cons.conf.idx",
+      "group": "macro",
+      "role": "context",
+      "available": "before (as published)",
+      "in_main_set": true,
+      "note": "monthly indicator"
+    },
+    {
+      "feature": "euribor3m",
+      "group": "macro",
+      "role": "context",
+      "available": "before (as published)",
+      "in_main_set": true,
+      "note": "daily indicator"
+    },
+    {
+      "feature": "nr.employed",
+      "group": "macro",
+      "role": "context",
+      "available": "before (as published)",
+      "in_main_set": true,
+      "note": "quarterly indicator"
+    }
+  ],
+  "price_list": {
+    "cost_per_contact": 1.0,
+    "value_per_subscription": 8.0,
+    "break_even_probability": 0.125,
+    "status": "illustrative assumption"
+  }
+}

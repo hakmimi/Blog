@@ -1,0 +1,10 @@
+model,variant,ap,roc_auc,mean_score,contribution_break_even,selected
+Logistic regression,as trained,0.48536,0.64079,0.13703,7665.00000,3311
+Logistic regression,without the five macro columns,0.55409,0.72546,0.10879,5901.00000,1347
+Logistic regression,trained on the more recent half of the past,0.52340,0.67722,0.14974,9133.00000,4027
+LightGBM,as trained,0.45631,0.65084,0.09138,5375.00000,1689
+LightGBM,without the five macro columns,0.47307,0.66626,0.14323,7574.00000,2202
+LightGBM,trained on the more recent half of the past,0.52122,0.70656,0.11832,7900.00000,2372
+Random forest,as trained,0.51410,0.73538,0.14409,10960.00000,4088
+Random forest,without the five macro columns,0.45376,0.67208,0.14329,8485.00000,2707
+Random forest,trained on the more recent half of the past,0.49527,0.72771,0.15143,10844.00000,4156

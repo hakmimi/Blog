@@ -1,0 +1,19 @@
+model,budget,best_cv_ap,val_ap_of_winner,val_ap_sd_across_draws,default_val_ap
+LightGBM,1,0.45465,0.46290,0.00531,0.45918
+LightGBM,2,0.45765,0.46490,0.00386,0.45918
+LightGBM,4,0.45922,0.46570,0.00303,0.45918
+LightGBM,8,0.46010,0.46619,0.00287,0.45918
+LightGBM,16,0.46083,0.46657,0.00213,0.45918
+LightGBM,40,0.46106,0.46453,0.00000,0.45918
+Random forest,1,0.45492,0.45837,0.01562,0.39384
+Random forest,2,0.46076,0.46417,0.00296,0.39384
+Random forest,4,0.46186,0.46487,0.00189,0.39384
+Random forest,8,0.46239,0.46530,0.00139,0.39384
+Random forest,16,0.46268,0.46595,0.00105,0.39384
+Random forest,24,0.46281,0.46664,0.00000,0.39384
+sklearn HistGradientBoosting,1,0.45329,0.46109,0.00460,0.45414
+sklearn HistGradientBoosting,2,0.45606,0.46150,0.00367,0.45414
+sklearn HistGradientBoosting,4,0.45805,0.46175,0.00306,0.45414
+sklearn HistGradientBoosting,8,0.45982,0.46185,0.00242,0.45414
+sklearn HistGradientBoosting,16,0.46131,0.46151,0.00249,0.45414
+sklearn HistGradientBoosting,40,0.46269,0.45949,0.00000,0.45414

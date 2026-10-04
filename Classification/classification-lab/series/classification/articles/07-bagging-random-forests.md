@@ -18,8 +18,6 @@ A single small tree scores about @@v:bagging_curve_summary.csv|trees=1|mean|.2f@
 
 **Work plan.** Build bagging from scratch and score it on inner validation rows while the number of trees grows. Measure how correlated the trees are. Compare random forests and extra trees. Check how many trees are enough, and what the out-of-bag score tells you.
 
-**You will leave with** a mental model of a forest as a variance-reduction machine, and settings you can defend.
-
 </div>
 
 ## Bagging from scratch
@@ -72,9 +70,9 @@ for n in (1, 5, 25, 100, 200):
 ![Validation average precision of a bagged ensemble as trees are added; line is the mean over five seeds, band the range.](/series/classification/figures/ch07-bagging.png)
 *Figure 1. Averaging helps quickly, then flattens.*
 
-**What it means.** Averaging lifts the score from about @@v:bagging_curve_summary.csv|trees=1|mean|.2f@@ for one tree to about @@v:bagging_curve_summary.csv|trees=200|mean|.2f@@ for 200, and more than half of the gain arrives with the first five trees. Beyond 50 trees the mean moves by less than 0.001 per doubling. This is what variance reduction looks like: a one-time gain that saturates. The seed-to-seed spread of a single curve point (a standard deviation of @@v:bagging_curve_summary.csv|trees=5|std|.3f@@ at 5 trees, @@v:bagging_curve_summary.csv|trees=200|std|.3f@@ at 200) also shrinks as trees are added.
+**What it means.** Averaging lifts the score from about @@v:bagging_curve_summary.csv|trees=1|mean|.2f@@ for one tree to about @@v:bagging_curve_summary.csv|trees=200|mean|.2f@@ for 200, and more than half of the gain arrives with the first five trees; beyond 50 trees the mean moves by less than 0.001 per doubling. That is variance reduction: a one-time gain that saturates, with a seed-to-seed spread that also shrinks (sd @@v:bagging_curve_summary.csv|trees=5|std|.3f@@ at 5 trees, @@v:bagging_curve_summary.csv|trees=200|std|.3f@@ at 200).
 
-Why does averaging help? Each tree overfits, but not in the same way, so part of their error is random and cancels in the mean. How much cancels depends on how **correlated** the trees' predictions are. If they were identical, averaging would change nothing. We measured the average correlation between pairs of tree scores: @@j:bagging_oob.json|mean_pairwise_tree_correlation_by_seed.0|.2f@@ for the first seed, and between 0.67 and 0.68 for all five. That is high. All the trees start from the same strong columns (`nr.employed`, `euribor3m`, `pdays`), so they resemble each other, and there is room for less correlated trees to do better.
+Each tree overfits differently, so part of their error is random and cancels in the mean, and how much cancels depends on how **correlated** the trees are (identical trees would gain nothing). The average correlation between pairs of tree scores is @@j:bagging_oob.json|mean_pairwise_tree_correlation_by_seed.0|.2f@@ for the first seed and 0.67 to 0.68 across all five: high, because all trees start from the same strong columns (`nr.employed`, `euribor3m`, `pdays`). There is room for less correlated trees to do better.
 
 ## The random-forest idea
 
@@ -90,7 +88,7 @@ Trees are cheap to add, but is more always better? We scored forests of 10 to 60
 
 @@table:bagging_n_estimators_summary.csv|cols=n_estimators,mean,std,min,max|rename=n_estimators:trees,mean:mean AP,std:sd,min:min,max:max|fmt=n_estimators:d@@
 
-The score rises from @@v:bagging_n_estimators_summary.csv|n_estimators=10|mean|.3f@@ with 10 trees to @@v:bagging_n_estimators_summary.csv|n_estimators=300|mean|.3f@@ with 300, then stops moving (@@v:bagging_n_estimators_summary.csv|n_estimators=600|mean|.3f@@ at 600). Individual runs are not guaranteed to improve with every added tree, since the seed-to-seed spread (about 0.003 for small forests) is as large as late gains. So `n_estimators` is best treated as a resource and a stability setting, not as a tuning dimension: choose a number large enough that results stop changing with the seed, then spend tuning effort on `min_samples_leaf` and `max_features`.
+The score rises from @@v:bagging_n_estimators_summary.csv|n_estimators=10|mean|.3f@@ with 10 trees to @@v:bagging_n_estimators_summary.csv|n_estimators=300|mean|.3f@@ with 300, then stops moving (@@v:bagging_n_estimators_summary.csv|n_estimators=600|mean|.3f@@ at 600). A single run need not improve with every added tree, since the seed-to-seed spread (about 0.003 for small forests) is as large as late gains. Treat `n_estimators` as a resource and stability setting, not a tuning dimension: use enough trees that results stop changing with the seed, and tune `min_samples_leaf` and `max_features`.
 
 ## Out-of-bag scores
 
@@ -108,7 +106,7 @@ print(f"validation AP : {average_precision_score(yv, rf.predict_proba(B)[:, 1]):
 (filled in by the build)
 ```
 
-The out-of-bag score is a little lower than the validation score. One tempting explanation is that out-of-bag predictions use only about a third of the trees. We tested it: scoring the validation rows with random subsets of 100 of the 300 trees gives an AP of @@j:bagging_oob.json|val_ap_random_100_of_300_mean|.3f@@ (sd @@j:bagging_oob.json|val_ap_random_100_of_300_sd|.3f@@ over 20 draws), almost the same as with all 300 (@@j:bagging_oob.json|val_ap_300_trees|.3f@@). So fewer trees per prediction does not explain the gap here. We did not test other explanations, such as the different sets of records scored. Out-of-bag evaluation also assumes the records are exchangeable. It says nothing about performance on later records when the data have a time structure (part 16).
+The out-of-bag score is a little lower than the validation score. One tempting explanation is that out-of-bag predictions use only about a third of the trees. We tested it: random subsets of 100 of the 300 trees give a validation AP of @@j:bagging_oob.json|val_ap_random_100_of_300_mean|.3f@@ (sd @@j:bagging_oob.json|val_ap_random_100_of_300_sd|.3f@@ over 20 draws), almost the same as all 300 (@@j:bagging_oob.json|val_ap_300_trees|.3f@@), so that does not explain the gap. We did not test other explanations. Out-of-bag evaluation also assumes exchangeable records and says nothing about later records when the data have a time structure (part 16).
 
 ## What a forest costs
 
@@ -123,5 +121,7 @@ The out-of-bag score is a little lower than the validation score. One tempting e
 - **Decorrelating trees helps on this data.** Random feature subsets scored @@v:bagging_forest_summary.csv|model=RF max_features=sqrt|val_ap_mean|.3f@@ against @@v:bagging_forest_summary.csv|model=RF max_features=1.0 (bagging)|val_ap_mean|.3f@@ for plain bagging with the same leaf size.
 - **Treat the tree count as a resource.** It stabilises results; the settings worth tuning are the leaf size and the feature fraction.
 - **Check an out-of-bag score against a real validation set before trusting it**, and never as evidence about future periods.
+
+*Further reading.* Breiman (1996), [Bagging predictors](https://doi.org/10.1007/BF00058655); Breiman (2001), [Random forests](https://doi.org/10.1023/A:1010933404324).
 
 [Part 8](/series/classification/08-gradient-boosting/) attacks the other side of the problem: instead of averaging independent trees, each new tree learns from the mistakes of the ones before it.

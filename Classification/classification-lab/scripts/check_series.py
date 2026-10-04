@@ -126,8 +126,42 @@ def article_checks() -> None:
         check(not bad.search(t), f"{f.name[:2]}: no 'thirteen classifiers/models' wording")
 
 
+def temporal_checks() -> None:
+    _, y = P.load()
+    t_dev, t_fut = P.temporal_split(len(y))
+    val = pd.read_csv(ART / "temporal_validation_scores.csv")
+    check(val["row"].max() <= t_dev.max(), "temporal validation predictions come only from the development prefix")
+    check(set(val["row"]).isdisjoint(set(t_fut)), "no future row appears in any temporal validation block")
+    fut = pd.read_csv(ART / "temporal_future_scores.csv")
+    check(fut["row"].min() > t_dev.max(), "future scores are for rows after the development prefix")
+    cand = pd.read_csv(ART / "temporal_candidates.csv")
+    check(bool(cand.groupby("model").is_default.sum().eq(1).all()), "temporal search includes the default for every model")
+    pol = pd.read_csv(ART / "temporal_policies.csv")
+    check(bool((pol.estimated_prevalence.between(0, 1)).all()), "estimated prevalences lie in [0, 1]")
+    ap_none = pol[(pol.policy == "break-even (1/8)") & (pol.correction == "none")].set_index("model").ap
+    ap_or = pol[(pol.policy == "break-even (1/8)") & (pol.correction == "oracle prevalence (diagnostic)")].set_index("model").ap
+    check(bool(np.allclose(ap_none.sort_index(), ap_or.sort_index())), "a prior correction does not change AP (monotone transform)")
+
+
+def render_consistency() -> None:
+    """Rendered articles must equal the templates with tokens filled in (code outputs aside)."""
+    import re
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import build_articles as B
+    fence = "`" * 3
+    strip = lambda t: re.sub(fence + r"output\n.*?\n" + fence, fence + "output\n" + fence, t, flags=re.S)
+    for src in sorted(B.SRC.glob("[0-9][0-9]-*.md")):
+        try:
+            want = strip(B.render(src.read_text(encoding="utf-8")).replace("\r\n", "\n"))
+        except (FileNotFoundError, KeyError, ValueError) as e:
+            check(False, f"{src.name[:2]}: template cannot be rendered ({type(e).__name__}: {e})")
+            continue
+        got = strip((ARTICLES / src.name).read_text(encoding="utf-8"))
+        check(want == got, f"{src.name[:2]}: rendered article matches template and artifacts")
+
+
 def main() -> int:
-    for group in (protocol_checks, alignment_checks, policy_checks, ranking_checks, count_checks, article_checks):
+    for group in (protocol_checks, alignment_checks, policy_checks, ranking_checks, count_checks, temporal_checks, render_consistency, article_checks):
         print("==", group.__name__)
         group()
     print(f"\n{len(failures)} failure(s)")

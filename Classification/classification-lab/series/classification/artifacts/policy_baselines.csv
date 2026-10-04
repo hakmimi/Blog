@@ -1,0 +1,4 @@
+policy,records_selected,contribution
+call nobody,0,0.0
+call everyone,8238,-814.0
+prior-success rule,268,1148.0

@@ -1,0 +1,11 @@
+{
+  "records": 8238,
+  "positives": 928,
+  "prevalence": 0.11264870114105366,
+  "roc_auc": 0.80162220210859,
+  "average_precision": 0.4645037327876942,
+  "pr_auc_trapezoid": 0.4639881174541794,
+  "always_no_accuracy": 0.8873512988589464,
+  "perfect_accuracy_gain_points": 11.264870114105365,
+  "negatives": 7310
+}

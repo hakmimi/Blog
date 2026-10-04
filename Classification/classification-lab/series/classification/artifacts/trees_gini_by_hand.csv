@@ -1,0 +1,7 @@
+split,gain,impurity
+root (no split),0.00000,0.19993
+euribor3m <= 1.0,0.02469,0.17524
+euribor3m <= 3.0,0.01641,0.18352
+euribor3m <= 5.0,0.00011,0.19982
+nr.employed <= 5087.65,0.02967,0.17026
+pdays <= 16.5,0.02093,0.17900

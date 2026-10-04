@@ -3,7 +3,7 @@
     python scripts/check_snippets.py 05 08        # chapters by number
     python scripts/check_snippets.py              # all
 
-A block is skipped if its first line is `# no-run`. Blocks that end in `...` placeholders are skipped too.
+A block is skipped if its first line starts with `# no-run` or `# schematic` (a visibly schematic excerpt). Blocks that end in `...` placeholders are skipped too.
 Exit code 1 if any chapter raises.
 """
 from __future__ import annotations
@@ -24,7 +24,7 @@ import sys; sys.path.insert(0, r"%s")
 def blocks(text: str):
     for m in re.finditer(r"```python\n(.*?)```", text, re.S):
         code = m.group(1)
-        if code.lstrip().startswith("# no-run") or "..." in code.replace("...)", "").replace("[...]", "") and re.search(r"^\s*\.\.\.\s*$", code, re.M):
+        if code.lstrip().startswith(("# no-run", "# schematic")) or "..." in code.replace("...)", "").replace("[...]", "") and re.search(r"^\s*\.\.\.\s*$", code, re.M):
             continue
         yield code
 

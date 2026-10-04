@@ -1,0 +1,6 @@
+column,emp.var.rate,cons.price.idx,cons.conf.idx,euribor3m,nr.employed
+emp.var.rate,1.000,0.775,0.196,0.972,0.907
+cons.price.idx,0.775,1.000,0.059,0.688,0.522
+cons.conf.idx,0.196,0.059,1.000,0.278,0.101
+euribor3m,0.972,0.688,0.278,1.000,0.945
+nr.employed,0.907,0.522,0.101,0.945,1.000

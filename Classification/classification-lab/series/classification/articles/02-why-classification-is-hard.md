@@ -20,8 +20,6 @@ Real datasets are full of columns like that, and of codes and trends that mislea
 
 **Work plan.** For each column ask when its value exists. Measure what the unclear ones are worth. Check the codes (`999`, `unknown`). Then look at how the outcome rate moves through the file.
 
-**You will leave with** a feature list you can defend, a sensitivity check showing what each choice costs, and a reason not to read the time trend as a cause.
-
 </div>
 
 ## The test every column must pass
@@ -79,13 +77,13 @@ main + duration: 0.589
 
 ## Campaign: a count tied to when the bank stopped
 
-`campaign` counts the contacts made, including the last one. The record is the *last* contact of the campaign, so the count is also a record of when the bank stopped calling, and that can depend on the outcome (a campaign for a client usually ends after a subscription or after the bank gives up). Here is how the outcome rate falls as the count rises:
+`campaign` counts the contacts made, including the last one. The other contact columns describe that last contact, so the count may also record *when the bank stopped calling*, which could depend on the outcome (plausibly after a subscription, or after the bank gave up; the documentation does not say). Here is how the outcome rate falls as the count rises:
 
 @@table:data_campaign_rates.csv|cols=campaign,records,rate|fmt=campaign:d;records:d;rate:.1%|rename=campaign:contacts in campaign (8 = 8 or more)@@
 
-That pattern could mean the later contacts are harder, or that records with large counts are the ones where the bank kept trying, or both. We cannot separate them with this file, so we do not rely on the column. Excluding it costs very little: the main feature set scores @@v:data_feature_sets.csv|feature_set=main|model=Logistic regression|cv_ap_mean|.3f@@ with a logistic regression and @@v:data_feature_sets.csv|feature_set=main + campaign|model=Logistic regression|cv_ap_mean|.3f@@ with `campaign` added (LightGBM: @@v:data_feature_sets.csv|feature_set=main|model=LightGBM|cv_ap_mean|.3f@@ and @@v:data_feature_sets.csv|feature_set=main + campaign|model=LightGBM|cv_ap_mean|.3f@@). The **main feature set** for the rest of the series is therefore the 18 columns marked "yes" in the table above.
+Later contacts may be harder, or large counts may mark records where the bank kept trying, or both; this file cannot separate them, so we do not rely on the column. Excluding it costs very little: the main feature set scores @@v:data_feature_sets.csv|feature_set=main|model=Logistic regression|cv_ap_mean|.3f@@ with a logistic regression and @@v:data_feature_sets.csv|feature_set=main + campaign|model=Logistic regression|cv_ap_mean|.3f@@ with `campaign` added (LightGBM: @@v:data_feature_sets.csv|feature_set=main|model=LightGBM|cv_ap_mean|.3f@@ and @@v:data_feature_sets.csv|feature_set=main + campaign|model=LightGBM|cv_ap_mean|.3f@@). The **main feature set** for the rest of the series is therefore the 18 columns marked "yes" in the table above.
 
-Removing the schedule columns as well (`contact`, `month`, `day_of_week`) lowers the score further, to @@v:data_feature_sets.csv|feature_set=no schedule (profile, history, macro)|model=Logistic regression|cv_ap_mean|.3f@@ for the logistic regression. If those columns are not really known at scheduling time, expect results closer to that row.
+Removing the schedule columns too lowers the logistic regression to @@v:data_feature_sets.csv|feature_set=no schedule (profile, history, macro)|model=Logistic regression|cv_ap_mean|.3f@@; if they are not known at scheduling time, expect results closer to that row.
 
 ## Codes that look like numbers or values
 
@@ -104,13 +102,11 @@ The file is ordered by date, but it has no date column, so row position is a pro
 ![Bars: share of records ending in a subscription, per chunk of 4,119 records in file order. Line: mean euribor3m in the same chunks.](/series/classification/figures/ch02-drift.png)
 *Figure 1. The outcome rate climbs from @@j:data_profile.json|rate_by_chunk.0|.1%@@ in the first chunk to @@j:data_profile.json|rate_by_chunk.9|.1%@@ in the last, while the Euribor rate falls from about @@j:data_profile.json|euribor3m_by_chunk.0|.1f@@% to @@j:data_profile.json|euribor3m_by_chunk.9|.1f@@%.*
 
-This is a correlation in a file with one economic cycle in it. Later records may differ from early ones for many reasons: the economy, which clients the bank chose to call, how the campaign was run, or how records were kept. We cannot tell which from this file. What we can say is practical: a model trained on early records meets a different world on later ones, so there are two separate questions. *Which algorithm learns this relationship best?* is answered with a random split (parts 3 to 15). *How would a model behave on later records?* needs a chronological split (part 16).
+This is a correlation in a file with one economic cycle. Later records may differ because of the economy, which clients the bank chose to call, how the campaign ran, or how records were kept; the file cannot say which. Practically, a model trained on early records meets a different world later, so there are two questions: *which algorithm learns this relationship best?* (a random split, parts 3 to 15) and *how would a model behave on later records?* (a chronological split, part 16).
 
 ## Analysis and conclusion: what we learned
 
-- **Eligibility comes before modelling.** `duration` fails the test outright. `campaign` is unclear, so it is out of the main set, with a measured cost of about 0.002 average precision.
-- **Codes need reading.** `999` and `unknown` are structure, not numbers or noise. On this data the choice of representation barely moves the score.
-- **The outcome rate drifts a lot** through the file, and we do not explain the drift. We design around it.
+`duration` fails the eligibility test; `campaign` is unclear and costs about 0.002 AP to leave out; `999` and `unknown` are structure, and the representation barely moves the score here; and the outcome rate drifts through the file without a known cause, so we design around it.
 
 | Question | Decision in this series |
 |---|---|

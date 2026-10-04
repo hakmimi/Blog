@@ -1,221 +1,170 @@
 ---
-title: "Pricing the Models: Profit, Thresholds and Call-Centre Capacity"
-description: "Take the same thirteen models and put them in a spreadsheet: expected profit under three decision policies, a call-capacity curve, and a bootstrap that asks whether the money ranking is any more real than the AP ranking."
+title: "Pricing the Models: What a Ranking Is Worth Under an Illustrative Price List"
+description: "A retrospective simulation with a stated price list, relevant baselines and a capacity ceiling. What the numbers mean, what they do not, and where model choice and cut-off choice matter."
 series: "classification"
 order: 14
-date: 2026-10-01
-updated: 2026-10-02
-keywords: ["expected profit", "cost-sensitive", "threshold selection", "cumulative gains", "business metrics", "model evaluation"]
-readingTime: "16 min read"
+date: 2026-09-30
+updated: 2026-10-04
+keywords: ["cost-sensitive", "decision threshold", "capacity", "expected value", "uplift", "baselines"]
+readingTime: "11 min read"
 figure: "leaderboard-profit.png"
 ---
 
-Average precision tells us which model ranks best. It doesn't tell us what we should *do*, or what it's worth. In [part 11](/series/classification/11-probabilities-calibration-thresholds-costs/) we derived the call-or-don't rule from a cost table. Here we apply it to every model in the leaderboard and ask the question a manager would ask: **how much money, and how sure are we?**
+Under the illustrative price list of this series, contacting every record of the comparison split would *lose* -814 units. The rule "contact only clients whose previous campaign succeeded" earns 1,148 from 268 contacts. The best model policies earn about three times that. What do those numbers mean, how much belongs to the model and how much to the cut-off, and how sure can we be?
 
-The economics are the same assumptions as [part 11](/series/classification/11-probabilities-calibration-thresholds-costs/), now kept in `common.py`:
+<div class="callout">
 
-- A call costs **1** unit.
-- A subscription is worth **8** units.
-- So a customer is worth calling when the probability of subscribing exceeds `1/8 = 0.125`.
+**Goal.** Turn frozen scores into simulated contributions against relevant baselines, and say exactly what a contribution is.
 
-A baseline to beat: calling *everyone* loses **814** units on the test set. Blind outreach destroys value, so *all* of the profit below is created by the models' ability to avoid bad calls.
+**Work plan.** State the price list and what the simulation does not measure. Compare policies (break-even threshold, default cut-off, capacity ceiling) with baselines, test whether differences between models are visible, and vary the value of a subscription.
 
-## Goals: what are we trying to achieve?
+</div>
 
-Average precision says which model ranks best. It does not say what to do, or what it is worth. Our goal is to put a price on every model and to see how much the model choice really matters.
+## What a contribution number is
 
-By the end you will be able to:
+The price list is an assumption, not the bank's: a contact costs 1 and a subscription is worth 8. For any set of selected records,
 
-- **Compare three threshold policies** (0.5, break-even 1/8, and out-of-fold) in profit.
-- **Read a capacity curve** when a call centre can only phone the top k.
-- **Test whether a profit gap is real**, and check how fragile the economics are.
+> contribution = 8 × (subscriptions among the selected records) − 1 × (selected records)
 
-## The work plan: how do we do it?
+This is a **retrospective policy simulation**: it counts every subscription among selected records as a gain, whether or not the contact caused it.
 
-The economics are the assumptions from [Part 11](/series/classification/11-probabilities-calibration-thresholds-costs/): a call costs 1, a subscription is worth 8, so the break-even probability is 1/8. We apply them in four steps:
+| Quantity | Per contacted record | Needs |
+|---|---|---|
+| Expected contribution | V · p_contact − C | Probability of subscribing when contacted |
+| Incremental contribution | V · (p_contact − p_no_contact) − C | The probability *without* a contact as well |
 
-1. **Three policies, thirteen models**: profit at t=0.5, t=1/8 and an out-of-fold threshold frozen before the test set.
-2. **Try it**: drag the threshold yourself for every model.
-3. **Capacity**: profit when only the top k customers can be called.
-4. **Is it real?**: a paired bootstrap on profit, and a sensitivity check on the value of a subscription.
+The break-even rule `p > C / V` (here 1/8) comes from the first line. It is right if people would not subscribe without the contact, or if that probability is the same for everyone. The dataset has no records of people who were *not* contacted, so it cannot identify `p_no_contact`, nor separate response propensity from **uplift**. The historical campaign also chose whom to call, so the records are not a sample of the bank's whole client base, and the price list ignores unequal costs, repeated contacts and unreachable clients. Read everything below as a way to compare rankings and policies on equal terms.
 
-## Implementation
+## Policies and baselines
 
-### Three policies, thirteen models
+Scores are the frozen ones from part 12 on the 8,238 comparison records (928 subscribers). Thresholds are fixed before scoring: the break-even value 1/8, an out-of-fold value from development data, and the library's 0.5.
 
-For each model we compare three ways of choosing who to call:
+| policy | records selected | simulated contribution |
+|---|---|---|
+| call nobody | 0 | 0 |
+| call everyone | 8,238 | -814 |
+| prior-success rule | 268 | 1,148 |
 
-- **t = 0.5**: the default threshold most tutorials use.
-- **t = 1/8**: the textbook break-even threshold, applied to the model's raw probabilities.
-- **t = OOF**: a threshold chosen on **out-of-fold predictions from the training set only**, maximising profit there, then frozen before looking at the test set. (This is what `run_leaderboard.py` does; no test data is involved in choosing it.)
+Select every record scoring at least 1/8 ("random same size" selects as many records at random, averaged over 400 draws):
 
-```python
-COST, VALUE = 1.0, 8.0
-pred = pd.read_csv("artifacts/leaderboard_predictions.csv")        # saved by run_leaderboard.py
-board = pd.read_csv("artifacts/leaderboard.csv").set_index("model")
-y = pred["y"].to_numpy()
+| model | selected | precision | recall | contribution | random same size | gain over call-everyone | gain over prior-success rule |
+|---|---|---|---|---|---|---|---|
+| Random forest | 1,508 | 0.403 | 0.655 | 3,356 | -149 | 4,170 | 2,208 |
+| LightGBM | 1,402 | 0.422 | 0.638 | 3,334 | -136 | 4,148 | 2,186 |
+| XGBoost | 1,450 | 0.412 | 0.643 | 3,326 | -143 | 4,140 | 2,178 |
+| sklearn HistGradientBoosting | 1,404 | 0.421 | 0.637 | 3,324 | -141 | 4,138 | 2,176 |
+| CatBoost | 1,398 | 0.421 | 0.634 | 3,306 | -137 | 4,120 | 2,158 |
+| Extra trees | 1,520 | 0.393 | 0.644 | 3,264 | -156 | 4,078 | 2,116 |
+| Small neural net (MLP) | 1,431 | 0.408 | 0.629 | 3,241 | -142 | 4,055 | 2,093 |
+| Linear SVM (Platt scaled) | 1,379 | 0.418 | 0.621 | 3,229 | -137 | 4,043 | 2,081 |
+| k-nearest neighbours | 1,474 | 0.398 | 0.631 | 3,214 | -139 | 4,028 | 2,066 |
+| Logistic regression | 1,563 | 0.378 | 0.636 | 3,157 | -156 | 3,971 | 2,009 |
+| Decision tree | 1,715 | 0.354 | 0.654 | 3,141 | -170 | 3,955 | 1,993 |
+| Gaussian Naive Bayes | 1,627 | 0.353 | 0.619 | 2,965 | -162 | 3,779 | 1,817 |
 
-def profit(p, t, value=VALUE):
-    call = p >= t
-    return value * y[call].sum() - COST * call.sum()
+![Simulated contribution of each model at the break-even threshold, with the call-everyone and prior-success benchmarks.](/series/classification/figures/leaderboard-profit.png)
+*Figure 1. Same frozen scores, one illustrative price list.*
 
-print(f"{'model':<30}{'t=0.5':>8}{'t=1/8':>8}{'t=OOF':>8}   {'calls':>6}{'hit rate':>9}")
-for m in models:                                                   # sorted by AP
-    p = pred[m].to_numpy(); t = board.loc[m, "profit_threshold"]; call = p >= t
-    print(f"{m:<30}{profit(p, .5):8.0f}{profit(p, 1 / VALUE):8.0f}{profit(p, t):8.0f}   {call.sum():6d}{y[call].mean():9.2f}")
-print("call everyone:", profit(np.ones(len(y)), .5))
-```
+- **Every model beats the baselines widely.** Random selection of the same size loses 130 to 170 units, so the gain does not come from selecting fewer records. The best models earn about 3,300 against the prior-success rule's 1,148, from five to six times as many records.
+- **The spread depends on who you include.** Best is 3,356 (random forest), lowest of all twelve 2,965 (Naive Bayes), a difference of about 390. Excluding Naive Bayes the lowest is 3,141 (a single tree), a spread of about 215. Logistic regression earns 3,157, about 94% of the best.
+- **The cut-off matters.** At the library default of 0.5 the same scores select only about 280 to 370 records (Naive Bayes, with inflated probabilities, 1,204) and earn roughly 1,300 to 1,600, about half of the break-even policy:
 
-```output
-model                            t=0.5   t=1/8   t=OOF    calls hit rate
-LightGBM                          1666    3352    3341     1587     0.39
-sklearn HistGradientBoosting      1602    3366    3323     1645     0.38
-Random forest                     1628    3314    3343     1489     0.41
-XGBoost                           1530    3350    3377     1407     0.43
-CatBoost                          1633    3320    3299     1621     0.38
-Extra trees                       1535    3262    3291     1413     0.42
-Small neural net (MLP)            1394    3261    3251     1333     0.43
-Decision tree                     1557    3143    3272     1344     0.43
-Logistic regression               1356    3187    3178     1510     0.39
-Linear SVM (calibrated)           1331    3235    3230     1394     0.41
-k-nearest neighbors               1287    3208    3184     1368     0.42
-Gaussian Naive Bayes              2510    3033    3040     1720     0.35
-call everyone: -814.0
-```
+| model | selected | contribution |
+|---|---|---|
+| Gaussian Naive Bayes | 1,204 | 2,508 |
+| Decision tree | 367 | 1,585 |
+| Random forest | 365 | 1,579 |
+| sklearn HistGradientBoosting | 342 | 1,546 |
+| Extra trees | 347 | 1,533 |
+| LightGBM | 342 | 1,530 |
+| CatBoost | 312 | 1,456 |
+| Logistic regression | 296 | 1,368 |
+| Linear SVM (Platt scaled) | 284 | 1,324 |
+| XGBoost | 286 | 1,306 |
+| k-nearest neighbours | 281 | 1,303 |
+| Small neural net (MLP) | 277 | 1,259 |
 
-The first insight is the biggest one:
+That is specific to these prices: a cut-off should come from the economics and be checked, not taken from a default.
 
-**The threshold matters more than the model.** Going from the default t=0.5 to a cost-aware threshold roughly **doubles profit for every real model** (LightGBM: 1,666 → 3,352; Naive Bayes is the odd one out, see below). At t=0.5, a model only calls customers it believes are *more likely than not* to subscribe, and with an 11% base rate that's a tiny, highly selective group, leaving thousands of profitable calls unmade. The gap between the best and worst real model at the right threshold (3,377 − 3,178 ≈ 200 units) is a tenth of the gap between the right and wrong threshold for the *same* model (≈1,700).
-
-### What if you can only call k people?
-
-Most call centres don't have a threshold; they have a headcount. If capacity limits you to the top *k* customers by score, the same models produce this:
-
-```python
-for k in (200, 500, 1000, 1500, 2500):
-    row = f"{k:>6}"
-    for m in ["LightGBM", "XGBoost", "Logistic regression", "Gaussian Naive Bayes"]:
-        top = np.argsort(-pred[m].to_numpy())[:k]
-        row += f"{VALUE * y[top].sum() - COST * k:14.0f}"
-    print(row)
-```
-
-```output
-     k      LightGBM       XGBoost  Logistic reg  Gaussian Nai
-   200           992           992           992           976
-   500          2028          1988          1868          1580
-  1000          3120          3096          2872          2256
-  1500          3356          3332          3188          2932
-  2500          2980          3068          2892          2828
-```
-
-Where models differ depends on where you cut:
-
-- **At k = 200 nothing separates them.** All four reach 992 (or 976): the top 200 customers are obvious (typically past successes in the low-rate months), and any reasonable model finds them. A narrow call budget makes model choice irrelevant.
-- **In the middle (k = 500–1,500) the boosters pull ahead:** at k = 1,000 LightGBM earns 3,120 vs 2,872 for logistic regression: **+8.6%**. That's the regime where the extra AP shows up in real money.
-- **Past the break-even point, everybody declines.** At k = 2,500, LightGBM *loses* money relative to k = 1,500 (2,980 vs 3,356), because we're now calling customers whose chance is below 12.5%. More capacity isn't better.
-- **Naive Bayes is clearly worse in the middle** (k = 500: 1,580 vs 2,028). Its ranking, not just its probabilities, is poorer, which AP already told us.
-
-### Is the money ranking real? Another bootstrap
-
-The profit differences between the top models look small (3,341 vs 3,377). We should apply the same discipline as in [part 13](/series/classification/13-is-the-winner-real/). Each customer contributes `8·y − 1` if called and 0 if not, so a model's profit is a *sum* we can bootstrap, paired across models:
-
-```python
-rng = np.random.default_rng(1)
-boots = rng.integers(0, len(y), size=(1000, len(y)))
-def boot_profit(m):
-    p = pred[m].to_numpy(); t = board.loc[m, "profit_threshold"]
-    gain = np.where(p >= t, VALUE * y - COST, 0.0)                   # each customer's contribution
-    return gain[boots].sum(axis=1)
-
-ref = boot_profit("XGBoost")
-for m in ["LightGBM", "Random forest", "CatBoost", "Logistic regression", "Gaussian Naive Bayes"]:
-    d = boot_profit(m) - ref; lo, hi = np.quantile(d, [.025, .975])
-    print(f"{m:<26}{d.mean():+8.0f}   [{lo:+6.0f}, {hi:+6.0f}]")
-```
-
-```output
-LightGBM                       -35   [   -99,    +35]
-Random forest                  -32   [  -111,    +51]
-CatBoost                       -76   [  -138,     -9]
-Logistic regression           -200   [  -264,   -133]
-Gaussian Naive Bayes          -336   [  -445,   -217]
-```
-
-XGBoost had the highest profit on this split, but the table says:
-
-- **LightGBM and the random forest are indistinguishable from XGBoost** (intervals straddle zero). "XGBoost wins on profit" is no more defensible than "LightGBM wins on AP".
-- **CatBoost is slightly behind** (−76, interval just excludes zero).
-- **Logistic regression leaves about 200 units on the table (6%)**, and that difference is solid: [−264, −133].
-
-In other words the profit ranking tells the *same story* as AP: a top cluster that's tied, a clear but modest gap to the linear baseline, and a clear gap to Naive Bayes. Two metrics with different foundations agreeing is reassuring.
-
-### How fragile are the economics?
-
-All of this rests on "a subscription is worth 8 calls". What if that's wrong? The decision threshold moves with it (`1/value`), and so do calls and profit:
-
-```python
-for m in ["LightGBM", "Logistic regression", "Gaussian Naive Bayes"]:
-    p = pred[m].to_numpy()
-    print(f"{m:<24}" + "".join(f"  value={v:>2}: {profit(p, 1 / v, v):7.0f} ({(p >= 1 / v).sum():5d} calls)" for v in (4, 8, 16)))
-```
-
-```output
-LightGBM                  value= 4:    1075 ( 1057 calls)  value= 8:    3352 ( 1480 calls)  value=16:    8429 ( 3315 calls)
-Logistic regression       value= 4:     928 (  960 calls)  value= 8:    3187 ( 1557 calls)  value=16:    8212 ( 3724 calls)
-Gaussian Naive Bayes      value= 4:     707 ( 1537 calls)  value= 8:    3033 ( 1759 calls)  value=16:    7981 ( 2067 calls)
-```
-
-Profit scales with the value of a success, from ~1,000 to ~8,400 for LightGBM; that's the assumption doing the work, not the model. The *ranking* of the models stays the same at all three values, and so does the lesson: the cheaper a call is relative to a win, the more of the list you should phone (1,057 → 3,315 calls), and the more the choice of threshold matters.
-
-## What did we get? Results
-
-Calling everyone loses 814 units on the test set, so all of the profit below comes from the models avoiding bad calls.
-
-- **Default threshold 0.5 against a cost-aware threshold:** profit roughly doubles for every real model (LightGBM 1,666 to 3,352).
-- **Best against worst real model at the right threshold:** about 200 units (3,377 against 3,178), a tenth of the gap between the right and the wrong threshold for the same model (about 1,700).
-- **Capacity:** at k = 1,000, LightGBM earns 3,120 against 2,872 for logistic regression (+8.6%). At k = 200 nothing separates the models.
-- **Paired profit bootstrap against XGBoost:** LightGBM −35 [−99, +35], Random forest −32 [−111, +51], CatBoost −76 [−138, −9], Logistic regression −200 [−264, −133].
-
-### Try it: drag the threshold
-
-Everything above is one slider position per model. Here is the whole slider. Pick a model, move the threshold, and watch the confusion matrix, the ROC and precision-recall points, and the profit curve respond. The dashed gold line on the profit chart is the break-even threshold `1/value`; the gold dot is the best threshold on this test set. Change what a subscription is worth and see the break-even line move.
+**Try it.** The widget below applies any threshold to the frozen scores of five models. Choose a model, move the threshold, and change what a subscription is worth: the dashed line marks the break-even threshold `1/value` and the gold dot the best threshold *on this sample* (not a population optimum).
 
 <div class="threshold-lab" data-src="/series/classification/artifacts/threshold_lab.json" data-cost="1" data-value="8"></div>
 <script src="/js/threshold-lab.js"></script>
 
-Things to try: slide to 0.5 and watch recall collapse; slide to 0.02 and watch the profit curve go negative as you call nearly everyone; switch to Gaussian Naive Bayes and see how differently its histogram is spread.
+## Capacity is a ceiling
 
-A few other things to read in that table:
+Treat capacity as a ceiling: contact at most k records, highest scores first, and never one below the break-even threshold. Solid lines below keep that guard; dashed crosses fill the capacity regardless.
 
-- **The two principled thresholds agree.** t=1/8 on raw probabilities and t=OOF land within about 1–4% of each other for the well-calibrated models. Both are sound; the OOF one needs no calibration assumption and is what you'd use when probabilities are questionable.
-- **Naive Bayes is the exception that proves the rule.** At t=0.5 it earns 2,510, *by far* the best of the t=0.5 column, because its over-confident probabilities spill above 0.5 for many more customers than the honest models do. It's right for the wrong reason: the threshold happens to be compensating for miscalibration. Once everyone gets a proper threshold, it's back at the bottom (3,040).
-- **The hit rate at the optimum is 35–43%.** At the best operating point, 60% of calls fail, and that is still the profit-maximising behaviour, because a success is worth eight failures. A model that insisted on 70% precision would be "more accurate" and earn much less.
+![Simulated contribution against capacity for three models, with and without the break-even guard.](/series/classification/figures/ch14-capacity.png)
+*Figure 2. Beyond about 1,500 contacts, filling the list loses value unless the guard stops it.*
 
-![Test profit for each model at its out-of-fold-chosen threshold.](/series/classification/figures/leaderboard-profit.png)
-*Figure 1. Profit per model at its frozen, training-derived threshold. The spread between the best and the worst serious model is under 10%.*
+| model | capacity | records_selected | precision | recall | contribution | random same size |
+|---|---|---|---|---|---|---|
+| Logistic regression | 200 | 200 | 0.735 | 0.158 | 976 | -17 |
+| Logistic regression | 500 | 500 | 0.592 | 0.319 | 1,868 | -51 |
+| Logistic regression | 1,000 | 1,000 | 0.485 | 0.523 | 2,880 | -93 |
+| Logistic regression | 1,500 | 1,500 | 0.390 | 0.630 | 3,180 | -142 |
+| Logistic regression | 2,500 | 1,563 | 0.378 | 0.636 | 3,157 | -160 |
+| Random forest | 200 | 200 | 0.750 | 0.162 | 1,000 | -25 |
+| Random forest | 500 | 500 | 0.634 | 0.342 | 2,036 | -51 |
+| Random forest | 1,000 | 1,000 | 0.502 | 0.541 | 3,016 | -94 |
+| Random forest | 1,500 | 1,500 | 0.405 | 0.655 | 3,364 | -140 |
+| Random forest | 2,500 | 1,508 | 0.403 | 0.655 | 3,356 | -163 |
+| LightGBM | 200 | 200 | 0.745 | 0.161 | 992 | -22 |
+| LightGBM | 500 | 500 | 0.628 | 0.338 | 2,012 | -47 |
+| LightGBM | 1,000 | 1,000 | 0.515 | 0.555 | 3,120 | -100 |
+| LightGBM | 1,500 | 1,402 | 0.422 | 0.638 | 3,334 | -144 |
+| LightGBM | 2,500 | 1,402 | 0.422 | 0.638 | 3,334 | -146 |
 
-![Cumulative gains: the share of all subscribers reached against the share of customers called, for four models.](/series/classification/figures/leaderboard-gains.png)
-*Figure 2. Cumulative gains. Calling the top 20% of the list by LightGBM score reaches about two thirds of the subscribers.*
+At 200 contacts nothing separates the models (976 to 1,000). The gaps are largest at 500 to 1,000: at 1,000 LightGBM earns 3,120 and logistic regression 2,880, about 8% more. At a ceiling of 2,500 the guarded policy stops at about 1,400 to 1,560 records, while filling the list lowers the contribution (LightGBM 3,044 against 3,334).
 
-## Analysis and conclusion: what did we learn?
+## Are the differences between models visible?
 
-- **The threshold matters more than the model.** It is worth about 100% of the profit, the model choice inside the top cluster about 3%.
-- **The profit ranking tells the same story as AP.** A tied top cluster, a modest but solid gap to the linear baseline, and a clear gap to Naive Bayes.
-- **Naive Bayes looks best at t=0.5 for the wrong reason.** Its over-confidence happens to compensate for the wrong threshold. With a proper threshold it is last again.
-- **The assumptions do the work.** Profit scales with the value of a success (about 1,000 to 8,400 for LightGBM across values 4 to 16), but the ranking of the models stays the same.
+A policy's contribution is a sum over records, so it can be bootstrapped in pairs like AP in part 13, conditional on the frozen scores and thresholds. Differences from logistic regression under the break-even policy, with marginal and simultaneous 95% intervals (eleven comparisons at once):
 
-### The decision-maker's summary
+| model | difference | marginal low | marginal high | simultaneous low | simultaneous high |
+|---|---|---|---|---|---|
+| Random forest | +199 | +100 | +297 | +59 | +339 |
+| LightGBM | +177 | +100 | +251 | +72 | +282 |
+| XGBoost | +169 | +109 | +234 | +82 | +256 |
+| sklearn HistGradientBoosting | +167 | +82 | +254 | +46 | +288 |
+| CatBoost | +149 | +90 | +208 | +66 | +232 |
+| Extra trees | +107 | +20 | +198 | -20 | +234 |
+| Small neural net (MLP) | +84 | +34 | +130 | +16 | +152 |
+| Linear SVM (Platt scaled) | +72 | +9 | +134 | -16 | +160 |
+| k-nearest neighbours | +57 | -29 | +141 | -60 | +174 |
+| Decision tree | -16 | -132 | +103 | -184 | +152 |
+| Gaussian Naive Bayes | -192 | -315 | -67 | -367 | -17 |
 
-1. **Choose the threshold from the economics and verify on out-of-fold data.** It's worth ~100% of profit compared with the default 0.5; the model choice in the top cluster is worth about 3%.
-2. **The "best" model changes with the metric** (LightGBM by AP, XGBoost by profit), but within the top tier none of those differences are statistically reliable. Pick on cost, speed and simplicity.
-3. **Logistic regression is a respectable fallback**: ~94% of the best profit with 3 µs scoring and a model you can explain to a regulator. Whether the last 6% justifies a boosting pipeline depends on the number of customers: at 8,238 customers it's 200 units; at ten million it's a budget line.
-4. **Capacity changes everything.** With a tiny call budget, a simple rule works; the gap opens at medium capacity.
+The random forest, XGBoost, LightGBM, scikit-learn's booster, CatBoost and the neural net earn more than logistic regression with simultaneous intervals above zero. Extra trees, the SVM, k-NN and the single tree are not separated from it, and Naive Bayes earns less. The visible advantages are about 150 to 200 units for the forest and the boosters (the neural net's is about 80) on a base of about 3,150, roughly 5% to 6%. An interval that includes zero is lack of evidence of a difference, not proof of equality.
 
-### So what did we do?
+## How much do the assumptions matter?
 
-We priced every model. The threshold is worth far more than the choice of model, logistic regression keeps about 94% of the best profit, and capacity changes which model wins. All of this holds only while the base rate stays where it was, which is the subject of the last part.
+The table keeps the cost at 1, changes the value, and applies the break-even threshold 1/value to the raw scores; call-everyone is recomputed for each value.
 
-### In the next part
+| model | value | records_selected | contribution | call everyone |
+|---|---|---|---|---|
+| Logistic regression | 4 | 968 | 924 | -4,526 |
+| Logistic regression | 8 | 1,563 | 3,157 | -814 |
+| Logistic regression | 16 | 3,648 | 8,192 | 6,610 |
+| Gaussian Naive Bayes | 4 | 1,439 | 677 | -4,526 |
+| Gaussian Naive Bayes | 8 | 1,627 | 2,965 | -814 |
+| Gaussian Naive Bayes | 16 | 1,755 | 7,733 | 6,610 |
+| LightGBM | 4 | 1,106 | 1,046 | -4,526 |
+| LightGBM | 8 | 1,402 | 3,334 | -814 |
+| LightGBM | 16 | 3,423 | 8,561 | 6,610 |
 
-[Part 15](/series/classification/15-inside-the-winner/) opens the winning model and asks what it uses and where it fails.
+At a value of 4, calling everyone loses heavily (-4,526) and the models earn about 700 to 1,050. At a value of 16, calling everyone earns 6,610, and the models' advantage over it is only about 1,100 to 1,950: the more valuable a success, the less a ranking adds. The model ordering stays similar across values, but the *size* of any advantage over a trivial baseline changes with the assumption, so report the advantage over a relevant baseline next to the total and state the prices.
+
+## A simple model or a booster?
+
+The best policies earn about 5% to 6% more than logistic regression on 8,238 records. Whether that justifies a more complex pipeline depends on facts this dataset cannot supply: how many records are scored, what a mistake costs at scale, how often the model must be retrained, who maintains and explains it. Evidence that would change the choice: a larger or more recent evaluation set, a measured cost per contact, a prospective test with a control group (so uplift could be estimated) and a monitoring plan (part 16). Until then, the benefit of the better models is visible but modest, and logistic regression is a strong baseline.
+
+## Analysis and conclusion: what we learned
+
+- **A contribution is a retrospective simulation** under assumed prices; it does not estimate value created by contacting.
+- **Compare with relevant baselines.** Call-nobody, call-everyone, matched random selection and a simple rule give context; all twelve models clear them widely under these prices.
+- **Take the cut-off from the economics.** Here the break-even threshold roughly doubled the contribution against a default of 0.5 for every model with usable probabilities.
+- **Capacity is a ceiling,** and differences between leading models are about 5% of the total and sensitive to the assumed value.
+
+[Part 15](/series/classification/15-inside-the-winner/) opens the model development evidence would have chosen and asks what it relies on and where it fails.

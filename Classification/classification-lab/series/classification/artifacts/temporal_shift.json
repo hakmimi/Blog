@@ -1,0 +1,93 @@
+{
+  "prevalence_past": 0.0637329286798179,
+  "prevalence_last_validation_block": 0.13834344876829704,
+  "prevalence_future": 0.3083272638990046,
+  "em_estimate_by_model": {
+    "Logistic regression": 0.9999998338019686,
+    "Gaussian Naive Bayes": 0.9997002150004112,
+    "k-nearest neighbours": 0.9950153122727149,
+    "Small neural net (MLP)": 0.999999359460808,
+    "Decision tree": 0.6239198953141373,
+    "Random forest": 0.9999997553498101,
+    "Extra trees": 0.9999998230300393,
+    "sklearn HistGradientBoosting": 0.8307951271702884,
+    "XGBoost": 0.8314180374145508,
+    "LightGBM": 0.5947206687897547,
+    "CatBoost": 0.9999998370366826
+  },
+  "domain_classifier_auc_past_vs_future": 0.9999250493413334,
+  "standardised_mean_difference_numeric": {
+    "age": -0.0010660899475498893,
+    "pdays": -0.5919837459803041,
+    "previous": 0.7922079532740085,
+    "emp.var.rate": -2.9642307268627754,
+    "cons.price.idx": -1.1255136400315853,
+    "cons.conf.idx": 0.12128647457722688,
+    "euribor3m": -3.5048700529574512,
+    "nr.employed": -3.0412214751074256
+  },
+  "category_shares": {
+    "contact": {
+      "past": {
+        "cellular": 0.5736,
+        "telephone": 0.4264
+      },
+      "future": {
+        "cellular": 0.8795,
+        "telephone": 0.1205
+      }
+    },
+    "month": {
+      "past": {
+        "may": 0.3121,
+        "jul": 0.2029,
+        "aug": 0.1571,
+        "jun": 0.1327,
+        "nov": 0.1097,
+        "apr": 0.0746,
+        "mar": 0.0086,
+        "oct": 0.002,
+        "dec": 0.0003,
+        "sep": 0.0
+      },
+      "future": {
+        "may": 0.4232,
+        "jul": 0.0594,
+        "aug": 0.1218,
+        "jun": 0.1146,
+        "nov": 0.0589,
+        "apr": 0.0211,
+        "mar": 0.032,
+        "oct": 0.079,
+        "dec": 0.0209,
+        "sep": 0.0692
+      }
+    },
+    "poutcome": {
+      "past": {
+        "nonexistent": 0.931,
+        "failure": 0.0639,
+        "success": 0.0051
+      },
+      "future": {
+        "nonexistent": 0.5933,
+        "failure": 0.2604,
+        "success": 0.1463
+      }
+    }
+  },
+  "calibration_effect_of_prior_correction": {
+    "LightGBM": {
+      "ece_before": 0.2169481194025205,
+      "ece_after_oracle_prior_correction": 0.05735673205430699,
+      "mean_score_before": 0.09137914449648407,
+      "mean_score_after": 0.3434783451358879
+    },
+    "Logistic regression": {
+      "ece_before": 0.17129694866031964,
+      "ece_after_oracle_prior_correction": 0.16991700187597783,
+      "mean_score_before": 0.13703031523868497,
+      "mean_score_after": 0.4782442657749824
+    }
+  }
+}

@@ -29,6 +29,18 @@ OUT = ROOT / "src" / "content" / "articles" / "classification"
 TOKEN = re.compile(r"@@([A-Za-z0-9_]+)(?::([^@]*))?@@")
 
 
+def write_retry(path: Path, text: str, tries: int = 8) -> None:
+    """Windows can briefly lock a file the dev server is reading; retry instead of failing the whole render."""
+    import time
+    for i in range(tries):
+        try:
+            path.write_text(text, encoding="utf-8", newline="\n")
+            return
+        except OSError:
+            time.sleep(0.5 * (i + 1))
+    path.write_text(text, encoding="utf-8", newline="\n")
+
+
 def render(text: str) -> str:
     def sub(m: re.Match) -> str:
         name, arg = m.group(1), m.group(2)
@@ -98,12 +110,12 @@ def main() -> int:
         out = render(f.read_text(encoding="utf-8")).replace("\r\n", "\n")
         if run:
             out = run_snippets(out, f.name, cache, force="--force" in sys.argv)
-            CACHE_FILE.write_text(json.dumps(cache, indent=0), encoding="utf-8")
+            write_retry(CACHE_FILE, json.dumps(cache, indent=0))
         # remove the previously rendered file for this part (the slug may have changed)
         for old in OUT.glob(f"{f.name[:2]}-*.md"):
             if old.name != f.name:
                 old.unlink()
-        (OUT / f.name).write_text(out, encoding="utf-8", newline="\n")
+        write_retry(OUT / f.name, out)
         print(f"rendered {f.name}  {len(out.split())} words")
     return 0
 

@@ -1,0 +1,12 @@
+model,em_estimate
+Logistic regression,1.000
+Gaussian Naive Bayes,1.000
+k-nearest neighbours,0.995
+Small neural net (MLP),1.000
+Decision tree,0.624
+Random forest,1.000
+Extra trees,1.000
+sklearn HistGradientBoosting,0.831
+XGBoost,0.831
+LightGBM,0.595
+CatBoost,1.000

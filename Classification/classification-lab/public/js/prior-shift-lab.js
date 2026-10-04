@@ -23,19 +23,19 @@
       <div class="tl-controls">
         <label>Model <select class="ps-model">${names.map((m) => `<option>${m}</option>`).join('')}</select></label>
         <label class="tl-slider">Base rate you tell the model: <strong class="ps-val"></strong>
-          <input class="tl-range ps-range" type="range" min="0.02" max="0.5" step="0.002"></label>
+          <input class="tl-range ps-range" type="range" min="0.02" max="0.98" step="0.002"></label>
         <div class="tl-buttons"><button type="button" class="ps-old">Training period (${fmt(old * 100, 1)}%)</button><button type="button" class="ps-last">Last validation block (${fmt(lastBlock * 100, 1)}%)</button><button type="button" class="ps-em">Estimate from unlabelled scores (EM)</button><button type="button" class="ps-new">Oracle: true future rate (${fmt(truth * 100, 1)}%)</button></div>
       </div>
       <div class="tl-readout ps-readout"></div>
       <figure style="margin:0"><figcaption>Simulated contribution at threshold 1/${VALUE} as a function of the base rate you assume (dashed: contacting every record)</figcaption><svg class="ps-svg" viewBox="0 0 640 230" role="img" aria-label="Simulated contribution versus assumed base rate"></svg></figure>`;
     const $ = (s) => root.querySelector(s), range = $('.ps-range'), svg = $('.ps-svg');
-    const rates = []; for (let r = 0.02; r <= 0.5001; r += 0.01) rates.push(r);
+    const rates = []; for (let r = 0.02; r <= 0.9801; r += 0.01) rates.push(r);
     const M = { l: 52, r: 12, t: 12, b: 34 }, W = 640, H = 230, iw = W - M.l - M.r, ih = H - M.t - M.b;
 
     function draw() {
       const cur = evalAt(assumed), curve = rates.map((r) => evalAt(r).profit);
       const hi = Math.max(...curve, cur.profit, everyone), lo = Math.min(0, everyone, ...curve, cur.profit);
-      const X = (r) => M.l + (r - 0.02) / 0.48 * iw, Y = (v) => M.t + (1 - (v - lo) / (hi - lo)) * ih;
+      const X = (r) => M.l + (Math.min(r, 0.98) - 0.02) / 0.96 * iw, Y = (v) => M.t + (1 - (v - lo) / (hi - lo)) * ih;
       $('.ps-val').textContent = fmt(assumed * 100, 1) + '%';
       range.value = assumed;
       $('.ps-readout').innerHTML = `<dl class="tl-stats">
@@ -46,7 +46,7 @@
         <p style="margin:0;max-width:30rem;color:var(--muted)">The true rate in this period is ${fmt(truth * 100, 1)}%, which a deployed system would not know. The EM estimate uses only the unlabelled scores of this period and assumes the class-conditional feature distributions did not change. Ranking (AP, AUC) never changes here, only who crosses the threshold.</p>`;
       svg.innerHTML = '';
       svgEl('rect', { x: M.l, y: M.t, width: iw, height: ih, class: 'tl-frame' }, svg);
-      [0, 0.1, 0.2, 0.3, 0.4, 0.5].forEach((r) => { const x = X(Math.max(r, 0.02)); svgEl('line', { x1: x, x2: x, y1: M.t, y2: M.t + ih, class: 'tl-grid' }, svg); svgEl('text', { x, y: H - 16, class: 'tl-tick', 'text-anchor': 'middle' }, svg).textContent = fmt(r * 100) + '%'; });
+      [0, 0.2, 0.4, 0.6, 0.8, 1].forEach((r) => { const x = X(Math.max(r, 0.02)); svgEl('line', { x1: x, x2: x, y1: M.t, y2: M.t + ih, class: 'tl-grid' }, svg); svgEl('text', { x, y: H - 16, class: 'tl-tick', 'text-anchor': 'middle' }, svg).textContent = fmt(r * 100) + '%'; });
       [lo, (lo + hi) / 2, hi].forEach((v) => { svgEl('text', { x: M.l - 5, y: Y(v) + 3, class: 'tl-tick', 'text-anchor': 'end' }, svg).textContent = fmt(v); });
       svgEl('text', { x: M.l + iw / 2, y: H - 3, class: 'tl-axis', 'text-anchor': 'middle' }, svg).textContent = 'base rate assumed by the correction';
       svgEl('path', { d: rates.map((r, i) => (i ? 'L' : 'M') + X(r).toFixed(1) + ' ' + Y(curve[i]).toFixed(1)).join(' '), class: 'tl-curve' }, svg);

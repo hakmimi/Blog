@@ -1,0 +1,16 @@
+{
+  "reference_levels": {
+    "job": "admin.",
+    "marital": "married",
+    "education": "university.degree",
+    "default": "no",
+    "housing": "yes",
+    "loan": "no",
+    "contact": "cellular",
+    "month": "may",
+    "day_of_week": "thu",
+    "poutcome": "nonexistent"
+  },
+  "bootstrap_refits": 100,
+  "intercept": -2.2971256768470876
+}

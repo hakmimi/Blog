@@ -184,7 +184,25 @@ def _sha1(a: np.ndarray) -> str:
     return hashlib.sha1(np.asarray(a, dtype=np.int64).tobytes()).hexdigest()
 
 
+def write_assignments() -> Path:
+    """One row per record: its role in the random split, in the temporal split, and its temporal validation block."""
+    n = len(load_frame())
+    y = (load_frame()["y"] == "yes").astype(int).to_numpy()
+    dev, comp = random_split(y)
+    t_dev, t_fut = temporal_split(n)
+    random_role = np.empty(n, dtype=object); random_role[dev] = "development"; random_role[comp] = "comparison"
+    temporal_role = np.empty(n, dtype=object); temporal_role[t_dev] = "development"; temporal_role[t_fut] = "future"
+    block = np.full(n, 0)
+    for i, (_, va) in enumerate(expanding_window_folds(len(t_dev)), 1):
+        block[va] = i
+    out = pd.DataFrame({"row": np.arange(n), "random_split": random_role, "temporal_split": temporal_role, "temporal_validation_block": block})
+    path = ART / "split_assignments.csv"
+    out.to_csv(path, index=False)
+    return path
+
+
 if __name__ == "__main__":
+    write_assignments()
     m = build_manifest()
     write_json("protocol_manifest.json", m)
     FEATURE_TABLE.to_csv(ART / "feature_availability.csv", index=False)

@@ -1,0 +1,7 @@
+loss,output,objective,grad_inf_norm,iterations,converged,validation_ap,validation_auc,spearman_with_log_loss_scores,top10pct_overlap_with_log_loss,mean_probability,log_loss_of_probabilities,brier_of_probabilities,ece,records_flagged_at_0.5,records_flagged_at_break_even,contribution_at_break_even
+log,probability,0.27892,1.5295e-08,156,True,0.44154,0.78278,1,1,0.11452,0.28131,0.079423,0.0056643,249,1334,2250
+weighted log,probability under re-weighted classes,0.53873,8.3838e-09,206,True,0.44121,0.78565,0.99196,0.95144,0.39599,0.53163,0.16927,0.28339,1389,6590,-654
+brier (on sigmoid),probability,0.079514,1.8118e-08,84,True,0.43669,0.77734,0.98755,0.94992,0.11642,0.2834,0.079878,0.010983,235,1539,2229
+squared hinge,margin score (Platt-scaled for the probability columns),0.31555,1.862e-07,519,True,0.44312,0.77869,0.93876,0.91351,0.11452,0.28193,0.079539,0.01443,264,1132,2348
+exponential,margin score (Platt-scaled for the probability columns),0.52692,5.4202e-08,315,True,0.44437,0.78521,0.99094,0.94234,0.11462,0.28044,0.079255,0.006146,266,1277,2283
+focal,probability,0.075146,1.0642e-08,193,True,0.44367,0.78417,0.99846,0.97724,0.28998,0.40247,0.11502,0.17739,253,6590,-654

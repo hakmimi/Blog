@@ -1,0 +1,9 @@
+block,first_row,last_row,records,positives,prevalence
+temporal development (first 80% of rows),0,32949,32950,2100,0.0637
+future (last 20% of rows),32950,41187,8238,2540,0.3083
+temporal fold 1: train,0,16474,16475,706,0.0429
+temporal fold 2: train,0,21910,21911,1028,0.0469
+temporal fold 3: train,0,27347,27348,1325,0.0484
+temporal fold 1: validate,16475,21910,5436,322,0.0592
+temporal fold 2: validate,21911,27347,5437,297,0.0546
+temporal fold 3: validate,27348,32949,5602,775,0.1383

@@ -1,0 +1,5 @@
+model,val_ap_mean,val_ap_sd,fit_seconds_mean
+Extra trees sqrt,0.46510,0.00059,3.80529
+RF max_features=0.5,0.46142,0.00103,9.21598
+RF max_features=1.0 (bagging),0.45556,0.00072,19.31445
+RF max_features=sqrt,0.46746,0.00098,3.78749

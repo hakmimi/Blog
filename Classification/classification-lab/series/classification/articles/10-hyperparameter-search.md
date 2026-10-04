@@ -1,6 +1,6 @@
 ---
 title: "Hyperparameter Search Without Fooling Yourself"
-description: "A bigger search always improves the score you used to choose the winner. We measure what it buys on rows the search never saw, for three models, and state exactly how far that inference reaches."
+description: "A bigger search can only raise the cross-validated score of its winner. We measure what it buys on rows the search never saw, for three models, and state how far that inference reaches."
 series: "classification"
 order: 10
 date: 2026-09-30
@@ -14,11 +14,9 @@ Search more candidates and the best cross-validated score you find can only go u
 
 <div class="callout">
 
-**Goal.** Quantify what a bigger tuning budget buys, honestly, and decide what this series' search protocol can and cannot claim.
+**Goal.** Quantify what a bigger tuning budget buys, and decide what this series' search protocol can and cannot claim.
 
 **Work plan.** Keep a block of rows out of the search entirely. Draw a pool of candidates for three models, score each by cross-validation on the search rows and by AP on the held-out rows. Then simulate searches of different sizes by drawing random subsets of the pool.
-
-**You will leave with** a budget curve per model, a clear view of the winner's curse, and the limits of the inference.
 
 </div>
 
@@ -35,11 +33,12 @@ Three models, each with a pool of candidates: the library default plus random dr
 ![Average precision of the winner on rows outside the search against search budget, for three models. Dotted lines: library defaults.](/series/classification/figures/ch10-budget.png)
 *Figure 1. The inner-test score of the winner rises more slowly than the cross-validated score, and the spread between lucky and unlucky searches shrinks.*
 
-What the numbers say, model by model and within these experiments.
+What the numbers say, within these experiments.
 
-- **The cross-validated score of the winner always rises with budget**, because it is a maximum over a larger set. Compare the "best cross-validated AP" column with the inner-test column: the first overstates what the second delivers. This is the winner's curse. The more candidates you evaluate, the less the winning cross-validated score tells you about future performance.
-- **The inner-test score gains less and varies less as the budget grows.** The "sd across draws" column is the luck of the draw of candidates. It is largest for a budget of one (essentially "pick something plausible") and shrinks as the budget grows.
-- **Defaults can be competitive.** The dotted lines show the library defaults on the inner test set. A search has to beat the default by more than its own noise to be worth the time, and for a model whose default is already good, a small budget mostly buys reliability, not accuracy.
+- **The cross-validated score of the winner always rises with budget**, because it is a maximum over a larger set. For histogram gradient boosting it climbs from @@v:budget_curve.csv|model=sklearn HistGradientBoosting|budget=1|best_cv_ap|.4f@@ at a budget of 1 to @@v:budget_curve.csv|model=sklearn HistGradientBoosting|budget=40|best_cv_ap|.4f@@ at 40. The score of that winner on the inner test set does *not* climb with it: it is @@v:budget_curve.csv|model=sklearn HistGradientBoosting|budget=1|val_ap_of_winner|.4f@@ for a single random draw and @@v:budget_curve.csv|model=sklearn HistGradientBoosting|budget=40|val_ap_of_winner|.4f@@ for the full pool of 40. That is the winner's curse: the more candidates you evaluate, the less the winning cross-validated score tells you about future performance, and past some budget the extra selection fits noise.
+- **The luck of the draw shrinks with budget.** The column "sd across draws" is how much the winner's inner-test score varies between simulated searches. It is large for a budget of one (essentially "pick something plausible") and small from a budget of about eight. For the random forest it falls from @@v:budget_curve.csv|model=Random forest|budget=1|val_ap_sd_across_draws|.4f@@ to @@v:budget_curve.csv|model=Random forest|budget=8|val_ap_sd_across_draws|.4f@@.
+- **Defaults matter as a reference.** For the random forest the library default (leaves of one record) scores @@v:budget_curve.csv|model=Random forest|budget=1|default_val_ap|.4f@@ and any search helps a great deal (@@v:budget_curve.csv|model=Random forest|budget=8|val_ap_of_winner|.4f@@ at a budget of 8). For LightGBM and histogram boosting the default is already close to the plateau: a budget of 8 gains about 0.007 to 0.008 AP over it, and the gain at 40 is not larger.
+- **Beyond a handful of candidates, the held-out gain is small compared with the draw-to-draw spread.** For these three models, a budget of about eight reaches within about 0.002 of the best average held-out score seen at any budget. That is a statement about these models and spaces.
 
 ## What the study does not show
 
@@ -73,5 +72,7 @@ Three habits matter more than the search algorithm. Score the library default as
 - **For the models tested, a small budget captures much of what a larger one buys on held-out rows**, and larger budgets mainly shrink the luck of the draw. That is a statement about these three models and spaces.
 - **Defaults are candidates.** Include them, and report both.
 - **State the count you actually used,** and remember that equal candidate counts are not equal compute or equal coverage of each model's space.
+
+*Further reading.* Bergstra and Bengio (2012), Random search for hyper-parameter optimization, *Journal of Machine Learning Research* 13, 281-305.
 
 [Part 11](/series/classification/11-probabilities-calibration-thresholds-costs/) deals with something tuning cannot fix: scores that rank well but do not behave like probabilities.

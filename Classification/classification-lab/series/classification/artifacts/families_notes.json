@@ -1,0 +1,19 @@
+{
+  "distance_variance_share_unscaled_top": {
+    "pdays": 0.8681,
+    "nr.employed": 0.1285,
+    "age": 0.0027,
+    "cons.conf.idx": 0.0005,
+    "euribor3m": 0.0001,
+    "emp.var.rate": 0.0001
+  },
+  "svm_loglog_slope_up_to_16000_rows": 2.136028175614219,
+  "svm_full_development_rows": 24712,
+  "feature_std": {
+    "age": 10.421249980934046,
+    "pdays": 186.9109073447418,
+    "previous": 0.49490107983928966,
+    "nr.employed": 72.25152766826106,
+    "euribor3m": 1.7344474048512668
+  }
+}

@@ -1,0 +1,22 @@
+|--- num__nr.employed <= 5087.65
+|   |--- num__pdays <= 16.50
+|   |   |--- cat__day_of_week_mon <= 0.50
+|   |   |   |--- weights: [205.00, 583.00] class: 1
+|   |   |--- cat__day_of_week_mon >  0.50
+|   |   |   |--- weights: [93.00, 109.00] class: 1
+|   |--- num__pdays >  16.50
+|   |   |--- cat__contact_cellular <= 0.50
+|   |   |   |--- weights: [382.00, 110.00] class: 0
+|   |   |--- cat__contact_cellular >  0.50
+|   |   |   |--- weights: [1552.00, 957.00] class: 0
+|--- num__nr.employed >  5087.65
+|   |--- num__cons.conf.idx <= -46.65
+|   |   |--- num__euribor3m <= 1.53
+|   |   |   |--- weights: [1611.00, 357.00] class: 0
+|   |   |--- num__euribor3m >  1.53
+|   |   |   |--- weights: [110.00, 94.00] class: 0
+|   |--- num__cons.conf.idx >  -46.65
+|   |   |--- cat__month_oct <= 0.50
+|   |   |   |--- weights: [25264.00, 1468.00] class: 0
+|   |   |--- cat__month_oct >  0.50
+|   |   |   |--- weights: [21.00, 34.00] class: 1

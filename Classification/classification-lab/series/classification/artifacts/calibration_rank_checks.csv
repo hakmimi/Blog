@@ -1,0 +1,11 @@
+model,map,ap_raw,ap_after_map,auc_raw,auc_after_map,distinct_scores_raw,distinct_scores_after_map,strictly_increasing_map
+Logistic regression,sigmoid,0.46077,0.46077,0.78700,0.78700,8024,8024,True
+Logistic regression,isotonic,0.46077,0.44151,0.78700,0.78587,8024,68,False
+Random forest (library default),sigmoid,0.39384,0.39384,0.76827,0.76827,1769,1691,True
+Random forest (library default),isotonic,0.39384,0.37822,0.76827,0.76750,1769,47,False
+Random forest (min_samples_leaf=10),sigmoid,0.46732,0.46732,0.79399,0.79399,8023,8023,True
+Random forest (min_samples_leaf=10),isotonic,0.46732,0.45050,0.79399,0.79277,8023,76,False
+Gaussian Naive Bayes,sigmoid,0.35181,0.35181,0.76426,0.76426,7385,7385,True
+Gaussian Naive Bayes,isotonic,0.35181,0.34254,0.76426,0.76374,7385,34,False
+LightGBM (library default),sigmoid,0.45918,0.45918,0.79863,0.79863,2912,2912,True
+LightGBM (library default),isotonic,0.45918,0.44224,0.79863,0.79744,2912,47,False

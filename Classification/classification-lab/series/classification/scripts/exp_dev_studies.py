@@ -67,7 +67,7 @@ def trees():
         est.fit(Xd, yd)
         train_ap = K.ap(yd, est.predict_proba(Xd)[:, 1])
         cvs = cross_val_score(est, Xd, yd, scoring="average_precision", cv=CV5)
-        out.append({"setting": "max_depth", "value": str(depth), "leaves": est[-1].get_n_leaves(), "train_ap": train_ap,
+        out.append({"setting": "max_depth", "value": str(depth) if depth is not None else "unlimited", "leaves": est[-1].get_n_leaves(), "train_ap": train_ap,
                     "cv_ap_mean": cvs.mean(), "cv_ap_sd": cvs.std(ddof=1)})
     for leaf in (1, 5, 10, 25, 50, 100, 200, 500):
         est = Pipeline([("prep", clone(prep)), ("m", DecisionTreeClassifier(min_samples_leaf=leaf, random_state=P.SEED))])

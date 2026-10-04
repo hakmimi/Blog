@@ -1,0 +1,19 @@
+{
+  "python": "3.13.13",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "processor": "Intel64 Family 6 Model 165 Stepping 2, GenuineIntel",
+  "logical_cpus": 12,
+  "worker_threads_used": 6,
+  "numpy": "2.4.4",
+  "pandas": "2.3.3",
+  "scipy": "1.17.1",
+  "scikit-learn": "1.8.0",
+  "xgboost": "3.4.1",
+  "lightgbm": "4.7.0",
+  "catboost": "1.2.10",
+  "seed": 42,
+  "tuning_folds": 3,
+  "max_search_candidates": 8,
+  "cost_per_contact": 1.0,
+  "value_per_subscription": 8.0
+}

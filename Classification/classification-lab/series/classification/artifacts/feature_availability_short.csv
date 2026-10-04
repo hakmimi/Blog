@@ -1,0 +1,21 @@
+feature,group,role,available,in_main_set
+age,profile,customer,before,True
+job,profile,customer,before,True
+marital,profile,customer,before,True
+education,profile,customer,before,True
+default,profile,customer,before,True
+housing,profile,customer,before,True
+loan,profile,customer,before,True
+contact,schedule,policy,when scheduled,True
+month,schedule,policy,when scheduled,True
+day_of_week,schedule,policy,when scheduled,True
+duration,call outcome,outcome of the contact,after,False
+campaign,contact count,policy,unclear,False
+pdays,history,customer,before,True
+previous,history,customer,before,True
+poutcome,history,customer,before,True
+emp.var.rate,macro,context,before (as published),True
+cons.price.idx,macro,context,before (as published),True
+cons.conf.idx,macro,context,before (as published),True
+euribor3m,macro,context,before (as published),True
+nr.employed,macro,context,before (as published),True

@@ -1,0 +1,105 @@
+model,candidate,cv_ap,val_ap
+sklearn HistGradientBoosting,0,0.45541,0.45414
+sklearn HistGradientBoosting,1,0.42785,0.45328
+sklearn HistGradientBoosting,2,0.45880,0.46196
+sklearn HistGradientBoosting,3,0.45348,0.46020
+sklearn HistGradientBoosting,4,0.45446,0.46371
+sklearn HistGradientBoosting,5,0.45517,0.46470
+sklearn HistGradientBoosting,6,0.45169,0.45760
+sklearn HistGradientBoosting,7,0.44856,0.45644
+sklearn HistGradientBoosting,8,0.45300,0.45915
+sklearn HistGradientBoosting,9,0.44762,0.45960
+sklearn HistGradientBoosting,10,0.45707,0.46395
+sklearn HistGradientBoosting,11,0.44264,0.44106
+sklearn HistGradientBoosting,12,0.45390,0.46368
+sklearn HistGradientBoosting,13,0.45581,0.46528
+sklearn HistGradientBoosting,14,0.45280,0.46187
+sklearn HistGradientBoosting,15,0.45154,0.46333
+sklearn HistGradientBoosting,16,0.46062,0.46205
+sklearn HistGradientBoosting,17,0.45173,0.46877
+sklearn HistGradientBoosting,18,0.45581,0.46424
+sklearn HistGradientBoosting,19,0.45409,0.46841
+sklearn HistGradientBoosting,20,0.45243,0.45452
+sklearn HistGradientBoosting,21,0.45668,0.45979
+sklearn HistGradientBoosting,22,0.46192,0.46554
+sklearn HistGradientBoosting,23,0.45129,0.46246
+sklearn HistGradientBoosting,24,0.45712,0.45871
+sklearn HistGradientBoosting,25,0.45276,0.46377
+sklearn HistGradientBoosting,26,0.45652,0.46197
+sklearn HistGradientBoosting,27,0.45164,0.45496
+sklearn HistGradientBoosting,28,0.45526,0.46710
+sklearn HistGradientBoosting,29,0.45620,0.46583
+sklearn HistGradientBoosting,30,0.44991,0.45296
+sklearn HistGradientBoosting,31,0.45871,0.45897
+sklearn HistGradientBoosting,32,0.45063,0.46051
+sklearn HistGradientBoosting,33,0.45426,0.45755
+sklearn HistGradientBoosting,34,0.45015,0.46329
+sklearn HistGradientBoosting,35,0.45068,0.45943
+sklearn HistGradientBoosting,36,0.45851,0.45989
+sklearn HistGradientBoosting,37,0.45535,0.46341
+sklearn HistGradientBoosting,38,0.45387,0.46984
+sklearn HistGradientBoosting,39,0.46269,0.45949
+LightGBM,0,0.45557,0.45918
+LightGBM,1,0.44594,0.46153
+LightGBM,2,0.46025,0.46989
+LightGBM,3,0.45593,0.46214
+LightGBM,4,0.45418,0.46682
+LightGBM,5,0.45947,0.46498
+LightGBM,6,0.45516,0.46250
+LightGBM,7,0.45597,0.46730
+LightGBM,8,0.45063,0.45692
+LightGBM,9,0.42902,0.44877
+LightGBM,10,0.45871,0.46642
+LightGBM,11,0.45427,0.46917
+LightGBM,12,0.45457,0.46103
+LightGBM,13,0.44597,0.46112
+LightGBM,14,0.45797,0.46524
+LightGBM,15,0.45758,0.45880
+LightGBM,16,0.45555,0.46375
+LightGBM,17,0.46103,0.46866
+LightGBM,18,0.45797,0.46600
+LightGBM,19,0.44783,0.45149
+LightGBM,20,0.45223,0.47179
+LightGBM,21,0.46093,0.46719
+LightGBM,22,0.45886,0.46117
+LightGBM,23,0.45083,0.46367
+LightGBM,24,0.45694,0.46506
+LightGBM,25,0.45792,0.46965
+LightGBM,26,0.45412,0.46033
+LightGBM,27,0.46106,0.46453
+LightGBM,28,0.45767,0.45822
+LightGBM,29,0.44608,0.45471
+LightGBM,30,0.44866,0.45028
+LightGBM,31,0.45650,0.46055
+LightGBM,32,0.45736,0.46486
+LightGBM,33,0.45980,0.46882
+LightGBM,34,0.44927,0.46555
+LightGBM,35,0.45517,0.46524
+LightGBM,36,0.45781,0.46415
+LightGBM,37,0.45564,0.46018
+LightGBM,38,0.46011,0.46387
+LightGBM,39,0.45722,0.46954
+Random forest,0,0.39320,0.39384
+Random forest,1,0.46181,0.46430
+Random forest,2,0.46203,0.46464
+Random forest,3,0.46097,0.46457
+Random forest,4,0.46281,0.46664
+Random forest,5,0.45808,0.46324
+Random forest,6,0.45989,0.46420
+Random forest,7,0.46211,0.46707
+Random forest,8,0.45808,0.46324
+Random forest,9,0.46212,0.46362
+Random forest,10,0.45762,0.46411
+Random forest,11,0.46261,0.46496
+Random forest,12,0.45516,0.46020
+Random forest,13,0.46137,0.46599
+Random forest,14,0.46205,0.46244
+Random forest,15,0.44366,0.44574
+Random forest,16,0.45606,0.45655
+Random forest,17,0.45735,0.46393
+Random forest,18,0.45516,0.46020
+Random forest,19,0.45770,0.45885
+Random forest,20,0.44968,0.45152
+Random forest,21,0.45697,0.45843
+Random forest,22,0.45976,0.45870
+Random forest,23,0.46033,0.46839

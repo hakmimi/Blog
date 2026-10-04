@@ -1,0 +1,13 @@
+model,seed,val_ap,fit_seconds
+RF max_features=sqrt,0,0.46664,3.43947
+RF max_features=sqrt,1,0.46720,4.54120
+RF max_features=sqrt,2,0.46854,3.38179
+RF max_features=0.5,0,0.46256,9.02961
+RF max_features=0.5,1,0.46111,9.15762
+RF max_features=0.5,2,0.46058,9.46070
+RF max_features=1.0 (bagging),0,0.45594,23.12791
+RF max_features=1.0 (bagging),1,0.45473,20.16669
+RF max_features=1.0 (bagging),2,0.45600,14.64875
+Extra trees sqrt,0,0.46476,3.14337
+Extra trees sqrt,1,0.46578,4.46160
+Extra trees sqrt,2,0.46477,3.81089

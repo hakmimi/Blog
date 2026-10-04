@@ -1,0 +1,14 @@
+{
+  "design_columns": 62,
+  "design_rank": 51,
+  "rank_deficiency": 11,
+  "weight_vs_intercept_shift": {
+    "weight": 7.875420875420875,
+    "max_abs_prob_diff_weighted_vs_shifted_intercept": 0.17382469437567483,
+    "spearman_weighted_vs_log": 0.9919636158728682
+  },
+  "lambda_part_b": 0.001,
+  "train_rows": 26360,
+  "validation_rows": 6590,
+  "validation_prevalence": 0.1125948406676783
+}

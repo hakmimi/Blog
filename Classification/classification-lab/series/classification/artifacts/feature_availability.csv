@@ -1,0 +1,21 @@
+feature,group,role,available,in_main_set,note
+age,profile,customer,before,True,
+job,profile,customer,before,True,'unknown' is a documented missing-value label
+marital,profile,customer,before,True,'unknown' is a documented missing-value label
+education,profile,customer,before,True,'unknown' is a documented missing-value label
+default,profile,customer,before,True,'unknown' is a documented missing-value label
+housing,profile,customer,before,True,'unknown' is a documented missing-value label
+loan,profile,customer,before,True,'unknown' is a documented missing-value label
+contact,schedule,policy,when scheduled,True,documented as an attribute of the last contact; assumed known when the contact is planned
+month,schedule,policy,when scheduled,True,documented as the month of the last contact; assumed known when the contact is planned
+day_of_week,schedule,policy,when scheduled,True,documented as the weekday of the last contact; assumed known when the contact is planned
+duration,call outcome,outcome of the contact,after,False,length of the last contact; documentation says to discard it for any realistic predictive model
+campaign,contact count,policy,unclear,False,"number of contacts in this campaign including the last one; a record is the last contact, so the count is tied to when the bank stopped calling, which can depend on the outcome. Excluded from the main set and re-added in a sensitivity run"
+pdays,history,customer,before,True,999 is a code for 'not previously contacted'
+previous,history,customer,before,True,contacts before this campaign
+poutcome,history,customer,before,True,outcome of the previous campaign
+emp.var.rate,macro,context,before (as published),True,quarterly indicator
+cons.price.idx,macro,context,before (as published),True,monthly indicator
+cons.conf.idx,macro,context,before (as published),True,monthly indicator
+euribor3m,macro,context,before (as published),True,daily indicator
+nr.employed,macro,context,before (as published),True,quarterly indicator

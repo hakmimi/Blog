@@ -1,195 +1,158 @@
 ---
 title: "Why This Data Is Harder Than It Looks"
-description: "Four traps in one CSV: imbalance, sentinel values, a leaky column that doubles your score, and a dataset that quietly changes over time."
+description: "One column lifts the score from 0.45 to 0.59 and cannot be used. Which columns are allowed, which are unclear, what the codes in the file mean, and why the data change over time."
 series: "classification"
 order: 2
 date: 2026-09-30
-updated: 2026-10-02
+updated: 2026-10-04
 keywords: ["data leakage", "class imbalance", "distribution shift", "feature engineering", "pandas"]
-readingTime: "13 min read"
+readingTime: "10 min read"
 figure: "ch02-duration-leak.png"
 ---
 
-Most classification tutorials go: load CSV, `train_test_split`, `fit`, print accuracy, celebrate. That workflow works on toy datasets because toy datasets have no traps. Real ones do. This one has four, and each can change which model "wins".
+Add one column, `duration`, to a plain logistic regression and its average precision rises from 0.45 to 0.59. That is the biggest jump anywhere in this series, and it is worthless. The column exists only after the call is over.
 
-## Goals: what are we trying to achieve?
-
-One column in this file lifts the score from 0.80 to 0.94 AUC. It also does not exist at the moment you have to decide whom to call. Finding that out *before* modelling is the whole point of this chapter.
-
-By the end you will be able to:
-
-- **Spot the four traps** in this CSV: imbalance, disguised missing values, a leaky column, and drift over time.
-- **Say what we decide** for each one, and where that decision shows up in later parts.
-- **Apply the prediction-moment test** to any column in any dataset.
-
-## The work plan: how do we do it?
-
-We audit the data before we fit anything, one trap at a time, from the quietest to the loudest. Each check gives a number, and each number gives a decision.
-
-| Trap | How we check it | What we need to decide |
-|---|---|---|
-| Imbalance | Count the classes ([part 1](/series/classification/01-classification-is-a-decision/) gave 88.7% "no") | Split and metrics |
-| Missing values in disguise | Look for suspiciously common values: `999`, `"unknown"` | Keep, flag, or recode |
-| Target leakage | Same model with and without the suspect column | Keep or drop |
-| Drift | Subscription rate across the file, oldest to newest | How to split |
-
-The test we apply to every column is the **prediction moment**: *"At the exact moment the model must output a number, is this value known?"* Here that moment is "before dialling".
-
-## Implementation
-
-### Trap 1: imbalance makes easy metrics lie
-
-We saw in [part 1](/series/classification/01-classification-is-a-decision/) that 88.7% of rows are "no". Every model in this series will be judged against that. The consequence is concrete:
-
-- A model minimising plain error can reach a low loss simply by predicting "no" for nearly everyone.
-- Stratified splits become mandatory. A random 20% sample of 41k rows will hold about 928 positives; an unlucky unstratified one can drift.
-- Metrics that only look at the majority class (accuracy, specificity) become meaningless. We use **average precision**, **log loss** and **profit** instead ([parts 3](/series/classification/03-what-does-good-performance-mean/) and [14](/series/classification/14-pricing-the-models/)).
-
-Nothing to fix in the data here. It is a property of the world, but it dictates choices everywhere else.
-
-### Trap 2: missing values wearing a disguise
-
-Don't just call `df.isna().sum()`. Pandas says there are zero missing values, which is true and misleading. Instead, audit the values that show up too often:
-
-```python
-import pandas as pd
-
-df = pd.read_csv("bank-additional-full.csv", sep=";")      # same load as part 1
-y = (df.pop("y") == "yes").astype(int)
-
-print("pdays == 999 (never contacted before):", f"{(df.pdays == 999).mean():.1%}")
-print("rows with an 'unknown' somewhere:", f"{(df == 'unknown').any(axis=1).mean():.1%}")
-print("exact duplicate rows:", df.duplicated().sum())
-```
-
-```output
-pdays == 999 (never contacted before): 96.3%
-rows with an 'unknown' somewhere: 26.0%
-exact duplicate rows: 12
-```
-
-- **`pdays` = 999** is not "999 days since last contact". It is a code meaning *never contacted before*. Fed to a linear model as a number, it creates a giant fake gap between 0–30 days and 999. Trees don't mind (they split on it), but linear models and k-nearest neighbours do.
-- **`unknown`** is a category in `job`, `education`, `default`, `housing`, `loan`. A quarter of rows have one. Dropping those rows would throw away 26% of the data *and* bias the sample, because "unknown" customers behave differently. We keep `unknown` as its own level. It is information (the agent didn't record it).
-- **12 duplicate rows** out of 41,188 is noise-level. We leave them. Any duplicate straddling a train/test split would leak a little, but at 0.03% it doesn't matter here.
-
-<div class="callout tip">
-
-**Rule of thumb.** Before modelling, list every column where a *specific value* is suspiciously common (`999`, `-1`, `0`, `"unknown"`, `"N/A"`). Decide for each: keep as-is, flag with a boolean, or recode. Write the decision down.
-
-</div>
-
-### Trap 3: the column that answers the question
-
-Now the big one. There is a column called `duration`, the length of the last call in seconds. To see what it is worth, we train the same model on the same split, with and without it:
-
-```python
-from sklearn.compose import ColumnTransformer
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import average_precision_score, roc_auc_score
-from sklearn.model_selection import train_test_split
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
-
-def score(frame):
-    cat = frame.select_dtypes("object").columns
-    prep = ColumnTransformer([("c", OneHotEncoder(handle_unknown="ignore"), cat)],
-                             remainder=StandardScaler())
-    model = make_pipeline(prep, LogisticRegression(max_iter=2000))
-    Xtr, Xte, ytr, yte = train_test_split(frame, y, test_size=0.2, stratify=y, random_state=42)
-    p = model.fit(Xtr, ytr).predict_proba(Xte)[:, 1]
-    return round(average_precision_score(yte, p), 3), round(roc_auc_score(yte, p), 3)
-
-print("with duration    (AP, AUC):", score(df))
-print("without duration (AP, AUC):", score(df.drop(columns="duration")))
-print(df.join(y.rename("y")).groupby("y").duration.median().rename("median call seconds"))
-```
-
-```output
-with duration    (AP, AUC): (0.636, 0.942)
-without duration (AP, AUC): (0.465, 0.801)
-y
-0    163.5
-1    449.0
-Name: median call seconds, dtype: float64
-```
-
-Once we have the verdict, the fix is one line, and it lives in `common.py` so every later script gets it:
-
-```python
-df = df.drop(columns="duration")
-```
-
-Leakage analysis is about timing, not column names. Look at `campaign`: it counts contacts *during this campaign*, including the current one. If the current call is the 4th, `campaign` is already 4 before dialling. Fine, so we keep it.
-
-### Trap 4: the dataset moves
-
-The file is sorted by date (May 2008 → November 2010). Slice it into ten chunks of 4,119 rows and look at the subscription rate, and at the interest rate `euribor3m` in the same chunks:
-
-```python
-import numpy as np
-
-chunk = np.arange(len(df)) // 4119
-print(y.groupby(chunk).mean().round(3).tolist())
-print(df.euribor3m.groupby(chunk).mean().round(2).tolist())
-```
-
-```output
-[0.028, 0.035, 0.042, 0.066, 0.062, 0.055, 0.102, 0.12, 0.157, 0.46]
-[4.86, 4.86, 4.94, 4.96, 4.96, 4.84, 3.37, 1.35, 1.26, 0.8]
-```
-
-## What did we get? Results
-
-**Leakage.** One column moves the same logistic regression a long way:
-
-| Model | Average precision | ROC-AUC |
-|---|---|---|
-| With `duration` | 0.636 | 0.942 |
-| Without `duration` | 0.465 | 0.801 |
-
-![ROC-AUC and average precision for the same logistic regression with and without the duration column.](/series/classification/figures/ch02-duration-leak.png)
-*Figure 1. One column lifts ROC-AUC from 0.80 to 0.94 and average precision from 0.47 to 0.64.*
-
-**Drift.** The subscription rate climbs from 2.8% to 46%, while the interest rate falls from about 4.9% to 0.8%:
-
-![Bars: subscription rate per chunk of 4,119 calls, oldest to newest. Line: mean euribor3m in the same chunks.](/series/classification/figures/ch02-drift.png)
-*Figure 2. The last chunk is not the same problem as the first. The rate rises as `euribor3m` falls.*
-
-**Decisions.** What we do about each trap, and where it shows up later:
-
-| Trap | What we do | Where it shows up |
-|---|---|---|
-| Imbalance | Stratified split, average precision + profit, never accuracy alone | Every chapter |
-| Sentinels / unknown | Keep `unknown` as a category; note `pdays=999` | [Parts 5](/series/classification/05-logistic-regression-naive-bayes/), [9](/series/classification/09-other-classification-families/) |
-| Leakage (`duration`) | Drop it, always | Everywhere |
-| Drift | Random split for algorithm comparison; chronological for deployment realism | [Parts 12](/series/classification/12-head-to-head-leaderboard/) and [16](/series/classification/16-when-time-breaks-the-model/) |
-
-## Analysis and conclusion: what did we learn?
-
-**The jump in score is not a feature-engineering triumph.** A 37% jump in average precision from one column (0.465 → 0.636) is too good. Subscribers talk for a median of 449 seconds, non-subscribers hang up after 164. That is about 2.7 times longer (my own calculation from the printed medians). **You cannot know how long a call will last before you make it.** The column is a *consequence* of the outcome, not a cause. The UCI documentation itself says it "should be discarded if the intention is to have a realistic predictive model".
-
-This is **target leakage**: information that exists in the training table but would not exist at prediction time. The test score is honest, because the split was clean, but the *deployed* model would never see the column. You would promise 0.94 AUC and ship 0.80.
-
-<div class="callout gotcha">
-
-**Gotcha: the prediction moment.** For every feature, ask whether the value is known at the exact moment the model must output a number. Here the decision moment is "before dialling". That rules out `duration`, and anything recorded during or after the call. (If instead you were scoring *completed* calls to prioritise follow-ups, `duration` would be legal. The same column is leakage or signal depending on the decision.)
-
-</div>
-
-**The drift is real, but the cause is not proven.** A chart like Figure 2 shows correlation, not cause. When deposits pay little elsewhere, a bank's term deposit looks better, so part of the climb is the economy. But later rows also contain the months where the bank may have targeted warmer customers. We cannot separate the two from this file alone.
+Real datasets are full of columns like that, and of codes and trends that mislead more quietly. This chapter audits the file before any model is trusted.
 
 <div class="callout">
 
-**Why this matters later.** If we shuffle the rows and split randomly (what we do for [parts 1](/series/classification/01-classification-is-a-decision/)–[15](/series/classification/15-inside-the-winner/)), the training set contains every era and the test set is "interpolation". If we train on the past and test on the future ([part 16](/series/classification/16-when-time-breaks-the-model/)), models trained on the 3%-era face a 30%+ world. The model ranking can change. We'll do both.
+**Goal.** Decide which columns may be used for the decision "rank planned contacts", and understand the codes and the time structure of the rest.
+
+**Work plan.** For each column ask when its value exists. Measure what the unclear ones are worth. Check the codes (`999`, `unknown`). Then look at how the outcome rate moves through the file.
 
 </div>
 
-For the main leaderboard we use a **stratified random split** for one practical reason: it gives a stable, interpretable comparison of *algorithms*. The chronological split answers a different question, *how would this have behaved in production?*, and deserves its own chapter.
+## The test every column must pass
 
-### So what did we do?
+For every column ask one question: *at the moment the bank decides whether to make this contact, does the value exist?* The documentation of the file (`bank-additional-names.txt`) says what each column describes, which is enough to sort them.
 
-We found four traps in one CSV and made a decision for each. We keep `unknown` as a category, we judge models by average precision and profit instead of accuracy, we drop `duration` everywhere, and we treat the time drift as its own question. The code for all of it lives in [`common.py`](/series/classification/code/common.py), which every later script imports.
+| feature | group | role | available | in main set |
+|---|---|---|---|---|
+| age | profile | customer | before | yes |
+| job | profile | customer | before | yes |
+| marital | profile | customer | before | yes |
+| education | profile | customer | before | yes |
+| default | profile | customer | before | yes |
+| housing | profile | customer | before | yes |
+| loan | profile | customer | before | yes |
+| contact | schedule | policy | when scheduled | yes |
+| month | schedule | policy | when scheduled | yes |
+| day_of_week | schedule | policy | when scheduled | yes |
+| duration | call outcome | outcome of the contact | after | no |
+| campaign | contact count | policy | unclear | no |
+| pdays | history | customer | before | yes |
+| previous | history | customer | before | yes |
+| poutcome | history | customer | before | yes |
+| emp.var.rate | macro | context | before (as published) | yes |
+| cons.price.idx | macro | context | before (as published) | yes |
+| cons.conf.idx | macro | context | before (as published) | yes |
+| euribor3m | macro | context | before (as published) | yes |
+| nr.employed | macro | context | before (as published) | yes |
 
-### In the next part
+Three columns need a comment.
 
-[Part 3](/series/classification/03-what-does-good-performance-mean/) turns to the question we keep dodging: if not accuracy, then *what*?
+- **Macro indicators** are published quarterly, monthly or daily. Values published before the contact are legitimate inputs. In a real deployment, a decision about *future* contacts would need forecasts or scenarios for them, not the realised values stored in this file.
+- **`contact`, `month`, `day_of_week`** are documented as attributes of the *last* contact. We treat them as known once the contact is scheduled. That is an assumption, so one sensitivity run below removes them.
+- **`campaign`** is the number of contacts in the campaign, including the last one. We come back to it below.
+
+## Duration: a benchmark number we cannot use
+
+**Implementation.** Score the same model on the development rows with and without `duration`, using 5-fold cross-validation.
+
+```python
+import numpy as np
+import pandas as pd
+from sklearn.compose import make_column_transformer
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
+df = pd.read_csv("bank-additional-full.csv", sep=";")
+y = (df.pop("y") == "yes").astype(int)
+dev, _ = train_test_split(np.arange(len(df)), test_size=0.2, stratify=y, random_state=42)
+dev = np.sort(dev)                      # development rows; the other 20% waits for part 12
+cv = StratifiedKFold(5, shuffle=True, random_state=42)
+
+def cv_ap(columns):
+    cat = [c for c in columns if df[c].dtype == object]
+    model = make_pipeline(make_column_transformer((OneHotEncoder(handle_unknown="ignore"), cat), remainder=StandardScaler()),
+                          LogisticRegression(max_iter=2000))
+    return cross_val_score(model, df.iloc[dev][columns], y.iloc[dev], cv=cv, scoring="average_precision").mean()
+
+main = [c for c in df.columns if c not in ("duration", "campaign")]
+print("main columns   :", round(cv_ap(main), 3))
+print("main + duration:", round(cv_ap(main + ["duration"]), 3))
+```
+
+```output
+main columns   : 0.448
+main + duration: 0.589
+```
+
+**Result.** Across the feature sets we tried, with a logistic regression and a LightGBM model at library defaults (mean average precision over 5 folds; a random ranking would score 0.113):
+
+| feature set | Logistic regression | LightGBM |
+|---|---|---|
+| main | 0.448 | 0.463 |
+| main + campaign | 0.449 | 0.465 |
+| no schedule (profile, history, macro) | 0.423 | 0.444 |
+| profile + history only | 0.338 | 0.344 |
+| main + duration (not eligible; benchmark only) | 0.589 | 0.662 |
+
+**What it means.** `duration` is the length of the last call. The dataset's own documentation says it "should be discarded if the intention is to have a realistic predictive model", and the reason is simple: the value does not exist before the call. That alone makes it unusable for this decision, whatever the mechanism behind its strength. Quoting the jump as a modelling success would promise a model that cannot be built.
+
+## Campaign: a count tied to when the bank stopped
+
+`campaign` counts the contacts made, including the last one. The other contact columns describe that last contact, so the count may also record *when the bank stopped calling*, which could depend on the outcome (plausibly after a subscription, or after the bank gave up; the documentation does not say). Here is how the outcome rate falls as the count rises:
+
+| contacts in campaign (8 = 8 or more) | records | rate |
+|---|---|---|
+| 1 | 17,642 | 13.0% |
+| 2 | 10,570 | 11.5% |
+| 3 | 5,341 | 10.8% |
+| 4 | 2,651 | 9.4% |
+| 5 | 1,599 | 7.5% |
+| 6 | 979 | 7.7% |
+| 7 | 629 | 6.0% |
+| 8 | 1,777 | 4.1% |
+
+Later contacts may be harder, or large counts may mark records where the bank kept trying, or both; this file cannot separate them, so we do not rely on the column. Excluding it costs very little: the main feature set scores 0.448 with a logistic regression and 0.449 with `campaign` added (LightGBM: 0.463 and 0.465). The **main feature set** for the rest of the series is therefore the 18 columns marked "yes" in the table above.
+
+Removing the schedule columns too lowers the logistic regression to 0.423; if they are not known at scheduling time, expect results closer to that row.
+
+## Codes that look like numbers or values
+
+- **`pdays = 999`** means "not previously contacted" (96.3% of records). It is a state, not a distance of 999 days. A linear or distance-based model treats it as a number, so we compared that with a representation that separates the state from the recency (a 0/1 flag plus the days, set to 0 when not contacted):
+
+| model | raw value (999 = never contacted) | flag + recency |
+|---|---|---|
+| Logistic regression | 0.448 | 0.447 |
+| k-nearest neighbours | 0.320 | 0.316 |
+| LightGBM | 0.463 | 0.462 |
+
+  On this data the two representations score the same within the fold-to-fold spread. We keep the raw column in the main comparison, and the recoding is available for any model that needs it.
+- **`unknown`** is a documented label for missing values in `job`, `marital`, `education`, `default`, `housing` and `loan`. The shares range from 0.2% for `marital` to 20.9% for `default`. We keep it as its own level and make no claim about why a value is missing. Dropping those records would remove 26% of the data and change who is in the sample.
+- **Duplicates.** 12 exact duplicate rows is too few to matter here.
+
+## The file moves
+
+The file is ordered by date, but it has no date column, so row position is a proxy for time. Cut it into ten equal chunks of 4,119 records and look at the outcome rate and the three-month Euribor rate in each:
+
+![Bars: share of records ending in a subscription, per chunk of 4,119 records in file order. Line: mean euribor3m in the same chunks.](/series/classification/figures/ch02-drift.png)
+*Figure 1. The outcome rate climbs from 2.8% in the first chunk to 46.0% in the last, while the Euribor rate falls from about 4.9% to 0.8%.*
+
+This is a correlation in a file with one economic cycle. Later records may differ because of the economy, which clients the bank chose to call, how the campaign ran, or how records were kept; the file cannot say which. Practically, a model trained on early records meets a different world later, so there are two questions: *which algorithm learns this relationship best?* (a random split, parts 3 to 15) and *how would a model behave on later records?* (a chronological split, part 16).
+
+## Analysis and conclusion: what we learned
+
+`duration` fails the eligibility test; `campaign` is unclear and costs about 0.002 AP to leave out; `999` and `unknown` are structure, and the representation barely moves the score here; and the outcome rate drifts through the file without a known cause, so we design around it.
+
+| Question | Decision in this series |
+|---|---|
+| Which columns are eligible? | The 18 columns of the main set. |
+| What if the schedule is not known in advance? | Sensitivity run: scores drop to the "no schedule" row. |
+| How are `999` and `unknown` handled? | Raw `pdays` and `unknown` as its own level; flag + recency checked in this chapter. |
+| Random or chronological split? | Random for comparing algorithms, chronological for the deployment question. |
+
+[Part 3](/series/classification/03-what-does-good-performance-mean/) turns to the question we keep postponing: if not accuracy, how do we grade a classifier?

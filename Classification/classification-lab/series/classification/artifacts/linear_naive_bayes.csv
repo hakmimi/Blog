@@ -1,0 +1,4 @@
+model,average_precision,roc_auc,pr_auc_trapezoid,log_loss,brier,ece_10_quantile,prevalence,mean_score,share_above_0.9,share_below_0.1
+Logistic regression (C=0.1),0.44565,0.78811,0.44553,0.27906,0.07903,0.00471,0.11266,0.11265,0.00000,0.76036
+Gaussian NB on one-hot columns,0.35148,0.76500,0.43040,2.05773,0.13509,0.12418,0.11266,0.13969,0.11939,0.83105
+Categorical NB on binned numerics,0.40375,0.78041,0.40360,0.77319,0.13698,0.13696,0.11266,0.18683,0.12592,0.74182
