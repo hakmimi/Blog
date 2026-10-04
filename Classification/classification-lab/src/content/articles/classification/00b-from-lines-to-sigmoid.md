@@ -61,6 +61,16 @@ below 0: 54 apples, above 1: 38 apples
 
 **Implementation.** Keep a straight line but let it live on a different scale. Instead of modelling the probability `p`, model its *log-odds*, `log(p / (1 - p))`, which can be any number. Then convert back with the **sigmoid**, `σ(z) = 1 / (1 + e^-z)`, which turns any number into a value strictly between 0 and 1.
 
+In symbols, with two measurements $x_1$ (redness) and $x_2$ (acidity):
+
+$$z = b + w_1 x_1 + w_2 x_2, \qquad p = \sigma(z) = \frac{1}{1 + e^{-z}}, \qquad \log\frac{p}{1-p} = z .$$
+
+Read these three together. The first is the straight line, which can be any real number. The second turns that number into a probability. The third says the same thing the other way round: the line is the *log-odds*. Solving $p = \sigma(z)$ for $z$ gives back $\log\frac{p}{1-p}$, so the sigmoid and the log-odds are inverse functions. The slope has a tidy form,
+
+$$\frac{d\sigma}{dz} = \sigma(z)\bigl(1-\sigma(z)\bigr) \le \tfrac14 ,$$
+
+which is largest at $z = 0$ and shrinks toward both ends. A step of $+1$ in $x_j$ adds $w_j$ to the log-odds, so it multiplies the odds $\frac{p}{1-p}$ by $e^{w_j}$. That number is the **odds ratio**.
+
 ```python
 z = np.array([-4, -2, -1, 0, 1, 2, 4])
 sigma = 1 / (1 + np.exp(-z))
@@ -79,7 +89,20 @@ slope   [0.018 0.105 0.197 0.25  0.197 0.105 0.018]
 
 **What it means.** Three properties are worth keeping. At `z = 0` the probability is exactly 0.5, so the *decision boundary at 0.5* is the set of points where the line equals zero. The slope is `σ(1 - σ)`, at most 0.25, and nearly flat for very large or very small `z`: extra evidence matters most near the middle. And log-odds have a plain reading. A probability of 0.8 is odds of 4 to 1; a coefficient `w` means *each extra unit of that measurement multiplies the odds by `e^w`*, which is why the series later talks about **odds ratios**.
 
+**Try it.** Move the sliders and watch one number travel through both pictures. On the left, the straight line $z = b + w x$ keeps growing. On the right, the same $z$ is passed through the sigmoid, so the probability slides between 0 and 1 and flattens at both ends. Press **Sweep x** to move the evidence from −6 to +6 and see the probability switch from "almost surely 0" to "almost surely 1". The dashed line is the tangent: its slope is how fast the probability reacts at that point.
+
+<div class="sigmoid-lab"></div>
+<script src="/js/sigmoid-lab.js"></script>
+
+**What to look for.** A larger slope $w$ makes the S sharper (the switch happens over a narrower range of $x$); changing the shift $b$ slides the S left or right without changing its shape; flipping the sign turns "more evidence means more likely" into "more evidence means less likely". The gold dot marks where $p = 0.5$, which is the decision boundary.
+
 **Implementation.** To fit the coefficients we maximise the likelihood of the labels, which has no closed-form answer. Newton-Raphson solves it in a few steps with nothing but NumPy: compute the predicted `p`, build the curvature matrix, and take a step.
+
+In symbols, the log-likelihood to maximise and one Newton step are
+
+$$\ell(w) = \sum_i \bigl[\,y_i \log p_i + (1-y_i)\log(1-p_i)\,\bigr], \qquad w \leftarrow w + \bigl(X^{\top} S X\bigr)^{-1} X^{\top}(y - p),$$
+
+where $X$ holds a column of ones and the measurements, $p_i = \sigma(x_i^{\top} w)$, and $S$ is the diagonal matrix with entries $p_i(1-p_i)$. The two lines of NumPy below are exactly this formula.
 
 ```python
 w = np.zeros(A.shape[1])
