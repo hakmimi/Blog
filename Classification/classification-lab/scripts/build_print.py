@@ -81,8 +81,16 @@ def data_uri(path: Path) -> str:
     mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
     return f"data:{mime};base64,{base64.b64encode(path.read_bytes()).decode()}"
 
+RTL_CSS = """
+body { font-family: "Segoe UI", "Arial Hebrew", Arial, sans-serif; }
+pre, code, .katex, .katex-display, table { direction: ltr; unicode-bidi: isolate; text-align: left; }
+.prose table th, .prose table td, table th, table td { text-align: right; }
+ul, ol { padding-right: 1.4em; padding-left: 0; }
+blockquote, .callout { border-left: 0; border-right: 4px solid #888; }
+"""
 
-def clean_article(page: Path, dist: Path, base: str) -> tuple[str, str]:
+
+def clean_article(page: Path, dist: Path, base: str, he: bool = False) -> tuple[str, str]:
     soup = BeautifulSoup(page.read_text(encoding="utf-8"), "html.parser")
     hero = soup.select_one(".article-hero")
     prose = soup.select_one(".prose")
@@ -108,9 +116,9 @@ def clean_article(page: Path, dist: Path, base: str) -> tuple[str, str]:
         d["open"] = ""
     for s in prose.select("script, style, button"):
         s.decompose()
-    for w in prose.select("div.threshold-lab, div.prior-shift-lab"):
+    for w in prose.select("div.threshold-lab, div.prior-shift-lab, div.sigmoid-lab, div.apple-grid-lab"):
         note = soup.new_tag("div", attrs={"class": "widget"})
-        note.string = "Interactive widget (slider and live charts). Open the online post to use it: " + title
+        note.string = ("ווידג׳ט אינטראקטיבי (מחוונים וגרפים חיים). פתחו את הפוסט באתר כדי להשתמש בו: " if he else "Interactive widget (slider and live charts). Open the online post to use it: ") + title
         w.replace_with(note)
 
     for img in prose.select("img"):
@@ -123,17 +131,17 @@ def clean_article(page: Path, dist: Path, base: str) -> tuple[str, str]:
             img.attrs.pop(a, None)
     for a in prose.select("a[href]"):
         h = a["href"]
-        m = re.search(r"/series/[\w-]+/(\d\d)-[\w-]+/?(#.*)?$", h)
+        m = re.search(r"/series/[\w-]+/(\d\d[a-z]?)-[\w-]+/?(#.*)?$", h)
         if m:
-            a["href"] = f"#part-{int(m.group(1))}"
+            a["href"] = f"#part-{m.group(1)}"
 
     eyebrow = hero.select_one(".eyebrow").get_text(" ", strip=True)
     lede = hero.select_one(".lede").get_text(" ", strip=True)
     byline = hero.select_one(".byline").get_text(" ", strip=True)
-    num = int(re.search(r"(\d+)", page.parent.name).group(1))
+    num = page.parent.name.split("-")[0]
     html = (f'<section class="part" id="part-{num}"><p class="eyebrow">{eyebrow}</p><h1>{title}</h1>'
             f'<p class="lede">{lede}</p><p class="byline">{byline}</p>{prose.decode_contents()}'
-            f'<div class="notes"><h3>My notes</h3><div class="lines"></div></div></section>')
+            f'<div class="notes"><h3>{"ההערות שלי" if he else "My notes"}</h3><div class="lines"></div></div></section>')
     return title, html
 
 
@@ -143,22 +151,26 @@ def main() -> int:
     ap.add_argument("--dist", type=Path, default=Path("dist"))
     ap.add_argument("--out", type=Path)
     ap.add_argument("--title", help="cover title (default: the series slug)")
+    ap.add_argument("--lang", choices=["en", "he"], default="en", help="he builds the Hebrew right-to-left edition from dist/he/series")
     ap.add_argument("--base", default="", help="site base path prefix used in the build, e.g. /Blog")
     args = ap.parse_args()
-    out = args.out or Path("print") / f"{args.series}.html"
+    he = args.lang == "he"
+    out = args.out or Path("print") / (f"{args.series}-he.html" if he else f"{args.series}.html")
 
-    pages = sorted((args.dist / "series" / args.series).glob("[0-9][0-9]*-*/index.html"))
+    pages = sorted(((args.dist / "he" if he else args.dist) / "series" / args.series).glob("[0-9][0-9]*-*/index.html"))
     if not pages:
         print("no built pages found; run `npm run build` first", file=sys.stderr)
         return 1
-    parts = [clean_article(p, args.dist, args.base) for p in pages]
-    toc = "".join(f'<li><a href="#part-{int(p.parent.name[:2])}">Part {int(p.parent.name[:2])}. {t}</a></li>'
+    parts = [clean_article(p, args.dist, args.base, he) for p in pages]
+    pk = lambda p: p.parent.name.split("-")[0]
+    word = "חלק" if he else "Part"
+    toc = "".join(f'<li><a href="#part-{pk(p)}">{word} {pk(p).lstrip("0") or "0"}. {t}</a></li>'
                   for p, (t, _) in zip(pages, parts))
     cover = (f'<div class="cover"><p class="eyebrow">Applied ML Notebook</p><h1>{args.title or args.series.replace("-", " ").title()}</h1>'
-             f'<p class="lede">Printable edition. Figures are embedded; interactive widgets are replaced by a note.</p></div>'
-             f'<div class="toc"><h2>Contents</h2><ol style="list-style:none;padding:0">{toc}</ol></div>')
-    html = (f'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-            f'<title>{args.series} (printable)</title><style>{CSS}</style></head><body><main>{cover}'
+             f'<p class="lede">{"מהדורה להדפסה. האיורים משובצים; ווידג׳טים אינטראקטיביים הוחלפו בהערה." if he else "Printable edition. Figures are embedded; interactive widgets are replaced by a note."}</p></div>'
+             f'<div class="toc"><h2>{"תוכן עניינים" if he else "Contents"}</h2><ol style="list-style:none;padding:0">{toc}</ol></div>')
+    html = (f'<!doctype html><html lang="{args.lang}" dir="{'rtl' if he else 'ltr'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+            f'<title>{args.series} (printable)</title><style>{CSS}{RTL_CSS if he else ""}</style></head><body><main>{cover}'
             + "".join(h for _, h in parts) + "</main></body></html>")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding="utf-8")

@@ -128,6 +128,24 @@ def article_checks() -> None:
         check(not bad.search(t), f"{key(f)}: no 'thirteen classifiers/models' wording")
 
 
+def hebrew_checks() -> None:
+    """Each Hebrew copy must match its English part: same code, rendered, with the right language flag."""
+    he_dir = ARTICLES.parent / "he" / "classification"
+    fence = "`" * 3
+    code = lambda s: re.findall(fence + "python\n(.*?)\n" + fence, s, re.S)
+    for hf in sorted(he_dir.glob("*.md")):
+        key = hf.name.split("-")[0]
+        en = ARTICLES / hf.name
+        check(en.exists(), f"he {key}: an English part with the same file name exists")
+        if not en.exists():
+            continue
+        t = hf.read_text(encoding="utf-8")
+        check("@@" not in t and "(filled in by the build)" not in t, f"he {key}: rendered, no tokens or empty output blocks")
+        check(code(t) == code(en.read_text(encoding="utf-8")), f"he {key}: python code is identical to the English part")
+        check(re.search(r'^lang: "he"', t, re.M) is not None and re.search(r'^order: ([\d.]+)', t, re.M).group(1) == re.search(r'^order: ([\d.]+)', en.read_text(encoding="utf-8"), re.M).group(1), f"he {key}: lang flag and order match")
+        check(len(re.findall(r"[֐-׿]", t)) > 500, f"he {key}: contains Hebrew text")
+
+
 def temporal_checks() -> None:
     _, y = P.load()
     t_dev, t_fut = P.temporal_split(len(y))
@@ -163,7 +181,7 @@ def render_consistency() -> None:
 
 
 def main() -> int:
-    for group in (protocol_checks, alignment_checks, policy_checks, ranking_checks, count_checks, temporal_checks, render_consistency, article_checks):
+    for group in (protocol_checks, alignment_checks, policy_checks, ranking_checks, count_checks, temporal_checks, render_consistency, article_checks, hebrew_checks):
         print("==", group.__name__)
         group()
     print(f"\n{len(failures)} failure(s)")

@@ -1,20 +1,25 @@
 ---
 import { render } from 'astro:content';
 import ArticleLayout from '../../../layouts/ArticleLayout.astro';
-import { getArticles } from '../../../lib/content';
+import { base, getArticles, getHebrewArticles, slugOf } from '../../../lib/content';
 
 export async function getStaticPaths() {
   const all = await getArticles();
+  const he = await getHebrewArticles();
   return all.map((entry) => {
     const siblings = all.filter((a) => a.data.series === entry.data.series).sort((a, b) => a.data.order - b.data.order);
     const i = siblings.findIndex((a) => a.id === entry.id);
     return {
       params: { series: entry.data.series, slug: entry.id.split('/').pop() },
-      props: { entry, siblings, prev: siblings[i - 1], next: siblings[i + 1] },
+      props: {
+        entry, siblings, prev: siblings[i - 1], next: siblings[i + 1],
+        alt: he.some((h) => h.data.series === entry.data.series && slugOf(h) === slugOf(entry))
+          ? { lang: 'he', label: 'עברית', href: `${base}/he/series/${entry.data.series}/${slugOf(entry)}/` } : undefined,
+      },
     };
   });
 }
-const { entry, prev, next, siblings } = Astro.props;
+const { entry, prev, next, siblings, alt } = Astro.props;
 const { Content } = await render(entry);
 ---
-<ArticleLayout {entry} {prev} {next} {siblings}><Content /></ArticleLayout>
+<ArticleLayout {entry} {prev} {next} {siblings} {alt}><Content /></ArticleLayout>

@@ -48,6 +48,7 @@ const articles = defineCollection({
     description: z.string(),
     series: z.string(),
     order: z.number(),
+    lang: z.enum(['en', 'he']).default('en'),
     label: z.string().optional(),          // shown instead of the number, e.g. '0b'
     date: z.coerce.date(),                 // first published
     updated: z.coerce.date().optional(),   // last substantive edit

@@ -30,3 +30,13 @@
 - Change log: `python scripts/build_changelog.py` (text lives in that script).
 
 If you edit a rendered file by mistake, copy the change into the template, because the next render overwrites it.
+
+## Hebrew (right-to-left) copies
+
+- Hebrew templates live in `series/classification/articles/he/` with the same file name as the English part (`00-start-here.md`, `00b-...md`). They have `lang: "he"` in the front matter and the same `order`.
+- The `python` blocks must stay **identical** to the English ones (the check enforces this); translate only the prose, headings and table headings. Numbers still come from tokens such as `@@j:...@@`.
+- Render with `python scripts/build_articles.py 00b`, which renders the English and the Hebrew copy of that part. Rendered Hebrew goes to `src/content/articles/he/classification/` (do not edit).
+- Pages are served at `/he/series/classification/<slug>/`; the English page shows an "עברית" link and the Hebrew page an "English" link.
+- Printable Hebrew edition: `python scripts/build_print.py classification --lang he --title "סדרת הסיווג" --out print/classification-he.html`.
+- To translate another part: copy its English template into `he/`, add `lang: "he"`, translate, then render. Untranslated parts simply have no Hebrew page.
+- The two lab widgets of part 0b take `data-lang="he"` for Hebrew labels; charts and sliders stay left-to-right.

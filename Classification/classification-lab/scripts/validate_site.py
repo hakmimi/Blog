@@ -33,16 +33,21 @@ def target_for(page: Path, url: str) -> Path | None:
 
 def main() -> None:
     errors: list[str] = []
-    articles = sorted((ROOT / "src" / "content" / "articles").rglob("*.md"))
+    root_articles = ROOT / "src" / "content" / "articles"
+    every = sorted(root_articles.rglob("*.md"))
+    is_he = lambda a: a.relative_to(root_articles).parts[0] == "he"
+    articles = [a for a in every if not is_he(a)]          # English parts: these are the ones indexed and searched
+    he_articles = [a for a in every if is_he(a)]
     forbidden = re.compile(r"(TODO|lorem ipsum|placeholder image)", re.I)
-    for article in articles:
+    for article in every:
         text = article.read_text(encoding="utf-8")
         head = re.match(r"---\n(.*?)\n---", text, re.S)
         meta = head.group(1) if head else ""
         for field in ("title:", "description:", "series:", "date:", "keywords:"):
             if field not in meta:
                 errors.append(f"{article.name} missing frontmatter {field}")
-        words = re.findall(r"[A-Za-z][A-Za-z’'-]*", text[head.end():] if head else text)
+        body = text[head.end():] if head else text
+        words = re.findall(r"[\w’'-]+", body) if is_he(article) else re.findall(r"[A-Za-z][A-Za-z’'-]*", body)
         if len(words) < 500:
             errors.append(f"{article.name} is unexpectedly short ({len(words)} words)")
         if forbidden.search(text):
@@ -76,7 +81,7 @@ def main() -> None:
         errors.append(f"search index has {len(search)} entries for {len(articles)} articles")
     if errors:
         raise SystemExit("VALIDATION FAILED\n" + "\n".join(errors))
-    print(f"VALIDATION PASSED: {len(articles)} articles, {len(html_pages)} pages, no broken local links")
+    print(f"VALIDATION PASSED: {len(articles)} articles (+{len(he_articles)} Hebrew), {len(html_pages)} pages, no broken local links")
 
 
 if __name__ == "__main__":

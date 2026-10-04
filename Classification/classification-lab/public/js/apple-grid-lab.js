@@ -12,7 +12,19 @@
   const GREEN = [64, 160, 90], RED = [214, 84, 80];
   const mix = (p) => GREEN.map((g, i) => Math.round(RED[i] + (g - RED[i]) * p));     // p = share of green apples
 
+  const TEXT = {
+    en: { cuts: 'Cuts per axis', cells: 'cell', cellsP: 'cells', color: 'Colour cells by', rate: 'share of green apples (the grid)', prob: 'logistic probability at the cell centre', line: 'logistic decision line', test: 'show test apples',
+      cellsL: 'Cells', empty: 'Empty cells', median: 'Median apples per cell', train: 'train', testC: 'test', grid: 'Grid', logistic: 'Logistic line',
+      gap: (g) => 'Train minus test for the grid: <strong>' + g + ' points</strong>. An empty cell predicts the majority class of the training apples. Accuracy on 400 test apples moves by about ±1.7 points from chance alone, so read the trend, not single steps.',
+      xax: 'redness of the skin →', yax: 'acidity →' },
+    he: { cuts: 'חיתוכים בכל ציר', cells: 'תא', cellsP: 'תאים', color: 'צבע התאים לפי', rate: 'חלק התפוחים הירוקים (הרשת)', prob: 'הסתברות לוגיסטית במרכז התא', line: 'קו ההחלטה הלוגיסטי', test: 'הצג תפוחי מבחן',
+      cellsL: 'תאים', empty: 'תאים ריקים', median: 'חציון תפוחים בתא', train: 'אימון', testC: 'מבחן', grid: 'רשת', logistic: 'קו לוגיסטי',
+      gap: (g) => 'אימון פחות מבחן עבור הרשת: <strong>' + g + ' נקודות</strong>. תא ריק חוזה את מחלקת הרוב של תפוחי האימון. הדיוק על 400 תפוחי מבחן זז בערך ב-‎±1.7 נקודות מהמקרה לבדו, ולכן קראו מגמה ולא צעדים בודדים.',
+      xax: 'אדמומיות הקליפה', yax: 'חומציות' },
+  };
+
   function build(root, data) {
+    const T = TEXT[root.dataset.lang === 'he' ? 'he' : 'en'];
     const S = 360, M = 34, IW = S - M - 8, sigmoid = (z) => 1 / (1 + Math.exp(-z));
     const L = data.logistic, prob = (r, a) => sigmoid(L.intercept + L.coef[0] * r + L.coef[1] * a);
     const tr = data.train, te = data.test, n = tr.x.length;
@@ -24,12 +36,12 @@
     const controls = document.createElement('div');
     controls.className = 'ag-controls';
     controls.innerHTML = `
-      <label class="ag-slider">Cuts per axis <strong class="ag-k"></strong>
+      <label class="ag-slider">${T.cuts} <strong class="ag-k"></strong>
         <input class="ag-range" type="range" min="1" max="12" step="1" value="${k}"></label>
-      <label>Colour cells by
-        <select class="ag-mode"><option value="rate">share of green apples (the grid)</option><option value="prob">logistic probability at the cell centre</option></select></label>
-      <label class="ag-check"><input type="checkbox" class="ag-line" checked> logistic decision line</label>
-      <label class="ag-check"><input type="checkbox" class="ag-test"> show test apples</label>`;
+      <label>${T.color}
+        <select class="ag-mode"><option value="rate">${T.rate}</option><option value="prob">${T.prob}</option></select></label>
+      <label class="ag-check"><input type="checkbox" class="ag-line" checked> ${T.line}</label>
+      <label class="ag-check"><input type="checkbox" class="ag-test"> ${T.test}</label>`;
     root.appendChild(controls);
     const body = document.createElement('div');
     body.className = 'ag-body';
@@ -58,7 +70,7 @@
 
     function draw() {
       const ev = evaluate();
-      $('.ag-k').textContent = `${k} (${k * k} cell${k === 1 ? '' : 's'})`;
+      $('.ag-k').textContent = `${k} (${k * k} ${k === 1 ? T.cells : T.cellsP})`;
       svg.innerHTML = '';
       el('rect', { x: M, y: 8, width: IW, height: IW, class: 'ag-frame' }, svg);
       const w = IW / k;
@@ -83,24 +95,24 @@
         for (const ac of [0, 1]) { const rd = -(L.intercept + L.coef[1] * ac) / L.coef[0]; if (rd >= 0 && rd <= 1) pts.push([rd, ac]); }
         if (pts.length >= 2) el('line', { x1: X(pts[0][0]), y1: Y(pts[0][1]), x2: X(pts[1][0]), y2: Y(pts[1][1]), class: 'ag-line-d' }, svg);
       }
-      el('text', { x: M + IW / 2, y: S - 2, class: 'ag-axis', 'text-anchor': 'middle' }, svg).textContent = 'redness of the skin →';
+      el('text', { x: M + IW / 2, y: S - 2, class: 'ag-axis', 'text-anchor': 'middle' }, svg).textContent = T.xax;
       const yl = el('text', { x: 9, y: 8 + IW / 2, class: 'ag-axis', 'text-anchor': 'middle', transform: `rotate(-90 9 ${8 + IW / 2})` }, svg);
-      yl.textContent = 'acidity →';
+      yl.textContent = T.yax;
       const gap = ev.train - ev.test;
       side.innerHTML = `
         <dl class="ag-stats">
-          <div><dt>Cells</dt><dd>${k * k}</dd></div>
-          <div><dt>Empty cells</dt><dd class="${ev.empty ? 'neg' : ''}">${ev.empty}</dd></div>
-          <div><dt>Median apples per cell</dt><dd>${ev.median}</dd></div>
+          <div><dt>${T.cellsL}</dt><dd>${k * k}</dd></div>
+          <div><dt>${T.empty}</dt><dd class="${ev.empty ? 'neg' : ''}">${ev.empty}</dd></div>
+          <div><dt>${T.median}</dt><dd>${ev.median}</dd></div>
         </dl>
         <table class="ag-table">
-          <thead><tr><th></th><th>train</th><th>test</th></tr></thead>
+          <thead><tr><th></th><th>${T.train}</th><th>${T.testC}</th></tr></thead>
           <tbody>
-            <tr><th>Grid (${k}×${k})</th><td>${pct(ev.train)}</td><td>${pct(ev.test)}</td></tr>
-            <tr><th>Logistic line</th><td>${pct(lrTrain)}</td><td>${pct(lrTest)}</td></tr>
+            <tr><th>${T.grid} (${k}×${k})</th><td>${pct(ev.train)}</td><td>${pct(ev.test)}</td></tr>
+            <tr><th>${T.logistic}</th><td>${pct(lrTrain)}</td><td>${pct(lrTest)}</td></tr>
           </tbody>
         </table>
-        <p class="ag-note">Train minus test for the grid: <strong>${(100 * gap).toFixed(1)} points</strong>. An empty cell predicts the majority class of the training apples. Accuracy on 400 test apples moves by about ±1.7 points from chance alone, so read the trend, not single steps.</p>`;
+        <p class="ag-note">${T.gap((100 * gap).toFixed(1))}</p>`;
     }
     $('.ag-range').addEventListener('input', (e) => { k = +e.target.value; draw(); });
     $('.ag-mode').addEventListener('change', (e) => { mode = e.target.value; draw(); });

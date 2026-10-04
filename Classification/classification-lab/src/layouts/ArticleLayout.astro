@@ -2,8 +2,12 @@
 import BaseLayout from './BaseLayout.astro';
 import { site } from '../data/site';
 import { articleUrl, fmtDate, iso, seriesBySlug, seriesUrl, topicUrl } from '../lib/content';
-const { entry, prev, next, siblings } = Astro.props;
-const { title, description, order, label, readingTime, series, date, updated, keywords } = entry.data;
+const { entry, prev, next, siblings, alt } = Astro.props;
+const { title, description, order, label, readingTime, series, date, updated, keywords, lang } = entry.data;
+const he = lang === 'he';
+const ui = he
+  ? { part: 'חלק', inPart: 'בחלק הזה', inSeries: 'בסדרה', updated: 'עודכן', prev: 'הקודם', next: 'הבא', other: 'English', notice: 'התרגום לעברית עדיין חלקי: חלקים שלא תורגמו מופיעים באנגלית. קוד ונוסחאות נשארים משמאל לימין.' }
+  : { part: 'Part', inPart: 'In this part', inSeries: 'In this series', updated: 'updated', prev: 'Previous', next: 'Next', other: 'עברית', notice: '' };
 const s = seriesBySlug[series];
 const jsonLd = {
   '@context': 'https://schema.org', '@type': 'TechArticle', headline: title, description,
@@ -12,17 +16,18 @@ const jsonLd = {
   position: order,
 };
 ---
-<BaseLayout title={title} description={description} keywords={keywords} type="article"
+<BaseLayout title={title} description={description} keywords={keywords} type="article" lang={lang} alt={alt}
   published={iso(date)} modified={iso(updated ?? date)} jsonLd={jsonLd}>
   <div class="progress" id="progress" aria-hidden="true"></div>
   <article class="article-shell">
     <header class="article-hero">
-      <p class="eyebrow"><a href={seriesUrl(series)}>{s.title}</a> · Part {label ?? order}</p>
+      <p class="eyebrow"><a href={seriesUrl(series)}>{s.title}</a> · {ui.part} {label ?? order}
+        {alt && <span> · <a class="lang-switch" href={alt.href} hreflang={alt.lang}>{alt.label}</a></span>}</p>
       <h1>{title}</h1>
       <p class="lede">{description}</p>
       <p class="byline">
         <span>{site.author}</span> · <time datetime={iso(date)}>{fmtDate(date)}</time>
-        {updated && <span> · updated <time datetime={iso(updated)}>{fmtDate(updated)}</time></span>} · {readingTime}
+        {updated && <span> · {ui.updated} <time datetime={iso(updated)}>{fmtDate(updated)}</time></span>} · {readingTime}
       </p>
       <ul class="chips" aria-label="Keywords">
         {keywords.map((k: string) => <li><a href={topicUrl(k)}>{k}</a></li>)}
@@ -30,17 +35,17 @@ const jsonLd = {
     </header>
     <div class="article-grid">
       <aside class="toc" aria-label="On this page">
-        <p>In this part</p><nav id="toc-links"></nav>
-        <p class="toc-series">In this series</p>
+        <p>{ui.inPart}</p><nav id="toc-links"></nav>
+        <p class="toc-series">{ui.inSeries}</p>
         <ol class="series-list">
           {siblings.map((a: any) => <li class:list={{ current: a.id === entry.id }}><a href={articleUrl(a)}>{a.data.title}</a></li>)}
         </ol>
       </aside>
-      <div class="prose"><slot /></div>
+      <div class="prose">{he && ui.notice && <p class="lang-notice" dir="rtl">{ui.notice}</p>}<slot /></div>
     </div>
     <nav class="chapter-nav" aria-label="Adjacent parts">
-      {prev ? <a href={articleUrl(prev)}><span>Previous</span>{prev.data.title}</a> : <span></span>}
-      {next ? <a class="next" href={articleUrl(next)}><span>Next</span>{next.data.title}</a> : <span></span>}
+      {prev ? <a href={articleUrl(prev)}><span>{ui.prev}</span>{prev.data.title}</a> : <span></span>}
+      {next ? <a class="next" href={articleUrl(next)}><span>{ui.next}</span>{next.data.title}</a> : <span></span>}
     </nav>
   </article>
   <script>

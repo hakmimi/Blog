@@ -11,7 +11,23 @@
   const sig = (z) => 1 / (1 + Math.exp(-z));
   const f = (v, d = 2) => (Math.abs(v) < 5e-3 && v !== 0 && d === 2 ? v.toExponential(1) : v.toFixed(d));
 
+  const TEXT = {
+    en: { slope: 'Slope', shift: 'Shift (bias)', ev: 'Evidence x', sweep: '▶ Sweep x', pause: '⏸ Pause', steeper: 'Steeper', flip: 'Flip sign', reset: 'Reset',
+      t1: '1. The straight line', h1: 'z = b + w·x can be any number', t2: '2. The sigmoid', h2: 'p = 1 / (1 + e^−z) stays between 0 and 1',
+      xax: 'x (evidence)', zax: 'z (log-odds)', pax: 'p (probability)', odds: 'odds p/(1−p)', slopeR: 'slope dp/dx', oddsx: 'odds × per +1 in x',
+      steep: 'Near z = 0 the curve is steepest: a small change in the evidence moves the probability a lot.',
+      flat: (end) => 'Far from z = 0 the curve is flat: more evidence barely changes a probability that is already close to ' + end + '.',
+      tail: ' The line on the left keeps growing; the curve on the right never leaves 0 to 1.', gold: (x) => ' The gold dot, x = ' + x + ', is where p = 0.5 (the decision boundary).' },
+    he: { slope: 'שיפוע', shift: 'הזזה (bias)', ev: 'ראיה x', sweep: '▶ סרוק x', pause: '⏸ השהיה', steeper: 'תלול יותר', flip: 'הפוך סימן', reset: 'איפוס',
+      t1: '1. הקו הישר', h1: 'z = b + w·x יכול להיות כל מספר', t2: '2. הסיגמואיד', h2: 'p = 1 / (1 + e^−z) נשאר בין 0 ל-1',
+      xax: 'x (ראיה)', zax: 'z (לוג-סיכויים)', pax: 'p (הסתברות)', odds: 'סיכויים p/(1−p)', slopeR: 'שיפוע dp/dx', oddsx: 'סיכויים × לכל +1 ב-x',
+      steep: 'ליד z = 0 העקומה תלולה ביותר: שינוי קטן בראיה מזיז את ההסתברות הרבה.',
+      flat: (end) => 'רחוק מ-z = 0 העקומה שטוחה: ראיות נוספות כמעט לא משנות הסתברות שכבר קרובה ל-' + end + '.',
+      tail: ' הקו משמאל ממשיך לגדול; העקומה מימין אף פעם לא יוצאת מהטווח 0 עד 1.', gold: (x) => ' הנקודה הזהובה, x = ' + x + ', היא איפה ש-p = 0.5 (גבול ההחלטה).' },
+  };
+
   function build(root) {
+    const T = TEXT[root.dataset.lang === 'he' ? 'he' : 'en'];
     let w = 1.5, b = 0, x = 1, timer = null;
     const XMIN = -6, XMAX = 6, W = 400, H = 250, M = { l: 40, r: 12, t: 12, b: 30 };
     const iw = W - M.l - M.r, ih = H - M.t - M.b;
@@ -22,10 +38,10 @@
     const controls = document.createElement('div');
     controls.className = 'sg-controls';
     controls.innerHTML = `
-      <label>Slope <strong class="sg-wv"></strong><input class="sg-w" type="range" min="-4" max="4" step="0.1" value="${w}"></label>
-      <label>Shift (bias) <strong class="sg-bv"></strong><input class="sg-b" type="range" min="-6" max="6" step="0.1" value="${b}"></label>
-      <label>Evidence x <strong class="sg-xv"></strong><input class="sg-x" type="range" min="${XMIN}" max="${XMAX}" step="0.05" value="${x}"></label>
-      <div class="sg-buttons"><button type="button" class="sg-play">▶ Sweep x</button><button type="button" class="sg-steep">Steeper</button><button type="button" class="sg-flip">Flip sign</button><button type="button" class="sg-reset">Reset</button></div>`;
+      <label>${T.slope} <strong class="sg-wv"></strong><input class="sg-w" type="range" min="-4" max="4" step="0.1" value="${w}"></label>
+      <label>${T.shift} <strong class="sg-bv"></strong><input class="sg-b" type="range" min="-6" max="6" step="0.1" value="${b}"></label>
+      <label>${T.ev} <strong class="sg-xv"></strong><input class="sg-x" type="range" min="${XMIN}" max="${XMAX}" step="0.05" value="${x}"></label>
+      <div class="sg-buttons"><button type="button" class="sg-play">${T.sweep}</button><button type="button" class="sg-steep">${T.steeper}</button><button type="button" class="sg-flip">${T.flip}</button><button type="button" class="sg-reset">${T.reset}</button></div>`;
     root.appendChild(controls);
     const read = document.createElement('div');
     read.className = 'sg-read';
@@ -43,8 +59,8 @@
       panels.appendChild(fg);
       return svg;
     };
-    const svgZ = mk('1. The straight line', 'z = b + w·x can be any number');
-    const svgP = mk('2. The sigmoid', 'p = 1 / (1 + e^−z) stays between 0 and 1');
+    const svgZ = mk(T.t1, T.h1);
+    const svgP = mk(T.t2, T.h2);
     const $ = (s) => root.querySelector(s);
 
     function frame(svg, ymin, ymax, yticks, ylabel) {
@@ -59,7 +75,7 @@
         el('line', { x1: M.l, x2: M.l + iw, y1: Y(t), y2: Y(t), class: 'sg-grid' }, svg);
         el('text', { x: M.l - 5, y: Y(t) + 3, class: 'sg-tick', 'text-anchor': 'end' }, svg).textContent = t;
       }
-      el('text', { x: M.l + iw / 2, y: H - 1, class: 'sg-axis', 'text-anchor': 'middle' }, svg).textContent = 'x (evidence)';
+      el('text', { x: M.l + iw / 2, y: H - 1, class: 'sg-axis', 'text-anchor': 'middle' }, svg).textContent = T.xax;
       el('text', { x: 10, y: M.t + ih / 2, class: 'sg-axis', 'text-anchor': 'middle', transform: `rotate(-90 10 ${M.t + ih / 2})` }, svg).textContent = ylabel;
       return Y;
     }
@@ -78,12 +94,12 @@
       $('.sg-bv').textContent = f(b, 1);
       $('.sg-xv').textContent = f(x, 2);
       // 1. line
-      const ZMIN = -8, ZMAX = 8, YZ = frame(svgZ, ZMIN, ZMAX, [-8, -4, 0, 4, 8], 'z (log-odds)');
+      const ZMIN = -8, ZMAX = 8, YZ = frame(svgZ, ZMIN, ZMAX, [-8, -4, 0, 4, 8], T.zax);
       curve(svgZ, (v) => b + w * v, YZ, 'sg-line', ZMIN, ZMAX);
       el('line', { x1: X(x), x2: X(x), y1: YZ(0), y2: YZ(Math.max(ZMIN, Math.min(ZMAX, z))), class: 'sg-drop' }, svgZ);
       el('circle', { cx: X(x), cy: YZ(Math.max(ZMIN, Math.min(ZMAX, z))), r: 5, class: 'sg-dot' }, svgZ);
       // 2. sigmoid
-      const YP = frame(svgP, 0, 1, [0, 0.25, 0.5, 0.75, 1], 'p (probability)');
+      const YP = frame(svgP, 0, 1, [0, 0.25, 0.5, 0.75, 1], T.pax);
       el('rect', { x: M.l, y: YP(0.5), width: iw, height: ih / 2, class: 'sg-low' }, svgP);
       el('line', { x1: M.l, x2: M.l + iw, y1: YP(0.5), y2: YP(0.5), class: 'sg-half' }, svgP);
       curve(svgP, (v) => sig(b + w * v), YP, 'sg-curve', 0, 1);
@@ -99,19 +115,19 @@
         <dl class="sg-stats">
           <div><dt>z = b + w·x</dt><dd>${f(z)}</dd></div>
           <div><dt>p = σ(z)</dt><dd class="${p >= 0.5 ? 'pos' : 'neg'}">${(100 * p).toFixed(1)}%</dd></div>
-          <div><dt>odds p/(1−p)</dt><dd>${z > 7 ? '> 1000' : z < -7 ? '< 0.001' : f(Math.exp(z))}</dd></div>
-          <div><dt>slope dp/dx</dt><dd>${f(slope, 3)}</dd></div>
-          <div><dt>odds × per +1 in x</dt><dd>${f(Math.exp(w))}</dd></div>
+          <div><dt>${T.odds}</dt><dd>${z > 7 ? '> 1000' : z < -7 ? '< 0.001' : f(Math.exp(z))}</dd></div>
+          <div><dt>${T.slopeR}</dt><dd>${f(slope, 3)}</dd></div>
+          <div><dt>${T.oddsx}</dt><dd>${f(Math.exp(w))}</dd></div>
         </dl>
-        <p class="sg-note">${Math.abs(z) < 1 ? 'Near z = 0 the curve is steepest: a small change in the evidence moves the probability a lot.' : 'Far from z = 0 the curve is flat: more evidence barely changes a probability that is already close to ' + (z > 0 ? '1' : '0') + '.'} The line on the left keeps growing; the curve on the right never leaves 0 to 1.${cross !== null && cross >= XMIN && cross <= XMAX ? ' The gold dot, x = ' + f(cross, 1) + ', is where p = 0.5 (the decision boundary).' : ''}</p>`;
+        <p class="sg-note">${Math.abs(z) < 1 ? T.steep : T.flat(z > 0 ? '1' : '0')}${T.tail}${cross !== null && cross >= XMIN && cross <= XMAX ? T.gold(f(cross, 1)) : ''}</p>`;
     }
     const bind = (sel, fn) => $(sel).addEventListener('input', (e) => { fn(+e.target.value); draw(); });
     const sync = () => { $('.sg-w').value = w; $('.sg-b').value = b; $('.sg-x').value = x; };
     bind('.sg-w', (v) => (w = v)); bind('.sg-b', (v) => (b = v)); bind('.sg-x', (v) => { x = v; stop(); });
-    function stop() { if (timer) { clearInterval(timer); timer = null; $('.sg-play').textContent = '▶ Sweep x'; } }
+    function stop() { if (timer) { clearInterval(timer); timer = null; $('.sg-play').textContent = T.sweep; } }
     $('.sg-play').addEventListener('click', () => {
       if (timer) return stop();
-      $('.sg-play').textContent = '⏸ Pause';
+      $('.sg-play').textContent = T.pause;
       if (x >= XMAX - 0.1) x = XMIN;
       timer = setInterval(() => { x += 0.08; if (x >= XMAX) { x = XMAX; stop(); } sync(); draw(); }, 30);
     });

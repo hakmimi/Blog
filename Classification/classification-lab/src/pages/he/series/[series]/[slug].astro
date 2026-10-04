@@ -1,0 +1,26 @@
+---
+import { render } from 'astro:content';
+import ArticleLayout from '../../../../layouts/ArticleLayout.astro';
+import { base, getArticles, getHebrewArticles, slugOf } from '../../../../lib/content';
+
+// Hebrew (RTL) copies of articles. They live in the same collection with lang: 'he' and are kept out of the English lists.
+export async function getStaticPaths() {
+  const he = await getHebrewArticles();
+  const en = await getArticles();
+  return he.map((entry) => {
+    const siblings = he.filter((a) => a.data.series === entry.data.series);
+    const i = siblings.findIndex((a) => a.id === entry.id);
+    const twin = en.find((a) => a.data.series === entry.data.series && slugOf(a) === slugOf(entry));
+    return {
+      params: { series: entry.data.series, slug: slugOf(entry) },
+      props: {
+        entry, siblings, prev: siblings[i - 1], next: siblings[i + 1],
+        alt: twin ? { lang: 'en', label: 'English', href: `${base}/series/${entry.data.series}/${slugOf(entry)}/` } : undefined,
+      },
+    };
+  });
+}
+const { entry, prev, next, siblings, alt } = Astro.props;
+const { Content } = await render(entry);
+---
+<ArticleLayout {entry} {prev} {next} {siblings} {alt}><Content /></ArticleLayout>

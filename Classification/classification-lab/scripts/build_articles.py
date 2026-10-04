@@ -26,6 +26,8 @@ import article_data as D  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "series" / "classification" / "articles"
 OUT = ROOT / "src" / "content" / "articles" / "classification"
+SRC_HE = SRC / "he"
+OUT_HE = ROOT / "src" / "content" / "articles" / "he" / "classification"
 TOKEN = re.compile(r"@@([A-Za-z0-9_]+)(?::([^@]*))?@@")
 
 
@@ -118,19 +120,22 @@ def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     run = "--no-run" not in sys.argv
     cache = json.loads(CACHE_FILE.read_text(encoding="utf-8")) if CACHE_FILE.exists() else {}
-    for f in sorted(SRC.glob("[0-9][0-9]*-*.md")):
-        if wanted and f.name.split("-")[0] not in wanted:
+    OUT_HE.mkdir(parents=True, exist_ok=True)
+    jobs = [(f, OUT) for f in sorted(SRC.glob("[0-9][0-9]*-*.md"))] + [(f, OUT_HE) for f in sorted(SRC_HE.glob("[0-9][0-9]*-*.md"))]
+    for f, out_dir in jobs:
+        key = f.name.split("-")[0]
+        if wanted and key not in wanted:      # a part number renders the English and the Hebrew copy
             continue
         out = render(f.read_text(encoding="utf-8")).replace("\r\n", "\n")
         if run:
             out = run_snippets(out, f.name, cache, force="--force" in sys.argv)
             write_retry(CACHE_FILE, json.dumps(cache, indent=0))
         # remove the previously rendered file for this part (the slug may have changed)
-        for old in OUT.glob(f"{f.name.split(chr(45))[0]}-*.md"):
+        for old in out_dir.glob(f"{key}-*.md"):
             if old.name != f.name:
                 old.unlink()
-        write_retry(OUT / f.name, out)
-        print(f"rendered {f.name}  {len(out.split())} words")
+        write_retry(out_dir / f.name, out)
+        print(f"rendered {'he/' if out_dir is OUT_HE else ''}{f.name}  {len(out.split())} words")
     return 0
 
 
