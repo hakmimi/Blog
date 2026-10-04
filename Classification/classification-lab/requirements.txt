@@ -1,7 +1,10 @@
+# Ranges: what the series is written against. The exact versions of the last full run are in requirements.lock.txt.
 numpy>=2.1,<3
 pandas>=2.2,<3
+scipy>=1.13,<2
 matplotlib>=3.9,<4
 scikit-learn>=1.7,<2
 xgboost>=3.0,<4
 lightgbm>=4.6,<5
 catboost>=1.2,<2
+beautifulsoup4>=4.12,<5      # article snippets are rendered and the printable edition is built with it

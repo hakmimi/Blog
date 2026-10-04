@@ -19,7 +19,7 @@ export const allSeries: Series[] = [
     title: 'Classification, Run for Real',
     tagline: 'From a bank-marketing spreadsheet to a model you can defend.',
     description:
-      'One real dataset, thirteen classifiers, every line of code. We tune, compare, calibrate and price the models — linear, trees, forests, XGBoost, LightGBM, CatBoost and more — and finish with a head-to-head leaderboard.',
+      'One real dataset, twelve classifiers and a no-model baseline, every line of code. We tune, compare, calibrate and price the models — linear, trees, forests, XGBoost, LightGBM, CatBoost and more — and finish with a head-to-head leaderboard.',
     status: 'in-progress',
     started: '2026-09-30',
     keywords: ['classification', 'scikit-learn', 'xgboost', 'lightgbm', 'catboost', 'model comparison'],

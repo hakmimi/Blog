@@ -1,12 +1,14 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 const cards = [
-  ['Prediction moment','Start of the current contact; duration is unavailable.'],
-  ['Split','Stratified 80/20 random split (seed 42) for the leaderboard; first 80% / last 20% by row order for part 16.'],
-  ['Selection','Same budget for every model: 8 random candidates, 3-fold CV, scored on average precision.'],
-  ['Primary features','All source inputs except duration. Unknown categories remain explicit.'],
+  ['Decision','Rank planned contacts just before they are made. Only information that exists at that moment may be a feature.'],
+  ['Records','One row is one record. The file has no client identifier, so records are never called distinct clients.'],
+  ['Features','18 main columns. duration is excluded (unknown before the call) and campaign is excluded (its eligibility cannot be established); both are re-tested in sensitivity runs.'],
+  ['Data roles','Development (80%, seed 42, stratified) for every choice, comparison (20%) scored once for frozen pipelines, and a chronological split (first 80% of rows / last 20%) for part 16.'],
+  ['Search protocol','Default plus up to seven random candidates per model, shuffled 3-fold CV on development rows, scored on average precision. Candidate counts are measured, not assumed.'],
+  ['Price list','Cost 1 per contact, value 8 per subscription: illustrative assumptions. Contributions are retrospective policy simulations, not value caused by contacting.'],
+  ['Reporting','Average precision, AUC, log loss, Brier, ECE with counts, simulated contribution against baselines, paired bootstrap with simultaneous intervals.'],
   ['Synthetic track','Fruit lab: one controlled factor changed at a time; fixed random seed 20260930.'],
-  ['Reporting','Average precision, AUC, log loss, ECE, profit at an out-of-fold threshold, paired bootstrap.'],
 ];
 ---
 <BaseLayout title="Methods">
@@ -16,9 +18,9 @@ const cards = [
     <p class="lede">These choices make the comparisons interpretable. They do not turn one dataset into universal evidence.</p>
     <div class="methods-grid">{cards.map(([h,p]) => <article><h2>{h}</h2><p>{p}</p></article>)}</div>
     <h2 id="scope">What the benchmark can establish</h2>
-    <p>It estimates how these concrete pipelines behave on a held-out sample (and, in part 16, a later period) of this dataset. It can reveal sensitivity to the split, class rarity, objectives, and thresholds. It cannot identify causal effects of contacting people, prove that the row-order proxy matches a future deployment, or crown a model family for every tabular problem.</p>
+    <p>It estimates how these concrete pipelines behave on a comparison sample (and, in part 16, on later records) of this dataset. The comparison split was looked at in earlier drafts of this series, so it is a controlled teaching benchmark, not a fresh test set. The benchmark can reveal sensitivity to the split, class rarity, objectives and thresholds. It cannot identify the causal effect of contacting people, prove that row order matches calendar time, or crown a model family for every tabular problem.</p>
     <h2 id="artifacts">Audit the run</h2>
-    <p>Start with the <a href={`${import.meta.env.BASE_URL}series/classification/artifacts/leaderboard_summary.json`}>machine-readable result summary</a>, then inspect <a href={`${import.meta.env.BASE_URL}series/classification/artifacts/leaderboard.csv`}>every model's metrics</a> and <a href={`${import.meta.env.BASE_URL}series/classification/artifacts/leaderboard_predictions.csv`}>test-set scores for all 13 models</a>. The code defines preprocessing inside each fitted pipeline so encoders and scalers learn from training rows only.</p>
+    <p>Start with the <a href={`${import.meta.env.BASE_URL}series/classification/artifacts/protocol_manifest.json`}>protocol manifest</a> (splits, feature decisions, versions, seeds), the <a href={`${import.meta.env.BASE_URL}series/classification/artifacts/feature_availability.csv`}>feature availability table</a>, then <a href={`${import.meta.env.BASE_URL}series/classification/artifacts/leaderboard_selected.csv`}>every model's selected configuration and scores</a>, <a href={`${import.meta.env.BASE_URL}series/classification/artifacts/leaderboard_candidates.csv`}>every candidate evaluated</a> and <a href={`${import.meta.env.BASE_URL}series/classification/artifacts/leaderboard_predictions.csv`}>comparison-split scores for all twelve models</a>. Preprocessing sits inside each fitted pipeline so encoders and scalers learn from training rows only. Tables and numbers in the articles are rendered from these files.</p>
   </section>
 </BaseLayout>
 

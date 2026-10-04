@@ -9,3 +9,7 @@ series/*/data/raw/
 series/*/*.log
 
 print/
+series/*/artifacts/*.log
+series/*/artifacts/snippet_cache.json
+series/*/scripts/catboost_info/
+series/*/data/raw/catboost_info/

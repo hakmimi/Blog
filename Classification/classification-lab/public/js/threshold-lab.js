@@ -1,4 +1,4 @@
-// Threshold lab: drag a decision threshold and watch ROC, precision-recall, profit and the confusion matrix respond.
+// Threshold lab: drag a decision threshold and watch ROC, precision-recall, simulated contribution and the confusion matrix respond (retrospective simulation, illustrative prices).
 // Usage: <div class="threshold-lab" data-src="/series/x/artifacts/threshold_lab.json" data-cost="1" data-value="8"></div>
 // Data format: {"y":[0,1,...], "models":{"name":[scores...]}}
 (function () {
@@ -26,7 +26,7 @@
       cumTP = new Int32Array(n + 1);
       for (let k = 0; k < n; k++) cumTP[k + 1] = cumTP[k] + y[order[k]];
     }
-    // number of customers with score >= thr (sortedScores is descending)
+    // number of records with score >= thr (sortedScores is descending)
     function callsAt(thr) {
       let lo = 0, hi = n;
       while (lo < hi) { const m = (lo + hi) >> 1; if (sortedScores[m] >= thr) lo = m + 1; else hi = m; }
@@ -42,14 +42,14 @@
     const controls = el('div', { class: 'tl-controls' }, root);
     controls.innerHTML = `
       <label>Model <select class="tl-model">${names.map((m) => `<option>${m}</option>`).join('')}</select></label>
-      <label>A subscription is worth <select class="tl-value"><option>2</option><option>4</option><option selected>8</option><option>16</option></select> calls</label>
+      <label>Illustrative price list: a subscription is worth <select class="tl-value"><option>2</option><option>4</option><option selected>8</option><option>16</option></select> contacts (a contact costs 1)</label>
       <label class="tl-slider">Threshold <strong class="tl-tval"></strong>
         <input class="tl-range" type="range" min="0.01" max="0.9" step="0.005"></label>
-      <div class="tl-buttons"><button type="button" class="tl-be">Break-even (1/value)</button><button type="button" class="tl-best">Profit-maximising</button><button type="button" class="tl-def">Default 0.5</button></div>`;
+      <div class="tl-buttons"><button type="button" class="tl-be">Break-even (1/value)</button><button type="button" class="tl-best">Best on this sample</button><button type="button" class="tl-def">Default 0.5</button></div>`;
     const readout = el('div', { class: 'tl-readout' }, root);
     const panels = el('div', { class: 'tl-panels' }, root);
     const mk = (title) => { const f = el('figure', {}, panels); el('figcaption', {}, f).textContent = title; return el('svg', { viewBox: '0 0 300 220', role: 'img', 'aria-label': title }, f); };
-    const svgRoc = mk('ROC curve'), svgPr = mk('Precision vs recall'), svgProfit = mk('Profit vs threshold'), svgHist = mk('Score distribution');
+    const svgRoc = mk('ROC curve'), svgPr = mk('Precision vs recall'), svgProfit = mk('Simulated contribution vs threshold'), svgHist = mk('Score distribution');
 
     const $ = (s) => root.querySelector(s);
     const range = $('.tl-range'), tval = $('.tl-tval');
@@ -84,12 +84,12 @@
       readout.innerHTML = `
         <div class="tl-cm"><div></div><b>Called</b><b>Not called</b>
           <b>Subscribes</b><span class="good">${fmt(cur.tp)}<small>hits</small></span><span class="bad">${fmt(cur.fn)}<small>missed</small></span>
-          <b>Declines</b><span class="bad">${fmt(cur.fp)}<small>wasted calls</small></span><span class="good">${fmt(cur.tn)}<small>correctly skipped</small></span></div>
+          <b>Declines</b><span class="bad">${fmt(cur.fp)}<small>wasted contacts</small></span><span class="good">${fmt(cur.tn)}<small>correctly skipped</small></span></div>
         <dl class="tl-stats">
-          <div><dt>Calls made</dt><dd>${fmt(cur.k)}</dd></div>
+          <div><dt>Records selected</dt><dd>${fmt(cur.k)}</dd></div>
           <div><dt>Precision</dt><dd>${fmt(cur.prec * 100, 1)}%</dd></div>
           <div><dt>Recall</dt><dd>${fmt(cur.rec * 100, 1)}%</dd></div>
-          <div><dt>Profit</dt><dd class="${cur.profit >= 0 ? 'pos' : 'neg'}">${cur.profit >= 0 ? '+' : ''}${fmt(cur.profit)}</dd></div>
+          <div><dt>Simulated contribution</dt><dd class="${cur.profit >= 0 ? 'pos' : 'neg'}">${cur.profit >= 0 ? '+' : ''}${fmt(cur.profit)}</dd></div>
         </dl>`;
       // ROC
       axes(svgRoc, 'false positive rate', 'recall (TPR)', ticks01, ticks01);
@@ -106,7 +106,7 @@
       const profits = grid.map((th) => stats(th).profit), best = Math.max(...profits), bestT = grid[profits.indexOf(best)];
       const lo = Math.min(0, ...profits), hi = Math.max(best, cur.profit, 1), norm = (v) => (v - lo) / (hi - lo);
       const XT = (th) => X((th - 0.01) / 0.89);
-      axes(svgProfit, 'threshold', 'profit', [[0, '0'], [(0.25 - 0.01) / 0.89, '.25'], [(0.5 - 0.01) / 0.89, '.5'], [(0.75 - 0.01) / 0.89, '.75']],
+      axes(svgProfit, 'threshold', 'contribution', [[0, '0'], [(0.25 - 0.01) / 0.89, '.25'], [(0.5 - 0.01) / 0.89, '.5'], [(0.75 - 0.01) / 0.89, '.75']],
         [[norm(0), '0'], [1, fmt(hi)]]);
       el('line', { x1: XT(1 / VALUE), x2: XT(1 / VALUE), y1: M.t, y2: M.t + ih, class: 'tl-be-line' }, svgProfit);
       pathOf(grid.map((th, i) => [XT(th), Y(norm(profits[i]))]), 'tl-curve', svgProfit);
@@ -118,7 +118,7 @@
       const bins = 20, h0 = new Array(bins).fill(0), h1 = new Array(bins).fill(0), s = data.models[name];
       for (let i = 0; i < n; i++) (y[i] ? h1 : h0)[Math.min(bins - 1, Math.floor(s[i] * bins))]++;
       const mx = Math.max(...h0, ...h1), sc = (v) => Math.sqrt(v / mx);
-      axes(svgHist, 'predicted probability', 'customers (√ scale)', ticks01, []);
+      axes(svgHist, 'predicted probability', 'records (√ scale)', ticks01, []);
       const bw = iw / bins;
       for (let b = 0; b < bins; b++) {
         el('rect', { x: M.l + b * bw + 1, y: Y(sc(h0[b])), width: bw / 2 - 1, height: ih * sc(h0[b]), class: 'tl-h0' }, svgHist);

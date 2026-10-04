@@ -40,6 +40,18 @@ def find_csv(archive_bytes: bytes) -> tuple[bytes, str]:
     raise RuntimeError("bank-additional-full.csv was not found in the UCI archive")
 
 
+def find_names_file(archive_bytes: bytes) -> bytes | None:
+    """The attribute documentation shipped next to the data (bank-additional-names.txt)."""
+    with zipfile.ZipFile(io.BytesIO(archive_bytes)) as outer:
+        for name in outer.namelist():
+            if name.lower().endswith(".zip"):
+                with zipfile.ZipFile(io.BytesIO(outer.read(name))) as nested:
+                    for inner in nested.namelist():
+                        if inner.endswith("bank-additional-names.txt"):
+                            return nested.read(inner)
+    return None
+
+
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
     raw_dir = root / "data" / "raw"
@@ -51,6 +63,9 @@ def main() -> None:
     with urlopen(request, timeout=120) as response:
         archive = response.read()
     csv_bytes, member = find_csv(archive)
+    names = find_names_file(archive)
+    if names is not None:
+        (raw_dir / "bank-additional-names.txt").write_bytes(names)
     destination = raw_dir / "bank-additional-full.csv"
     destination.write_bytes(csv_bytes)
 
@@ -82,6 +97,8 @@ def main() -> None:
         "columns": list(frame.columns),
         "targets": sorted(frame["y"].unique().tolist()),
         "delimiter": ";",
+        "names_file": "bank-additional-names.txt" if names is not None else None,
+        "names_file_sha256": sha256(names) if names is not None else None,
     }
     (generated / "data_manifest.json").write_text(
         json.dumps(metadata, indent=2) + "\n", encoding="utf-8"
