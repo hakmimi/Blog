@@ -10,7 +10,6 @@ updated: 2026-10-04
 keywords: ["סיווג", "קלסיפיקציה", "למידת מכונה", "שיווק בנקאי", "מפת הסדרה", "פרוטוקול הערכה"]
 readingTime: "10 דקות קריאה"
 ---
-
 ## מוטיבציה
 
 כבר הרבה זמן חשבתי לכתוב סדרה על בעיות קלסיפיקציה, בעיות שבהן משתנה המטרה הוא משתנה בדיד וכולל שתי מחלקות או יותר (כן/לא, 1/0, א/ב/ג).
@@ -31,7 +30,9 @@ readingTime: "10 דקות קריאה"
 
 לרשומה (למשל לקוח שעומד לקבל שיחה) יש מדידות $x = (x_1, \dots, x_d)$, ויש תוצאה אחת שמעניינת אותנו, $y \in \{0, 1\}$ (נרשם או לא נרשם). אנחנו מחפשים פונקציה שמקבלת את המדידות ומחזירה **ציון** $p(x)$ (הערכה להסתברות שהרשומה חיובית), ואז מקבלים **החלטה** $\hat y$ לפי סף $t$:
 
-$$x \;\longrightarrow\; p(x) \approx P(y = 1 \mid x) \;\longrightarrow\; \hat y = \begin{cases} 1 & p(x) \ge t \\ 0 & p(x) < t \end{cases}$$
+$$
+x \;\longrightarrow\; p(x) \approx P(y = 1 \mid x) \;\longrightarrow\; \hat y = \begin{cases} 1 & p(x) \ge t \\ 0 & p(x) < t \end{cases}
+$$
 
 <div class="pipe" role="group" aria-label="מרשומה להחלטה">
 <div><b>רשומה</b><span>מה ידוע לפני השיחה</span></div>
@@ -85,6 +86,40 @@ print(df.columns.tolist()[:6], "...")
 - **דליפת מידע (leakage).** מצב שבו המודל "מציץ" בתשובה. למשל, אורך השיחה (`duration`) ידוע רק אחרי שהשיחה נגמרה, ושיחה ארוכה היא סימן שהלקוח התעניין. מודל שמשתמש בו נראה מצוין בטבלה, אבל ברגע ההחלטה, לפני שמרימים טלפון, המידע הזה לא קיים. חלק 2 מראה כמה זה משנה בקובץ הזה.
 - **סחיפה (drift).** העולם משתנה. מודל שלמד מהעבר, כמו נהג שלמד לנהוג רק בקיץ, פוגש פתאום חורף: הלקוחות, התנאים והמחירים אחרים. חלק 16 מודד כמה זה עולה.
 
+## מא' ועד ת': שלבי בניית מודל
+
+כך בונים מודל קלסיפיקציה מההתחלה ועד הסוף. התרשים מראה את התהליך בחמש פאזות, ובכל שלב מצוין החלק בסדרה שעוסק בו. לחצו על שלב כדי לקפוץ אליו.
+
+<div class="proc" role="group" aria-label="תרשים תהליך: אחד-עשר שלבים בחמש פאזות, עם לולאת חזרה">
+<section class="proc-phase"><h4><span>א</span> הגדרה</h4><ol>
+<li><a href="/he/series/classification/01-classification-is-a-decision/"><b>1</b><span>מגדירים את ההחלטה העסקית</span><small>מה מחליטים, ומה עולה כל טעות · חלק 1</small></a></li>
+<li><a href="/series/classification/02-why-classification-is-hard/"><b>2</b><span>מבינים את הנתונים</span><small>רק מה שידוע ברגע ההחלטה · חלק 2</small></a></li>
+</ol></section>
+<div class="proc-arrow" aria-hidden="true"></div>
+<section class="proc-phase"><h4><span>ב</span> הכנה</h4><ol>
+<li><a href="/series/classification/03-what-does-good-performance-mean/"><b>3</b><span>קובעים איך מודדים הצלחה</span><small>דיוק, שלמות, AUC, AP · חלקים 3 ו-4</small></a></li>
+<li><a href="#כללי-המשחק-מפה-פשוטה"><b>4</b><span>מפרידים נתונים</span><small>פיתוח, השוואה, זמן · המפה למטה</small></a></li>
+</ol></section>
+<div class="proc-arrow" aria-hidden="true"></div>
+<section class="proc-phase"><h4><span>ג</span> בנייה</h4><ol>
+<li><a href="/series/classification/05-logistic-regression-naive-bayes/"><b>5</b><span>בונים קו בסיס פשוט</span><small>מה שחייבים לנצח · חלק 5</small></a></li>
+<li><a href="/series/classification/06-decision-trees/"><b>6</b><span>מנסים משפחות מודלים</span><small>עצים, יערות, boosting, רשתות · חלקים 6 עד 9</small></a></li>
+<li><a href="/series/classification/10-hyperparameter-search/"><b>7</b><span>מכווננים בהגינות</span><small>אותו מאמץ לכל מודל · חלק 10</small></a></li>
+</ol></section>
+<div class="proc-arrow" aria-hidden="true"></div>
+<section class="proc-phase"><h4><span>ד</span> החלטה</h4><ol>
+<li><a href="/series/classification/11-probabilities-calibration-thresholds-costs/"><b>8</b><span>הופכים ציון להחלטה</span><small>כיול, סף, עלויות · חלקים 11 ו-14</small></a></li>
+<li><a href="/series/classification/12-head-to-head-leaderboard/"><b>9</b><span>משווים ובודקים אם ההפרש אמיתי</span><small>אם לא, בוחרים את המודל הפשוט · חלקים 12 ו-13</small></a></li>
+</ol></section>
+<div class="proc-arrow" aria-hidden="true"></div>
+<section class="proc-phase"><h4><span>ה</span> ביקורת והפעלה</h4><ol>
+<li><a href="/series/classification/15-inside-the-winner/"><b>10</b><span>בודקים מבפנים ובזמן</span><small>על מה נשען, את מי מחמיץ · חלקים 15 ו-16</small></a></li>
+<li><a href="/series/classification/16-when-time-breaks-the-model/"><b>11</b><span>מפעילים ומנטרים</span><small>סחיפה וחישוב מחדש · חלק 16</small></a></li>
+</ol></section>
+<div class="proc-loop"><b>↺ לולאת חזרה</b> אם הנתונים, המחירים או העולם משתנים, או שהבדיקה בשלב 10 מגלה בעיה, חוזרים לשלב 2 (מה מותר לקחת) או לשלב 4 (איך מפרידים) ובונים מחדש.</div></div>
+
+*איור: תהליך בניית מודל מא' ועד ת'. התהליך אינו קו ישר: ממצא בשלב מאוחר מחזיר אותנו לשלבים מוקדמים.*
+
 ## כללי המשחק: מפה פשוטה
 
 כדי שהשוואה בין מודלים תהיה הוגנת, כל המודלים בסדרה עוברים אותו מסלול. הנה המסלול על דף אחד (הגרסה המלאה בדף [השיטות](/series/classification/methods/)).
@@ -107,40 +142,6 @@ print(df.columns.tolist()[:6], "...")
 - **ההשוואה בין מודלים היא מזווגת.** משווים על אותן רשומות בדיוק, ומעריכים את אי-הוודאות בבוטסטראפ.
 
 **מה המדד לא יכול להוכיח.** הוא לא יכול להראות שהתקשרות *גורמת* להרשמה. הוא לא יכול להראות שסדר השורות בקובץ הוא סדר לוח השנה האמיתי. והוא לא יכול להכתיר משפחת מודלים לכל טבלת נתונים, אלא רק לתאר איך שנים-עשר תהליכים קונקרטיים התנהגו על הנתונים האלה.
-
-## מא' ועד ת': שלבי בניית מודל
-
-כך בונים מודל קלסיפיקציה מההתחלה ועד הסוף. התרשים מראה את התהליך בחמש פאזות, ובכל שלב מצוין החלק בסדרה שעוסק בו. לחצו על שלב כדי לקפוץ אליו.
-
-<div class="proc" role="group" aria-label="תרשים תהליך: אחד-עשר שלבים בחמש פאזות, עם לולאת חזרה">
-<section class="proc-phase"><h4><span>א</span> הגדרה</h4><ol>
-<li><a href="/he/series/classification/01-classification-is-a-decision/"><b>1</b><span>מגדירים את ההחלטה העסקית</span><small>מה מחליטים, ומה עולה כל טעות · חלק 1</small></a></li>
-<li><a href="/series/classification/02-why-classification-is-hard/"><b>2</b><span>מבינים את הנתונים</span><small>רק מה שידוע ברגע ההחלטה · חלק 2</small></a></li>
-</ol></section>
-<div class="proc-arrow" aria-hidden="true"></div>
-<section class="proc-phase"><h4><span>ב</span> הכנה</h4><ol>
-<li><a href="/series/classification/03-what-does-good-performance-mean/"><b>3</b><span>קובעים איך מודדים הצלחה</span><small>דיוק, שלמות, AUC, AP · חלקים 3 ו-4</small></a></li>
-<li><a href="#כללי-המשחק-מפה-פשוטה"><b>4</b><span>מפרידים נתונים</span><small>פיתוח, השוואה, זמן · המפה שלמעלה</small></a></li>
-</ol></section>
-<div class="proc-arrow" aria-hidden="true"></div>
-<section class="proc-phase"><h4><span>ג</span> בנייה</h4><ol>
-<li><a href="/series/classification/05-logistic-regression-naive-bayes/"><b>5</b><span>בונים קו בסיס פשוט</span><small>מה שחייבים לנצח · חלק 5</small></a></li>
-<li><a href="/series/classification/06-decision-trees/"><b>6</b><span>מנסים משפחות מודלים</span><small>עצים, יערות, boosting, רשתות · חלקים 6 עד 9</small></a></li>
-<li><a href="/series/classification/10-hyperparameter-search/"><b>7</b><span>מכווננים בהגינות</span><small>אותו מאמץ לכל מודל · חלק 10</small></a></li>
-</ol></section>
-<div class="proc-arrow" aria-hidden="true"></div>
-<section class="proc-phase"><h4><span>ד</span> החלטה</h4><ol>
-<li><a href="/series/classification/11-probabilities-calibration-thresholds-costs/"><b>8</b><span>הופכים ציון להחלטה</span><small>כיול, סף, עלויות · חלקים 11 ו-14</small></a></li>
-<li><a href="/series/classification/12-head-to-head-leaderboard/"><b>9</b><span>משווים ובודקים אם ההפרש אמיתי</span><small>אם לא, בוחרים את המודל הפשוט · חלקים 12 ו-13</small></a></li>
-</ol></section>
-<div class="proc-arrow" aria-hidden="true"></div>
-<section class="proc-phase"><h4><span>ה</span> ביקורת והפעלה</h4><ol>
-<li><a href="/series/classification/15-inside-the-winner/"><b>10</b><span>בודקים מבפנים ובזמן</span><small>על מה נשען, את מי מחמיץ · חלקים 15 ו-16</small></a></li>
-<li><a href="/series/classification/16-when-time-breaks-the-model/"><b>11</b><span>מפעילים ומנטרים</span><small>סחיפה וחישוב מחדש · חלק 16</small></a></li>
-</ol></section>
-<div class="proc-loop"><b>↺ לולאת חזרה</b> אם הנתונים, המחירים או העולם משתנים, או שהבדיקה בשלב 10 מגלה בעיה, חוזרים לשלב 2 (מה מותר לקחת) או לשלב 4 (איך מפרידים) ובונים מחדש.</div></div>
-
-*איור: תהליך בניית מודל מא' ועד ת'. התהליך אינו קו ישר: ממצא בשלב מאוחר מחזיר אותנו לשלבים מוקדמים.*
 
 ## איך שישה-עשר החלקים מתחברים
 
@@ -191,4 +192,13 @@ print(df.columns.tolist()[:6], "...")
 
 עקיפה קצרה אחת עומדת לפני חלק 1. [חלק 0b](/he/series/classification/00b-from-lines-to-sigmoid/) מראה, עם 400 תפוחים מומצאים, למה קו ישר נכשל בשאלת כן/לא ולמה רשת של תאים מתאימה את עצמה יותר מדי לנתוני האימון (overfitting). זו התמונה הנקייה ביותר של הרעיון שעובר לאורך כל הסדרה.
 
-לגרסה חיה, נסו את [Fruit Lab](/series/classification/fruit-lab/) (באנגלית), שבו מזיזים שלוש מדידות של פרי ובודקים את השכנים הקרובים שמאחורי כל חיזוי. אחר כך המשיכו ל[חלק 0b](/he/series/classification/00b-from-lines-to-sigmoid/), או קפצו ישר ל[חלק 1](/he/series/classification/01-classification-is-a-decision/).
+המשיכו ל[חלק 0b](/he/series/classification/00b-from-lines-to-sigmoid/), או קפצו ישר ל[חלק 1](/he/series/classification/01-classification-is-a-decision/). ובינתיים, מעבדה קטנה לסיום.
+
+## מעבדה חיה: איזה פרי זה?
+
+זו ההדגמה הקטנה ביותר של כל מה שדיברנו עליו: מדידות נכנסות, מודל נותן ציון, וההחלטה היא המחלקה עם ההצבעה הגבוהה ביותר. הזיזו את המחוונים ושימו לב איך השכונה משתנה ואיך ההצבעה משתנה איתה. כאן המודל הוא k שכנים קרובים, שבו כל חיזוי ניתן לבדיקה: רואים בדיוק אילו דוגמאות תמכו בתשובה.
+
+<div class="fruit-lab-widget" data-lang="he" data-src="/series/classification/artifacts/fruit_points.json"></div>
+<script src="/js/fruit-lab.js"></script>
+
+המעבדה המלאה, עם החישוב המתמטי, הקוד וההשוואה בין ארבעה מסווגים, נמצאת ב[עמוד המעבדה בעברית](/he/series/classification/fruit-lab/).

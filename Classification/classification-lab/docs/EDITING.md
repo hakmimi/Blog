@@ -40,3 +40,4 @@ If you edit a rendered file by mistake, copy the change into the template, becau
 - Printable Hebrew edition: `python scripts/build_print.py classification --lang he --title "סדרת הסיווג" --out print/classification-he.html`.
 - To translate another part: copy its English template into `he/`, add `lang: "he"`, translate, then render. Untranslated parts simply have no Hebrew page.
 - The two lab widgets of part 0b take `data-lang="he"` for Hebrew labels; charts and sliders stay left-to-right.
+- The Fruit Lab exists as a widget (`public/js/fruit-lab.js`, `data-lang="he"` for Hebrew) and as a Hebrew page at `/he/series/classification/fruit-lab/` (`src/pages/he/series/classification/fruit-lab.astro`).

@@ -127,7 +127,7 @@ def clean_article(page: Path, dist: Path, base: str, he: bool = False) -> tuple[
         d["open"] = ""
     for s in prose.select("script, style, button"):
         s.decompose()
-    for w in prose.select("div.threshold-lab, div.prior-shift-lab, div.sigmoid-lab, div.apple-grid-lab"):
+    for w in prose.select("div.threshold-lab, div.prior-shift-lab, div.sigmoid-lab, div.apple-grid-lab, div.fruit-lab-widget"):
         note = soup.new_tag("div", attrs={"class": "widget"})
         note.string = ("ווידג׳ט אינטראקטיבי (מחוונים וגרפים חיים). פתחו את הפוסט באתר כדי להשתמש בו: " if he else "Interactive widget (slider and live charts). Open the online post to use it: ") + title
         w.replace_with(note)

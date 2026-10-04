@@ -1,0 +1,61 @@
+---
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import katex from 'katex';
+const b = import.meta.env.BASE_URL.replace(/\/$/, '') + '/series/classification';
+const standardization = katex.renderToString('z_j=(x_j-\mu_j)/s_j', { throwOnError: false });
+const distance = katex.renderToString('d(x,x_i)=\sqrt{\sum_{j=1}^{3}(z_j-z_{ij})^2}', { displayMode: true, throwOnError: false });
+const vote = katex.renderToString('V_c=\sum_{i\in N_k} \mathbf{1}(y_i=c)/(d_i+10^{-6})', { throwOnError: false });
+const alt = { lang: 'en', href: `${b}/fruit-lab/` };
+---
+<BaseLayout lang="he" alt={alt} title="מעבדה חיה: מסווגים פרי" description="משנים את המדידות של פרי וצופים במסווג שכנים קרובים שקוף מקבל החלטה בין שלוש מחלקות.">
+  <section class="lab-hero">
+    <div>
+      <p class="eyebrow">מעבדה טכנית חיה | סיווג רב-מחלקתי | <a href={`${b}/fruit-lab/`} hreflang="en">English</a></p>
+      <h1>איזה פרי זה?</h1>
+      <p class="lede">מזיזים שלוש מדידות. חישוב אמיתי של k שכנים קרובים מתקנן אותן, מוצא פירות מתוייגים קרובים, והופך את ההצבעות שלהם, משוקללות במרחק, לחיזוי שאפשר לבדוק.</p>
+    </div>
+    <div class="lab-brief">
+      <p><strong>הכאב</strong> מדידות גולמיות משתמשות ביחידות שונות, המחלקות חופפות, ותווית יכולה להסתיר אי-ודאות.</p>
+      <p><strong>המטרה</strong> לחזות תפוח, תפוז או לימון, ולהראות בדיוק אילו דוגמאות תמכו בתשובה.</p>
+      <p><strong>הצלחה היא</strong> שקורא יכול לשנות תכונה, לראות את השכונה משתנה, ולהסביר את החיזוי.</p>
+    </div>
+  </section>
+
+  <div class="lab-wrap"><div class="fruit-lab-widget" data-lang="he" data-src="/series/classification/artifacts/fruit_points.json"></div></div>
+  <script is:inline src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/js/fruit-lab.js`}></script>
+
+  <section class="section prose lab-explainer" dir="rtl">
+    <h2 id="math">מה הדפדפן מחשב</h2>
+    <p>סקאלות התכונות נלמדות מהדוגמאות המתוייגות. עבור תכונה <em>j</em>, התקנון הוא <span set:html={standardization} />, כאשר μ הוא ממוצע האימון ו-<em>s</em> סטיית התקן שלו. המרחק האוקלידי בין השאילתה <em>x</em> לפרי האימון <em>xᵢ</em> הוא:</p>
+    <div class="formula" set:html={distance} />
+    <p>המעבדה בוחרת את <em>k</em> המרחקים הקטנים ביותר. מחלקה <em>c</em> מקבלת הצבעה <span set:html={vote} />. החלקים המוצגים מחלקים את הצבעת כל מחלקה בסך ההצבעות. הם חלקי הצבעה מקומיים שימושיים, לא הסתברויות מכוילות באופן מובטח.</p>
+
+    <pre><code class="language-python">from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+
+model = make_pipeline(
+    StandardScaler(),
+    KNeighborsClassifier(n_neighbors=7, weights="distance"),
+)
+model.fit(X_train, y_train)
+probabilities = model.predict_proba(X_test)</code></pre>
+
+    <h2 id="benchmark">אותם נתונים, ארבעה מסווגים מפורסמים</h2>
+    <p>התצוגה החיה משתמשת ב-k-NN כי כל חיזוי ניתן לבדיקה. הניסוי הניתן לשחזור ב-Python מתאים גם רגרסיה לוגיסטית רב-מחלקתית, עץ החלטה מוגבל ויער אקראי על אותה חלוקה שכבתית.</p>
+    <img src={`${b}/figures/fruit-confusion-matrices.png`} alt="ארבע מטריצות בלבול שמשוות בין רגרסיה לוגיסטית, k שכנים קרובים, עץ החלטה ויער אקראי על מחלקות פירות סינתטיות." />
+    <p><em>איור 1. הספירות באות מסט מבחן סינתטי של 90 דוגמאות. החפיפה מכוונת; המדידות האלה הן נתוני הוראה, לא תצפיות חקלאיות.</em></p>
+    <p>בהרצה המתועדת עם גרעין קבוע, רגרסיה לוגיסטית ו-k-NN מסווגות כל אחת נכון 81 מתוך 90 פירות מבחן (דיוק 90.0%). לרגרסיה הלוגיסטית ה-log loss הרב-מחלקתי הנמוך ביותר, 0.200; העץ פחות מדויק, 85.6%, וטועה בביטחון רב בהרבה, עם log loss של 1.049. זו חלוקה אחת של נתונים סינתטיים, ולכן המסקנה השימושית נוגעת להתנהגות שאפשר לבדוק, לא לדירוג כללי של מודלים.</p>
+    <p>אפשר להוריד את <a href={`${b}/artifacts/fruit_benchmark.csv`}>המדידות</a>, את <a href={`${b}/artifacts/synthetic_fruits.csv`}>הנתונים הסינתטיים</a> או את <a href={`${b}/code/run_fruit_lab.py`}>הקוד שיוצר אותם</a>.</p>
+
+    <h2 id="lessons">על מה כדאי לשים לב</h2>
+    <ul>
+      <li><strong>תקנון משנה את הגאומטריה.</strong> בלעדיו הגרמים שולטים על ציון מתיקות של 1 עד 10.</li>
+      <li><strong>מחלקות יכולות לחפוף.</strong> פרי שנראה כמו תפוז עדיין יכול לשבת בין תפוחים.</li>
+      <li><strong>k שולט בהטיה ובשונות.</strong> k קטן מגיב מקומית; k גדול מחליק על פני אזורים.</li>
+      <li><strong>הצבעה אינה הסבר של הטבע.</strong> היא מסבירה את הפלט של האלגוריתם הזה בהינתן הדוגמאות והתכונות האלה.</li>
+      <li><strong>רב-מחלקתי אינו שלוש תוויות בלתי תלויות.</strong> המחלקות האלה סותרות זו את זו, וחלקי ההצבעה המוצגים מסתכמים באחד.</li>
+    </ul>
+    <div class="callout"><strong>מה הדוגמה הזו לא מבססת:</strong> טקסונומיה אמיתית של פירות, השפעות סיבתיות, כיול לפריסה, או עליונות של מסווג אחד. מטרתה להפוך את הדרך ייצוג → מרחק → שכנים → הצבעות → מחלקה לגלויה, לפני שהמקרה הבנקאי מוסיף סחיפה ועלות תפעולית.</div>
+  </section>
+</BaseLayout>
