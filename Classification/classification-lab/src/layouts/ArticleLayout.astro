@@ -21,16 +21,28 @@ const jsonLd = {
   <div class="progress" id="progress" aria-hidden="true"></div>
   <article class="article-shell">
     <header class="article-hero">
-      <p class="eyebrow"><a href={seriesUrl(series)}>{s.title}</a> · {ui.part} {label ?? order}
-        {alt && <span> · <a class="lang-switch" href={alt.href} hreflang={alt.lang}>{alt.label}</a></span>}</p>
+      {he ? (
+        <p class="eyebrow"><bdi><a href={seriesUrl(series)}>{s.title}</a></bdi> | <bdi>{ui.part} {label ?? order}</bdi>
+          {alt && <Fragment> | <bdi><a class="lang-switch" href={alt.href} hreflang={alt.lang}>{alt.label}</a></bdi></Fragment>}</p>
+      ) : (
+        <p class="eyebrow"><a href={seriesUrl(series)}>{s.title}</a> · {ui.part} {label ?? order}
+          {alt && <span> · <a class="lang-switch" href={alt.href} hreflang={alt.lang}>{alt.label}</a></span>}</p>
+      )}
       <h1>{title}</h1>
       <p class="lede">{description}</p>
-      <p class="byline">
-        <span>{site.author}</span> · <time datetime={iso(date)}>{fmtDate(date)}</time>
-        {updated && <span> · {ui.updated} <time datetime={iso(updated)}>{fmtDate(updated)}</time></span>} · {readingTime}
-      </p>
+      {he ? (
+        <p class="byline">
+          <bdi>{site.author}</bdi> | <bdi><time datetime={iso(date)}>{fmtDate(date, lang)}</time></bdi>
+          {updated && <Fragment> | <bdi>{ui.updated} <time datetime={iso(updated)}>{fmtDate(updated, lang)}</time></bdi></Fragment>} | <bdi>{readingTime}</bdi>
+        </p>
+      ) : (
+        <p class="byline">
+          <span>{site.author}</span> · <time datetime={iso(date)}>{fmtDate(date)}</time>
+          {updated && <span> · {ui.updated} <time datetime={iso(updated)}>{fmtDate(updated)}</time></span>} · {readingTime}
+        </p>
+      )}
       <ul class="chips" aria-label="Keywords">
-        {keywords.map((k: string) => <li><a href={topicUrl(k)}>{k}</a></li>)}
+        {keywords.map((k: string) => he ? <li><span>{k}</span></li> : <li><a href={topicUrl(k)}>{k}</a></li>)}
       </ul>
     </header>
     <div class="article-grid">

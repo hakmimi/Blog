@@ -5,7 +5,9 @@ export type Article = CollectionEntry<'articles'>;
 export const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 export const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-export const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+export const fmtDate = (d: Date, lang = 'en') => lang === 'he'
+  ? d.toLocaleDateString('he-IL', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
+  : d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
 export const iso = (d: Date) => d.toISOString().slice(0, 10);
 
 export const articleUrl = (a: Article) => `${base}${a.data.lang === 'he' ? '/he' : ''}/series/${a.data.series}/${a.id.split('/').pop()}/`;
