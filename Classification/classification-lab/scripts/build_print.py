@@ -81,6 +81,17 @@ def data_uri(path: Path) -> str:
     mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
     return f"data:{mime};base64,{base64.b64encode(path.read_bytes()).decode()}"
 
+DIAGRAM_CSS = """
+.flow-start,.flow-end,.flow-stage,.proc-phase,.proc-loop,.proto-bar,.pipe > div:not(.pipe-arrow) { border: 1px solid #888; border-radius: 6px; padding: 6px 10px; margin: 4px 0; page-break-inside: avoid; }
+.flow-start,.flow-end,.proc-loop,.proto-bar.all,.proto-bar.out { text-align: center; background: #f4f4f4; }
+.flow-arrow,.proc-arrow,.proto-arrow { text-align: center; line-height: 1; } .flow-arrow:after,.proc-arrow:after,.proto-arrow:after { content: "93"; }
+.pipe { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; } .pipe > div:not(.pipe-arrow) { text-align: center; } .pipe b,.pipe span { display: block; } .pipe-arrow { display: none; }
+.proto-row { display: flex; gap: 6px; } .proto-bar { flex: 1; } .proto-bar b,.proto-bar span { display: block; }
+.flow ol,.proc-phase ol { list-style: none; padding: 0; margin: 0; } .proc-phase ol { display: flex; gap: 8px; } .proc-phase li { flex: 1; }
+.flow h4,.proc-phase h4 { margin: 0 0 4px; } .flow li a,.proc-phase li a { display: block; border: 1px solid #bbb; border-radius: 4px; padding: 3px 6px; margin: 3px 0; } .proc-phase small { display: block; color: #555; }
+"""
+
+
 RTL_CSS = """
 body { font-family: "Segoe UI", "Arial Hebrew", Arial, sans-serif; }
 pre, code, .katex, .katex-display, table { direction: ltr; unicode-bidi: isolate; text-align: left; }
@@ -151,6 +162,7 @@ def main() -> int:
     ap.add_argument("--dist", type=Path, default=Path("dist"))
     ap.add_argument("--out", type=Path)
     ap.add_argument("--title", help="cover title (default: the series slug)")
+    ap.add_argument("--only", help="build only the part(s) with these prefixes, e.g. 00 or 00,00b")
     ap.add_argument("--lang", choices=["en", "he"], default="en", help="he builds the Hebrew right-to-left edition from dist/he/series")
     ap.add_argument("--base", default="", help="site base path prefix used in the build, e.g. /Blog")
     args = ap.parse_args()
@@ -158,6 +170,9 @@ def main() -> int:
     out = args.out or Path("print") / (f"{args.series}-he.html" if he else f"{args.series}.html")
 
     pages = sorted(((args.dist / "he" if he else args.dist) / "series" / args.series).glob("[0-9][0-9]*-*/index.html"))
+    if args.only:
+        keep = set(args.only.split(","))
+        pages = [p for p in pages if p.parent.name.split("-")[0] in keep]
     if not pages:
         print("no built pages found; run `npm run build` first", file=sys.stderr)
         return 1
@@ -170,7 +185,7 @@ def main() -> int:
              f'<p class="lede">{"מהדורה להדפסה. האיורים משובצים; ווידג׳טים אינטראקטיביים הוחלפו בהערה." if he else "Printable edition. Figures are embedded; interactive widgets are replaced by a note."}</p></div>'
              f'<div class="toc"><h2>{"תוכן עניינים" if he else "Contents"}</h2><ol style="list-style:none;padding:0">{toc}</ol></div>')
     html = (f'<!doctype html><html lang="{args.lang}" dir="{'rtl' if he else 'ltr'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-            f'<title>{args.series} (printable)</title><style>{CSS}{RTL_CSS if he else ""}</style></head><body><main>{cover}'
+            f'<title>{args.series} (printable)</title><style>{CSS}{DIAGRAM_CSS}{RTL_CSS if he else ""}</style></head><body><main>{cover}'
             + "".join(h for _, h in parts) + "</main></body></html>")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding="utf-8")

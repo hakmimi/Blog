@@ -6,5 +6,5 @@ export const site = {
   author: 'Yitzhak',
   authorHe: 'יצחק חכמימי',
   // Paste the full LinkedIn profile URL here; the author name on Hebrew pages then links to it.
-  linkedin: '',
+  linkedin: 'https://www.linkedin.com/in/hakmimi/',
 };
