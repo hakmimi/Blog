@@ -63,6 +63,9 @@ def run_snippets(text: str, name: str, cache: dict, force: bool = False) -> str:
     replace the *next* output block with what they printed. A block starting with '# schematic' is not run."""
     ns: dict = {"__name__": "__snippet__"}
     history = ""
+    blocks: list[str] = []      # python blocks seen so far
+    done = 0                    # how many of them have been executed in ns
+    cwd0 = os.getcwd()
     pieces, pos, pending = [], 0, None        # pending: (index in pieces of the output block to fill, captured text)
     matches = list(FENCE.finditer(text))
     out_text = text
@@ -76,9 +79,19 @@ def run_snippets(text: str, name: str, cache: dict, force: bool = False) -> str:
                 continue
             history += body + "\n"
             key = hashlib.sha1(history.encode()).hexdigest()
+            blocks.append(body)
             if key in cache and not force:
                 captured = cache[key]
             else:
+                # A changed block may use names defined by earlier blocks that came from the cache: run those first.
+                for j in range(done, len(blocks) - 1):
+                    with contextlib.redirect_stdout(io.StringIO()), warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        os.chdir(DATA_DIR)
+                        try:
+                            exec(compile(blocks[j], f"<{name} replay {j}>", "exec"), ns)
+                        finally:
+                            os.chdir(cwd0)
                 buf = io.StringIO()
                 cwd = os.getcwd()
                 os.chdir(DATA_DIR)
@@ -90,6 +103,7 @@ def run_snippets(text: str, name: str, cache: dict, force: bool = False) -> str:
                     os.chdir(cwd)
                 captured = buf.getvalue().rstrip()
                 cache[key] = captured
+                done = len(blocks)
             last_py_output = captured
         elif kind == "output" and last_py_output is not None:
             replacements.append((m.start(2), m.end(2), last_py_output))

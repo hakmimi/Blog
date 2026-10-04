@@ -6,6 +6,8 @@
   "scripts": {
     "sync": "node scripts/sync-assets.mjs",
     "dev": "npm run sync && astro dev",
+    "render": "python scripts/build_articles.py",
+    "print": "python scripts/build_print.py classification --title \"Classification Series\" --out print/classification.html",
     "check": "tsc --noEmit",
     "build": "npm run sync && astro build",
     "preview": "astro preview"
