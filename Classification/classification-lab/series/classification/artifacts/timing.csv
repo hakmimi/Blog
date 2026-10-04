@@ -1,0 +1,13 @@
+model,family,fit_seconds_best,fit_seconds_median,batch_records,batch_seconds_best,batch_records_per_second,single_record_ms_median,single_record_ms_p95,search_seconds_total,search_candidates
+Logistic regression,linear,0.28732,0.32276,8238,0.026811,3.0727e+05,9.817,16.301,9.584,8
+Linear SVM (Platt scaled),linear,1.3053,1.7194,8238,0.095583,86187,22.93,29.641,34.519,8
+Gaussian Naive Bayes,probabilistic,0.15231,0.15293,8238,0.037082,2.2215e+05,5.947,7.0087,7.9807,8
+k-nearest neighbours,instance,0.11767,0.12288,8238,0.7092,11616,14.643,18.52,39.917,8
+Small neural net (MLP),neural,3.0789,3.3133,8238,0.035421,2.3257e+05,6.5175,8.6319,158.07,8
+Decision tree,tree,0.35479,0.37633,8238,0.023787,3.4632e+05,4.4664,5.7485,17.153,8
+Random forest,bagging,8.3846,8.5546,8238,0.181,45513,70.604,91.784,125.25,8
+Extra trees,bagging,5.2739,5.8932,8238,0.15351,53664,91.955,134.06,185.17,8
+sklearn HistGradientBoosting,boosting,1.9601,1.9713,8238,0.11897,69246,27.165,62.458,72.763,8
+XGBoost,boosting,2.8335,3.2925,8238,0.066263,1.2432e+05,24.864,33.606,29.497,8
+LightGBM,boosting,1.1144,1.1219,8238,0.085102,96801,20.53,25.291,17.607,8
+CatBoost,boosting,30.502,31.48,8238,0.054858,1.5017e+05,3.7861,4.7811,799.16,8

@@ -1,208 +1,134 @@
 ---
-title: "Is the Winner Real? Bootstrap Intervals and Five Other Splits"
-description: "LightGBM beat XGBoost by 0.006 average precision. We test whether that is a result or a coin flip using paired bootstrap, five different random splits, and a rank-stability table."
+title: "Is the Winner Real? Uncertainty, Pairs and Other Splits"
+description: "One AP number carries about ±0.035 of test-sample uncertainty. Paired comparisons are sharper, multiple comparisons make them weaker, and repeating the whole procedure on other splits shows how much of a ranking is luck."
 series: "classification"
 order: 13
-date: 2026-10-01
-updated: 2026-10-02
-keywords: ["bootstrap", "confidence intervals", "statistical significance", "model comparison", "rank stability", "paired test"]
-readingTime: "16 min read"
-figure: "leaderboard-stability.png"
+date: 2026-09-30
+updated: 2026-10-04
+keywords: ["bootstrap", "paired comparison", "multiple comparisons", "confidence interval", "model selection", "variance"]
+readingTime: "11 min read"
+figure: "leaderboard-paired.png"
 ---
 
-The leaderboard says LightGBM 0.496, HistGradientBoosting 0.494, random forest 0.490, XGBoost 0.490. Somebody will want to write "LightGBM wins" on a slide. Before they do, we should ask how much of that ordering would survive a different draw of customers.
-
-There are two different sources of randomness hiding in a single number like "AP = 0.496":
-
-1. **Test-set sampling noise.** The 8,238 test customers are one sample. A different 8,238 would give a different AP for every model, and most of that variation is *shared* between models (easy and hard customers are easy and hard for everybody).
-2. **Split and training noise.** A different train/test partition changes what each model learns, not only how it's graded.
-
-We have tools for each. This chapter uses them both.
-
-## Goals: what are we trying to achieve?
-
-Somebody will want to write "LightGBM wins" on a slide. Our goal is to find out how much of that ordering survives a different draw of customers.
-
-By the end you will be able to:
-
-- **Separate two sources of noise**: the test sample, and the split and training.
-- **Run a paired bootstrap**, and say why it is sharper than comparing two intervals.
-- **Write a claim the data licenses**, and not one it does not.
-
-## The work plan: how do we do it?
-
-Three tests, each answering a different question:
-
-1. **Part A, single interval:** the bootstrap of one model's AP on the saved test scores.
-2. **Part B, paired comparison:** the difference between LightGBM and every other model, on the same resamples.
-3. **Part C, other splits:** the whole procedure on five different random 80/20 splits.
-
-## Implementation
-
-### Part A: how precise is a single AP?
-
-The bootstrap resamples the 8,238 test customers *with replacement*, recomputes the metric, and repeats. The spread of the results estimates the sampling noise. Since `run_leaderboard.py` saved every model's test-set scores, you can reproduce everything here without retraining anything:
-
-```python
-import numpy as np
-import pandas as pd
-from sklearn.metrics import average_precision_score
-
-pred = pd.read_csv("artifacts/leaderboard_predictions.csv")       # one score column per model
-y = pred["y"].to_numpy()
-print(len(y), "test customers,", y.sum(), "subscribers")
-
-rng = np.random.default_rng(42)
-boots = rng.integers(0, len(y), size=(1000, len(y)))               # 1000 resamples of the customers
-
-def ap_samples(model):
-    p = pred[model].to_numpy()
-    return np.array([average_precision_score(y[b], p[b]) for b in boots])
-
-lgbm = ap_samples("LightGBM")
-lo, hi = np.quantile(lgbm, [.025, .975])
-print(f"LightGBM alone: AP = {average_precision_score(y, pred['LightGBM']):.3f}, 95% interval {lo:.3f} to {hi:.3f}  (width {hi - lo:.3f})")
-```
-
-```output
-8238 test customers, 928 subscribers
-LightGBM alone: AP = 0.496, 95% interval 0.464 to 0.531  (width 0.067)
-```
-
-The 95% interval for LightGBM's AP alone is **0.464 to 0.531**, a width of 0.067. That's *wider than the entire gap between the first and fifth models in the table*. With only 928 subscribers in the test set, no AP is known to better than about ±0.03.
-
-That is exactly why the whiskers in Figure 1 of the last chapter overlap everywhere in tier 1. If we stopped here the correct conclusion would be "we can't separate them".
-
-### Part B: the paired comparison is much sharper
-
-But that's the wrong test. We care about the *difference* between two models, and the two models are scored on the **same customers**. Whatever makes a sample hard for LightGBM (a cluster of unusual subscribers) usually makes it hard for XGBoost too. Resample once, score both models on the same resample, and take the difference *within* each resample; the shared noise cancels.
-
-```python
-print("PAIRED difference vs LightGBM (same resample for both models)")
-for m in ["sklearn HistGradientBoosting", "Random forest", "XGBoost", "CatBoost", "Extra trees",
-          "Small neural net (MLP)", "Logistic regression", "Gaussian Naive Bayes"]:
-    d = ap_samples(m) - lgbm
-    lo, hi = np.quantile(d, [.025, .975])
-    print(f"{m:<30} {d.mean():+.3f}   [{lo:+.3f}, {hi:+.3f}]   P(LightGBM worse) = {(d > 0).mean():.2f}")
-```
-
-```output
-PAIRED difference vs LightGBM (same resample for both models)
-sklearn HistGradientBoosting   -0.003   [-0.012, +0.006]   P(LightGBM worse) = 0.25
-Random forest                  -0.006   [-0.014, +0.001]   P(LightGBM worse) = 0.06
-XGBoost                        -0.006   [-0.014, -0.000]   P(LightGBM worse) = 0.03
-CatBoost                       -0.009   [-0.018, +0.000]   P(LightGBM worse) = 0.03
-Extra trees                    -0.012   [-0.020, -0.004]   P(LightGBM worse) = 0.00
-Small neural net (MLP)         -0.020   [-0.031, -0.009]   P(LightGBM worse) = 0.00
-Logistic regression            -0.032   [-0.045, -0.018]   P(LightGBM worse) = 0.00
-Gaussian Naive Bayes           -0.084   [-0.106, -0.064]   P(LightGBM worse) = 0.00
-```
-
-The paired intervals are about three times narrower (width ≈ 0.02 instead of 0.067), so differences become visible. Reading the table:
-
-| Comparison | Difference | Verdict |
-|---|---|---|
-| LightGBM vs HistGradientBoosting | −0.003 [−0.012, +0.006] | **Tie.** One in four resamples puts HistGB ahead. |
-| LightGBM vs Random forest | −0.006 [−0.014, +0.001] | **Probably a tie.** The interval includes zero. |
-| LightGBM vs XGBoost | −0.006 [−0.014, −0.000] | **Borderline.** Interval touches zero. |
-| LightGBM vs CatBoost | −0.009 [−0.018, +0.000] | **Borderline.** |
-| LightGBM vs Extra trees | −0.012 [−0.020, −0.004] | LightGBM better (small) |
-| LightGBM vs MLP | −0.020 [−0.031, −0.009] | LightGBM clearly better |
-| LightGBM vs Logistic regression | −0.032 [−0.045, −0.018] | LightGBM clearly better |
-| LightGBM vs Naive Bayes | −0.084 [−0.106, −0.064] | Overwhelming |
-
-Two conclusions fall out:
-
-1. **The gap between tiers is real.** Boosting beats logistic regression by 0.03 AP with an interval that excludes zero by a wide margin, and also beats the small neural net.
-2. **The ordering within tier 1 is not.** HistGB, random forest, XGBoost, CatBoost and LightGBM are statistically a cluster. If the leaderboard had been drawn with a different random seed it's quite plausible that any of the first four would be on top.
-
-<div class="callout gotcha">
-
-**Gotcha — twelve comparisons, one lucky one.** We computed several 95% intervals at once. Even if every model were equally good we'd expect about one in twenty to exclude zero by chance. The borderline results (XGBoost, CatBoost) deserve no more than a shrug. A defensible reading: "LightGBM is *not worse than* any other model, and is clearly better than everything outside the top cluster."
-
-</div>
-
-### Part C: does the ranking survive a different split?
-
-The bootstrap resamples the test rows but leaves the *training set* fixed. To also vary what each model learns, we repeat the whole train/test procedure on **five different random 80/20 splits** (`random_state` 100–104): refit every model (with the hyperparameters it chose on the original split) on the new training set and score it on the new test set.
-
-Here are the numbers. The column "std" is how much a model's own AP bounces between splits; "mean rank" is its average position out of 12:
-
-| Model | Mean AP | Std | Range | Rank on each split (0–4) | Mean rank |
-|---|---|---|---|---|---|
-| LightGBM | 0.478 | 0.023 | 0.459–0.515 | 1, 3, 1, 1, 1 | **1.4** |
-| sklearn HistGradientBoosting | 0.476 | 0.021 | 0.457–0.511 | 2, 1, 3, 3, 2 | 2.2 |
-| XGBoost | 0.473 | 0.022 | 0.456–0.509 | 4, 4, 2, 4, 4 | 3.6 |
-| CatBoost | 0.472 | 0.020 | 0.451–0.504 | 3, 2, 6, 7, 5 | 4.6 |
-| Random forest | 0.472 | 0.023 | 0.455–0.510 | 5, 5, 4, 6, 3 | 4.6 |
-| Extra trees | 0.469 | 0.021 | 0.454–0.503 | 6, 6, 5, 5, 6 | 5.6 |
-| Small neural net (MLP) | 0.460 | 0.019 | 0.444–0.490 | 9, 7, 7, 2, 7 | 6.4 |
-| Logistic regression | 0.456 | 0.018 | 0.442–0.484 | 7, 8, 8, 8, 8 | 7.8 |
-| Linear SVM (calibrated) | 0.451 | 0.017 | 0.437–0.479 | 10, 9, 9, 9, 10 | 9.4 |
-| Decision tree | 0.448 | 0.021 | 0.428–0.482 | 8, 11, 11, 11, 9 | 10.0 |
-| k-nearest neighbors | 0.444 | 0.016 | 0.429–0.465 | 11, 10, 10, 10, 11 | 10.4 |
-| Gaussian Naive Bayes | 0.397 | 0.014 | 0.375–0.412 | 12, 12, 12, 12, 12 | 12.0 |
-
-This is the more convincing evidence. Three observations:
-
-**1. LightGBM stays on top, and the top two boosters are consistent.** LightGBM is ranked first on four of five splits and third on the other (mean rank 1.4); HistGB is always in the top three. Gradient boosting ends up in front of the forests more often than not.
-
-**2. But the *absolute* AP moves a lot more than the gaps do.** A model's AP ranges over about 0.05 from split to split (LightGBM 0.459 to 0.515!). That's larger than the whole difference between the first-ranked and fifth-ranked model. A single AP number, from a single split, should always be quoted with ±0.02 around it.
-
-**3. Some orderings flip.** The decision tree was 8th on the original split (0.468, above logistic regression) but 9–11th on four of the five new ones, finishing below logistic regression on average (0.448 vs 0.456). Its apparent strength on the original split was at least partly luck. The small neural net ranks anywhere from 2nd to 9th depending on the split. These are the effects of *single-split* noise, and they're why one split can never support a claim like "the tree beats logistic regression".
+The model with the highest average precision on the comparison split scores 0.492. The second scores 0.491. Somebody will want to write "wins" on a slide. First ask how much of that ordering would survive a different draw of records, a different training sample or a different random search.
 
 <div class="callout">
 
-**A caveat about this stability check.** The hyperparameters for each model were chosen using the original split's training data, and the new splits' test rows overlap those training rows. Final models are always refit from scratch on each new training partition and graded on rows that partition left out, so there is no leakage into *fitting*. But the hyperparameter choices have seen some of these test rows, which makes the stability AP numbers very slightly optimistic. For *ranking* models against each other, which share that optimism equally, it's a small effect. For quoting absolute performance, rely on the original locked test set.
+**Goal.** Say which differences in the leaderboard are supported by evidence, and be precise about what each analysis varies.
+
+**Work plan.** Bootstrap one model's AP. Compare models in pairs on the same resampled records with simultaneous intervals (because we look at many pairs). Change the resampling scheme as a stress test. Then repeat the whole procedure, search included, on other splits.
 
 </div>
 
-## What did we get? Results
+## What kind of uncertainty is this?
 
-- **One AP is not precise:** LightGBM's AP of 0.496 has a 95% interval of 0.464 to 0.531 (width 0.067), with only 928 subscribers in the test set.
-- **Paired differences are about three times narrower** (width about 0.02).
-
-| Comparison | Difference | Verdict |
+| Source | Varied by | Where |
 |---|---|---|
-| LightGBM vs HistGradientBoosting | −0.003 [−0.012, +0.006] | Tie |
-| LightGBM vs Random forest | −0.006 [−0.014, +0.001] | Probably a tie |
-| LightGBM vs XGBoost | −0.006 [−0.014, −0.000] | Borderline |
-| LightGBM vs CatBoost | −0.009 [−0.018, +0.000] | Borderline |
-| LightGBM vs Extra trees | −0.012 [−0.020, −0.004] | LightGBM better (small) |
-| LightGBM vs MLP | −0.020 [−0.031, −0.009] | Clearly better |
-| LightGBM vs Logistic regression | −0.032 [−0.045, −0.018] | Clearly better |
-| LightGBM vs Naive Bayes | −0.084 [−0.106, −0.064] | Overwhelming |
+| Which comparison records were drawn | Bootstrap of the comparison records | The next two sections |
+| Which training records the model saw, and its own randomness | A different split and seed | Final section |
+| Which hyperparameters the search picked | A different search | Final section: every split re-tunes from scratch |
 
-- **Five other splits:** LightGBM ranked first on four of five (mean rank 1.4, mean AP 0.478). The decision tree was 8th on the original split but 9th to 11th on four of the five new ones.
+The bootstrap of saved predictions **conditions on the fitted models, their settings and thresholds**: it describes test-sample uncertainty for these fits and nothing more.
 
-![Mean average precision over five random splits for each model with standard-deviation whiskers.](/series/classification/figures/leaderboard-stability.png)
-*Figure 1. Mean ± standard deviation of AP across five other random splits. The same three tiers show up.*
+## One AP is not precise, but pairs are sharper
 
-## Analysis and conclusion: what did we learn?
+Resampling the 8,238 comparison records 2,000 times gives each model an interval about 0.07 wide, larger than the range of the top six:
 
-- **The gap between tiers is real.** Boosting beats logistic regression by about 0.03 AP, with an interval far from zero.
-- **The order inside tier 1 is not.** HistGB, random forest, XGBoost, CatBoost and LightGBM form a statistical cluster.
-- **One split can mislead.** The tree's apparent strength over logistic regression on the original split was partly luck.
-- **A single AP carries about ±0.03 of noise** at this base rate and test size. Treat differences below 0.01 as ties unless a paired test says otherwise.
+| model | ap | 95% low | 95% high |
+|---|---|---|---|
+| sklearn HistGradientBoosting | 0.4917 | 0.4580 | 0.5283 |
+| LightGBM | 0.4909 | 0.4567 | 0.5278 |
+| Random forest | 0.4863 | 0.4524 | 0.5231 |
+| CatBoost | 0.4844 | 0.4495 | 0.5212 |
+| Extra trees | 0.4821 | 0.4484 | 0.5181 |
+| XGBoost | 0.4795 | 0.4451 | 0.5182 |
+| Small neural net (MLP) | 0.4696 | 0.4339 | 0.5067 |
+| Decision tree | 0.4650 | 0.4306 | 0.5014 |
+| Logistic regression | 0.4642 | 0.4289 | 0.5003 |
+| Linear SVM (Platt scaled) | 0.4608 | 0.4244 | 0.4963 |
+| k-nearest neighbours | 0.4547 | 0.4205 | 0.4910 |
+| Gaussian Naive Bayes | 0.4048 | 0.3719 | 0.4394 |
 
-### What we'd put on the slide
+With 928 subscribers, an AP is known to about ±0.035 *in this evaluation*; that figure belongs to this model, split and prevalence, not to AP in general. The right comparison puts two models on the *same* resamples, so shared noise cancels. Because we look at eleven models at once, the tables give both the marginal 95% interval and a **simultaneous** one (max-t bootstrap), which controls the chance of *any* false exclusion of zero. Endpoints have four decimals so "touches zero" can be judged.
 
-> *On this dataset, gradient-boosted trees (LightGBM, scikit-learn's HistGradientBoosting, XGBoost, CatBoost) and random forests form a top tier with average precision about 0.49 ± 0.02, statistically hard to separate from each other. They beat logistic regression and a small neural network by 0.02–0.03 AP, a gap that holds across five splits and survives paired testing. A calibrated Naive Bayes model, k-NN and a single tuned tree trail.*
+**Against logistic regression.**
 
-Everything in that sentence is supported. "LightGBM is the best model" is not, and neither is "CatBoost is worse than XGBoost". That is not hedging; it's what the data licenses.
+| model | AP difference | marginal low | marginal high | simultaneous low | simultaneous high |
+|---|---|---|---|---|---|
+| sklearn HistGradientBoosting | +0.0275 | +0.0140 | +0.0415 | +0.0088 | +0.0463 |
+| LightGBM | +0.0267 | +0.0143 | +0.0403 | +0.0089 | +0.0445 |
+| Random forest | +0.0221 | +0.0085 | +0.0379 | +0.0022 | +0.0421 |
+| CatBoost | +0.0202 | +0.0078 | +0.0338 | +0.0025 | +0.0379 |
+| Extra trees | +0.0178 | +0.0043 | +0.0316 | -0.0009 | +0.0366 |
+| XGBoost | +0.0152 | +0.0047 | +0.0282 | -0.0008 | +0.0312 |
+| Small neural net (MLP) | +0.0054 | -0.0029 | +0.0153 | -0.0071 | +0.0178 |
+| Decision tree | +0.0008 | -0.0152 | +0.0165 | -0.0207 | +0.0222 |
+| Linear SVM (Platt scaled) | -0.0034 | -0.0085 | +0.0018 | -0.0105 | +0.0036 |
+| k-nearest neighbours | -0.0095 | -0.0225 | +0.0039 | -0.0274 | +0.0084 |
+| Gaussian Naive Bayes | -0.0594 | -0.0780 | -0.0427 | -0.0837 | -0.0352 |
 
-### Practical rules from this chapter
+**Against the top-scoring model (scikit-learn's histogram booster).**
 
-1. **Never compare two models by looking at two numbers.** Compare them on the same resamples (paired), and show the interval.
-2. **A single AP carries about ±0.03 of sampling noise** at this base rate and test size. Differences below 0.01 should be treated as ties unless you have a paired test that says otherwise.
-3. **If the choice between candidates doesn't matter statistically, choose on other grounds:** speed, simplicity, inference cost, library maintenance. Here that argues for HistGradientBoosting (0.5 s fit, 5 µs/row, no extra dependency) or LightGBM over CatBoost.
-4. **Repeat the split.** Five repeated splits cost five refits and revealed one *apparent* strength (the tree) that wasn't real.
-5. **Save the predictions.** `leaderboard_predictions.csv` is how a reader reproduces all the numbers in this chapter in seconds.
+| model | AP difference | marginal low | marginal high | simultaneous low | simultaneous high | resamples above zero |
+|---|---|---|---|---|---|---|
+| Logistic regression | -0.0275 | -0.0415 | -0.0140 | -0.0467 | -0.0083 | 0.000 |
+| Linear SVM (Platt scaled) | -0.0309 | -0.0458 | -0.0170 | -0.0510 | -0.0109 | 0.000 |
+| Gaussian Naive Bayes | -0.0870 | -0.1080 | -0.0666 | -0.1157 | -0.0582 | 0.000 |
+| k-nearest neighbours | -0.0370 | -0.0495 | -0.0245 | -0.0546 | -0.0193 | 0.000 |
+| Small neural net (MLP) | -0.0222 | -0.0348 | -0.0091 | -0.0400 | -0.0043 | 0.002 |
+| Decision tree | -0.0268 | -0.0400 | -0.0152 | -0.0443 | -0.0092 | 0.000 |
+| Random forest | -0.0054 | -0.0137 | +0.0036 | -0.0175 | +0.0067 | 0.117 |
+| Extra trees | -0.0097 | -0.0176 | -0.0013 | -0.0210 | +0.0017 | 0.009 |
+| XGBoost | -0.0123 | -0.0198 | -0.0035 | -0.0236 | -0.0009 | 0.004 |
+| LightGBM | -0.0009 | -0.0072 | +0.0065 | -0.0104 | +0.0087 | 0.413 |
+| CatBoost | -0.0073 | -0.0159 | +0.0020 | -0.0199 | +0.0053 | 0.070 |
 
-### So what did we do?
+![Paired AP differences from logistic regression, with marginal (dots, thin bars) and simultaneous (thick gold bars) 95% intervals.](/series/classification/figures/leaderboard-paired.png)
+*Figure 1. Gold bars that cross the dashed zero line mean the data do not separate that model from the baseline once the number of comparisons is accounted for.*
 
-We bootstrapped the test set, compared models in pairs, and repeated the race on five splits. Boosting and forests are a real top tier, their internal order is mostly noise, and the claim the data supports is "LightGBM is not worse than any other model".
+- **An interval that includes zero is lack of evidence of a difference, not evidence of equality.** Claiming "not worse" would need a pre-specified margin and an analysis built for it, which we do not have. "Resamples above zero" is an empirical resampling proportion, not the probability that a model is better.
+- **Against logistic regression:** scikit-learn's booster, LightGBM and CatBoost lead by about 0.02 to 0.03 AP with simultaneous intervals that exclude zero. The forest and XGBoost lead on marginal intervals only. Extra trees, k-NN, the neural net, the single tree and the SVM are not separated from it.
+- **Against the top model:** the other boosters and the forest are within 0.013 of it. Which of those differences are real is not settled by one split. Logistic regression, the SVM, k-NN, the neural net, the single tree and Naive Bayes trail it, with simultaneous intervals that exclude zero.
+- **Dependence.** The file is in order and records may be dependent. As a stress test we resampled **blocks of 100 consecutive records** (not calendar-exact: the file has no dates). The booster's interval against logistic regression moves from +0.0140 to +0.0415 (records) to +0.0129 to +0.0414 (blocks), so dependence at that scale is not driving the widths. Repeated clients, which neither scheme can see, remain untested.
 
-### In the next part
+## What happens on other splits?
 
-Having established that the top tier is real and its order is mostly noise, we should ask the question the business actually cares about. [Part 14](/series/classification/14-pricing-the-models/) prices the models in money.
+To vary the training sample, the seeds and the search too, we repeated the whole procedure on **3 other random 80/20 splits** (seeds 100 to 102). On each, every model is re-tuned from scratch (default plus seven random draws, 3-fold CV), refit and scored on that split's comparison part. Nothing chosen on one split is reused on another.
+
+| model | mean AP | sd | min | max | mean rank | best rank | worst rank |
+|---|---|---|---|---|---|---|---|
+| LightGBM | 0.465 | 0.015 | 0.455 | 0.482 | 2.0 | 1 | 4 |
+| sklearn HistGradientBoosting | 0.462 | 0.016 | 0.448 | 0.480 | 3.7 | 2 | 6 |
+| XGBoost | 0.461 | 0.015 | 0.451 | 0.479 | 4.0 | 3 | 5 |
+| Random forest | 0.461 | 0.011 | 0.452 | 0.473 | 3.0 | 1 | 5 |
+| CatBoost | 0.460 | 0.010 | 0.453 | 0.471 | 3.3 | 2 | 6 |
+| Extra trees | 0.460 | 0.015 | 0.450 | 0.478 | 5.0 | 4 | 6 |
+| Small neural net (MLP) | 0.449 | 0.016 | 0.438 | 0.468 | 7.7 | 7 | 9 |
+| Logistic regression | 0.449 | 0.011 | 0.440 | 0.462 | 7.7 | 7 | 8 |
+| Linear SVM (Platt scaled) | 0.444 | 0.011 | 0.436 | 0.456 | 8.7 | 8 | 9 |
+| Decision tree | 0.433 | 0.007 | 0.426 | 0.441 | 10.3 | 10 | 11 |
+| k-nearest neighbours | 0.433 | 0.020 | 0.417 | 0.456 | 10.7 | 10 | 11 |
+| Gaussian Naive Bayes | 0.365 | 0.006 | 0.359 | 0.370 | 12.0 | 12 | 12 |
+| Prior (no model) | 0.113 | 0.000 | 0.113 | 0.113 | 13.0 | 13 | 13 |
+
+![Mean AP over the other splits, with each split as a dot. Each model is re-tuned on each split.](/series/classification/figures/leaderboard-stability.png)
+*Figure 2. The spread across splits is comparable to the gaps among the leading models.*
+
+The leading group stays roughly the same, but positions inside it change from split to split, and a model's own AP moves by about as much as the gaps among the leaders. A handful of splits is too few to estimate those spreads precisely, so read them as an illustration of the size of the effect.
+
+## Statistical and practical significance
+
+A difference can be visible and still not matter, or the reverse. AP is a ranking metric; what operations feel is the number of records contacted and the simulated contribution at a given capacity. Part 14 translates the differences into those units, and notes what AP cannot show: a model a little behind in ranking may be much cheaper to run and explain.
+
+## Analysis and conclusion: what we learned
+
+- **A single AP carries roughly ±0.035 of test-sample uncertainty here**, and the top six models lie within 0.013 of each other.
+- **Pairs are sharper, but looking at many weakens them:** several marginal intervals that exclude zero do not survive a simultaneous interval.
+- **Supported:** the histogram booster, LightGBM and CatBoost beat logistic regression by about 0.02 to 0.03 AP. **Not supported:** a strict order among the leaders, or equivalence of any two.
+- **Other splits move the order**, so "model X is best" describes one sample.
+
+A defensible sentence for a slide: *On this benchmark, gradient-boosted models and a random forest scored about 0.02 to 0.03 average precision above logistic regression, and the evidence separates the three best boosters from it more clearly than the others. The data do not establish an order among the leading models.*
+
+*Further reading.* Efron (1979), [Bootstrap methods: another look at the jackknife](https://doi.org/10.1214/aos/1176344552); Westfall and Young (1993), *Resampling-Based Multiple Testing* (the max-t method used for the simultaneous intervals); Wilson (1927), *Journal of the American Statistical Association* 22, 209-212 (the score interval used for proportions).
+
+[Part 14](/series/classification/14-pricing-the-models/) puts the same frozen scores through an illustrative price list.

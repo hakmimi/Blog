@@ -3,5 +3,79 @@
   "data_profile.json",
   "data_segment_rates.csv"
  ],
- "ch06-tree-overfit.png": []
+ "ch02-drift.png": [
+  "data_profile.json"
+ ],
+ "ch02-duration-leak.png": [
+  "data_feature_sets.csv",
+  "data_profile.json"
+ ],
+ "ch03-threshold-roc-pr.png": [
+  "metrics_scores.csv"
+ ],
+ "ch05-odds-ratios.png": [
+  "linear_odds_ratios.csv"
+ ],
+ "ch06-tree-overfit.png": [
+  "trees_sweeps.csv"
+ ],
+ "ch07-bagging.png": [
+  "bagging_curve.csv"
+ ],
+ "ch08-boosting-lr.png": [
+  "boosting_scratch_curve.csv"
+ ],
+ "ch09-svm-scaling.png": [
+  "families_notes.json",
+  "families_svm_timing.csv"
+ ],
+ "ch10-budget.png": [
+  "budget_curve.csv"
+ ],
+ "ch11-calibration.png": [
+  "calibration_reliability.csv"
+ ],
+ "ch14-capacity.png": [
+  "policy_capacity.csv"
+ ],
+ "ch16-folds.png": [
+  "temporal_blocks.csv"
+ ],
+ "ch16-time-shift.png": [
+  "temporal_policies.csv",
+  "temporal_shift.json"
+ ],
+ "leaderboard-ap.png": [
+  "leaderboard_predictions.csv",
+  "leaderboard_selected.csv",
+  "uncertainty_single_ap.csv"
+ ],
+ "leaderboard-cost-vs-quality.png": [
+  "leaderboard_predictions.csv",
+  "leaderboard_selected.csv",
+  "timing.csv"
+ ],
+ "leaderboard-curves.png": [
+  "leaderboard_predictions.csv",
+  "leaderboard_selected.csv"
+ ],
+ "leaderboard-importance.png": [
+  "importance_groups.csv",
+  "importance_permutation.csv"
+ ],
+ "leaderboard-paired.png": [
+  "uncertainty_paired_ap.csv"
+ ],
+ "leaderboard-profit.png": [
+  "leaderboard_predictions.csv",
+  "leaderboard_selected.csv",
+  "policy_baselines.csv",
+  "policy_by_model.csv"
+ ],
+ "leaderboard-stability.png": [
+  "leaderboard_predictions.csv",
+  "leaderboard_selected.csv",
+  "stability_runs.csv"
+ ],
+ "loss-and-impurity.png": []
 }
