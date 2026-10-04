@@ -72,7 +72,42 @@ Every comparison in the series follows the same written protocol (the [Methods p
 
 ## How the sixteen parts fit together
 
-Read as one story with four stages.
+Read as one story with four stages. Click any box to jump to that part.
+
+<div class="flow" role="group" aria-label="Flowchart of the series: four stages, parts 1 to 16">
+<div class="flow-start"><a href="/series/classification/00b-from-lines-to-sigmoid/"><b>0 · 0b</b> Map and warm-up: lines, sigmoids, apples</a></div>
+<div class="flow-arrow" aria-hidden="true"></div>
+<section class="flow-stage"><h4><span>1</span> Foundations</h4><p>What are we deciding, and how do we grade it?</p><ol>
+<li><a href="/series/classification/01-classification-is-a-decision/"><b>1</b> The decision</a></li>
+<li><a href="/series/classification/02-why-classification-is-hard/"><b>2</b> The data and its traps</a></li>
+<li><a href="/series/classification/03-what-does-good-performance-mean/"><b>3</b> What “good” means</a></li>
+<li><a href="/series/classification/04-objective-functions/"><b>4</b> What the model minimises</a></li>
+</ol></section>
+<div class="flow-arrow" aria-hidden="true"></div>
+<section class="flow-stage"><h4><span>2</span> Models</h4><p>How does each family work, and how well does it do?</p><ol>
+<li><a href="/series/classification/05-logistic-regression-naive-bayes/"><b>5</b> Logistic regression, Naive Bayes</a></li>
+<li><a href="/series/classification/06-decision-trees/"><b>6</b> Trees</a></li>
+<li><a href="/series/classification/07-bagging-random-forests/"><b>7</b> Forests</a></li>
+<li><a href="/series/classification/08-gradient-boosting/"><b>8</b> Boosting</a></li>
+<li><a href="/series/classification/09-other-classification-families/"><b>9</b> k-NN, SVM, neural net</a></li>
+</ol></section>
+<div class="flow-arrow" aria-hidden="true"></div>
+<section class="flow-stage"><h4><span>3</span> Calibration and decisions</h4><p>Which model wins, is it real, and what is it worth?</p><ol>
+<li><a href="/series/classification/10-hyperparameter-search/"><b>10</b> Tuning without fooling yourself</a></li>
+<li><a href="/series/classification/11-probabilities-calibration-thresholds-costs/"><b>11</b> Probabilities, thresholds, cost</a></li>
+<li><a href="/series/classification/12-head-to-head-leaderboard/"><b>12</b> The head-to-head</a></li>
+<li><a href="/series/classification/13-is-the-winner-real/"><b>13</b> Is the winner real?</a></li>
+<li><a href="/series/classification/14-pricing-the-models/"><b>14</b> Pricing the models</a></li>
+</ol></section>
+<div class="flow-arrow" aria-hidden="true"></div>
+<section class="flow-stage"><h4><span>4</span> Audit and time</h4><p>What does it rely on, and does time break it?</p><ol>
+<li><a href="/series/classification/15-inside-the-winner/"><b>15</b> Inside the chosen model</a></li>
+<li><a href="/series/classification/16-when-time-breaks-the-model/"><b>16</b> When time breaks the model</a></li>
+</ol></section>
+<div class="flow-arrow" aria-hidden="true"></div>
+<div class="flow-end"><b>The result</b> a ranking, a threshold from the prices, and a statement of what it cannot prove</div></div>
+
+*Figure 0. The series as a flow: each stage hands a question to the next.*
 
 **Foundations (parts 1 to 4).** *Classification is a decision* (1) starts from the do-nothing model that is right 88.7% of the time and finds nobody. *Why the data is hard* (2) checks which columns are legal. *What good means* (3) grades one model five ways. *What the model minimises* (4) opens the objective functions.
 

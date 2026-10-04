@@ -242,3 +242,29 @@ a.series-card:hover { transform:translateY(-3px); border-color:color-mix(in srgb
 .ag-table { border-collapse:collapse; font-variant-numeric:tabular-nums; } .ag-table th,.ag-table td { padding:.3rem .8rem; text-align:right; border-bottom:1px solid var(--line); } .ag-table th:first-child { text-align:left; }
 .ag-note { color:var(--muted); font-size:.8rem; }
 @media (max-width:700px) { .ag-body { grid-template-columns:1fr; } }
+
+/* series flowchart (part 0) */
+.flow { display:grid; grid-template-columns:1fr; gap:.2rem; margin:1.6rem 0 .4rem; }
+.flow a { color:inherit; text-decoration:none; }
+.flow-start,.flow-end { border:1px dashed var(--line); border-radius:12px; padding:.6rem .9rem; background:var(--soft); text-align:center; font-size:.88rem; color:var(--muted); }
+.flow-start a:hover { color:var(--teal); } .flow-start b,.flow-end b { color:var(--ink); margin-right:.4rem; }
+.flow-arrow { height:1.2rem; position:relative; } .flow-arrow:after { content:"↓"; position:absolute; left:50%; top:0; transform:translateX(-50%); color:var(--teal); font-size:1.2rem; }
+.flow-stage { border:1px solid var(--line); border-radius:14px; background:var(--card); padding:.9rem 1rem 1rem; box-shadow:var(--shadow); }
+.flow-stage h4 { margin:0; font-size:1rem; color:var(--ink); display:flex; align-items:center; gap:.5rem; }
+.flow-stage h4 span { display:inline-grid; place-items:center; width:1.5rem; height:1.5rem; border-radius:50%; background:var(--teal); color:var(--card); font-size:.8rem; font-weight:700; }
+.flow-stage p { margin:.3rem 0 .6rem; color:var(--muted); font-size:.8rem; }
+.flow-stage ol { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.35rem; }
+.flow-stage li a { display:block; padding:.4rem .6rem; border:1px solid var(--line); border-radius:9px; background:var(--soft); font-size:.84rem; }
+.flow-stage li a:hover { border-color:var(--teal); } .flow-stage li b { color:var(--teal); margin-right:.35rem; font-variant-numeric:tabular-nums; }
+@media (min-width:1000px) {
+  .flow { grid-template-columns:1fr 1.6rem 1.25fr 1.6rem 1.25fr 1.6rem 1fr; gap:0; }
+  .flow > :nth-child(1),.flow > :nth-child(2),.flow > :nth-child(10),.flow > :nth-child(11) { grid-column:1 / -1; }
+  .flow > :nth-child(4),.flow > :nth-child(6),.flow > :nth-child(8) { height:auto; }
+  .flow > :nth-child(4):after,.flow > :nth-child(6):after,.flow > :nth-child(8):after { content:"→"; top:50%; transform:translate(-50%,-50%); }
+  .flow > :nth-child(3) { grid-column:1; grid-row:3; } .flow > :nth-child(4) { grid-column:2; grid-row:3; }
+  .flow > :nth-child(5) { grid-column:3; grid-row:3; } .flow > :nth-child(6) { grid-column:4; grid-row:3; }
+  .flow > :nth-child(7) { grid-column:5; grid-row:3; } .flow > :nth-child(8) { grid-column:6; grid-row:3; }
+  .flow > :nth-child(9) { grid-column:7; grid-row:3; }
+  .flow > :nth-child(1) { grid-row:1; } .flow > :nth-child(2) { grid-row:2; } .flow > :nth-child(10) { grid-row:4; } .flow > :nth-child(11) { grid-row:5; }
+}
+}
