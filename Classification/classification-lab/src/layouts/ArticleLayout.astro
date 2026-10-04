@@ -32,7 +32,7 @@ const jsonLd = {
       <p class="lede">{description}</p>
       {he ? (
         <p class="byline">
-          <bdi>{site.author}</bdi> | <bdi><time datetime={iso(date)}>{fmtDate(date, lang)}</time></bdi>
+          <bdi>{site.linkedin ? <a href={site.linkedin} rel="author noopener" target="_blank">{site.authorHe}</a> : site.authorHe}</bdi>
           {updated && <Fragment> | <bdi>{ui.updated} <time datetime={iso(updated)}>{fmtDate(updated, lang)}</time></bdi></Fragment>} | <bdi>{readingTime}</bdi>
         </p>
       ) : (
