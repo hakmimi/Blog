@@ -41,3 +41,7 @@ If you edit a rendered file by mistake, copy the change into the template, becau
 - To translate another part: copy its English template into `he/`, add `lang: "he"`, translate, then render. Untranslated parts simply have no Hebrew page.
 - The two lab widgets of part 0b take `data-lang="he"` for Hebrew labels; charts and sliders stay left-to-right.
 - The Fruit Lab exists as a widget (`public/js/fruit-lab.js`, `data-lang="he"` for Hebrew) and as a Hebrew page at `/he/series/classification/fruit-lab/` (`src/pages/he/series/classification/fruit-lab.astro`).
+
+## Text only: nothing is recomputed
+
+`python scripts/build_articles.py 00` (or `npm run render` for every part) only re-renders the text. It does **not** run the model experiments (`run_all.py`) and it does not fit any model: numbers come from the saved files in `series/classification/artifacts/`, and code snippets are answered from `snippet_cache.json` unless you changed that snippet. While `npm run dev` is running, the page refreshes by itself a few seconds after the render.
