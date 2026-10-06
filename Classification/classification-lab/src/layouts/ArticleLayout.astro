@@ -5,12 +5,12 @@ import { base, articleUrl, fmtDate, iso, seriesBySlug, seriesUrl, topicUrl } fro
 const { entry, prev, next, siblings, alt } = Astro.props;
 const { title, description, order, label, readingTime, series, date, updated, keywords, lang } = entry.data;
 const he = lang === 'he';
-const seriesTitle = he ? ({ classification: 'סיווג, בהרצה אמיתית' } as Record<string, string>)[series] ?? s.title : s.title;
-const seriesHref = he ? `${base}/he/series/${series}/` : seriesUrl(series);
 const ui = he
   ? { part: 'חלק', inPart: 'בחלק הזה', inSeries: 'בסדרה', updated: 'עודכן', prev: 'הקודם', next: 'הבא', other: 'English', notice: 'התרגום לעברית עדיין חלקי: חלקים שלא תורגמו מופיעים באנגלית. קוד ונוסחאות נשארים משמאל לימין.' }
   : { part: 'Part', inPart: 'In this part', inSeries: 'In this series', updated: 'updated', prev: 'Previous', next: 'Next', other: 'עברית', notice: '' };
 const s = seriesBySlug[series];
+const seriesTitle = he ? ({ classification: 'סיווג, בהרצה אמיתית' } as Record<string, string>)[series] ?? s.title : s.title;
+const seriesHref = he ? `${base}/he/series/${series}/` : seriesUrl(series);
 const jsonLd = {
   '@context': 'https://schema.org', '@type': 'TechArticle', headline: title, description,
   datePublished: iso(date), dateModified: iso(updated ?? date), keywords: keywords.join(', '),
