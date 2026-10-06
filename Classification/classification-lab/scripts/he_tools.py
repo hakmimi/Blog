@@ -38,7 +38,7 @@ def split(text: str):
 
 def show(num: str) -> None:
     marked, blocks = split(english(num).read_text(encoding="utf-8"))
-    sys.stdout.reconfigure(encoding="utf-8")
+    getattr(sys.stdout, "reconfigure", lambda **_: None)(encoding="utf-8")
     print(marked)
     print(f"\n[{len(blocks)} code blocks]")
 
