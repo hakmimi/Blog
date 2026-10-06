@@ -2,11 +2,25 @@
 // Usage: <div class="prior-shift-lab" data-src="/series/x/artifacts/prior_shift_lab.json" data-cost="1" data-value="8"></div>
 // Data format: {"y":[...], "train_rate":0.064, "last_block_rate":0.138, "test_rate":0.308, "em_rate":{"name":0.35}, "models":{"name":[scores...]}}
 (function () {
+  const TEXT = {
+    en: { model: 'Model', rate: 'Base rate you tell the model:', old: 'Training period', last: 'Last validation block', em: 'Estimate from unlabelled scores (EM)', oracle: 'Oracle: true future rate',
+      cap: (v) => 'Simulated contribution at threshold 1/' + v + ' as a function of the base rate you assume (dashed: contacting every record)', aria: 'Simulated contribution versus assumed base rate',
+      sel: (v) => 'Records selected at 1/' + v, gain: (e) => 'Gain over call-everyone (' + e + ')', meanP: 'Mean predicted p', contr: 'Simulated contribution',
+      note: (truth) => 'The true rate in this period is ' + truth + '%, which a deployed system would not know. The EM estimate uses only the unlabelled scores of this period and assumes the class-conditional feature distributions did not change. Ranking (AP, AUC) never changes here, only who crosses the threshold.',
+      xax: 'base rate assumed by the correction', trainP: 'training period', oracleL: 'oracle', loading: 'Loading scores…', fail: 'Could not load the interactive lab.' },
+    he: { model: 'מודל', rate: 'שיעור הבסיס שאתם מספרים למודל:', old: 'תקופת האימון', last: 'בלוק האימות האחרון', em: 'הערכה מציונים בלי תוויות (EM)', oracle: 'אורקל: השיעור האמיתי בעתיד',
+      cap: (v) => 'תרומה מדומה בסף 1/' + v + ' כפונקציה של שיעור הבסיס שמניחים (מקווקו: יוצרים קשר עם כל הרשומות)', aria: 'תרומה מדומה מול שיעור הבסיס המונח',
+      sel: (v) => 'רשומות שנבחרו ב-1/' + v, gain: (e) => 'רווח לעומת "מתקשרים לכולם" (' + e + ')', meanP: 'ממוצע p החזוי', contr: 'תרומה מדומה',
+      note: (truth) => 'השיעור האמיתי בתקופה הזו הוא ' + truth + '%, ומערכת פעילה לא הייתה יודעת אותו. הערכת ה-EM משתמשת רק בציונים של התקופה הזו בלי תוויות, ומניחה שההתפלגויות של התכונות בתוך כל מחלקה לא השתנו. הדירוג (AP, AUC) לא משתנה כאן אף פעם, רק מי שחוצה את הסף.',
+      xax: 'שיעור הבסיס שהתיקון מניח', trainP: 'תקופת האימון', oracleL: 'אורקל', loading: 'טוען ציונים…', fail: 'לא ניתן היה לטעון את המעבדה האינטראקטיבית.' },
+  };
+  const textFor = (root) => TEXT[root.dataset.lang === 'he' ? 'he' : 'en'];
   const NS = 'http://www.w3.org/2000/svg';
   const svgEl = (tag, attrs, parent) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); parent.appendChild(n); return n; };
   const fmt = (x, d = 0) => x.toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: d });
 
   function build(root, data) {
+    const L = textFor(root);
     const COST = +root.dataset.cost || 1, VALUE = +root.dataset.value || 8, T = 1 / VALUE;
     const names = Object.keys(data.models), y = data.y, n = y.length;
     const old = data.train_rate, truth = data.test_rate, lastBlock = data.last_block_rate, emRate = data.em_rate || {};
@@ -21,13 +35,13 @@
 
     root.classList.add('tl'); root.innerHTML = `
       <div class="tl-controls">
-        <label>Model <select class="ps-model">${names.map((m) => `<option>${m}</option>`).join('')}</select></label>
-        <label class="tl-slider">Base rate you tell the model: <strong class="ps-val"></strong>
+        <label>${L.model} <select class="ps-model">${names.map((m) => `<option>${m}</option>`).join('')}</select></label>
+        <label class="tl-slider">${L.rate} <strong class="ps-val"></strong>
           <input class="tl-range ps-range" type="range" min="0.02" max="0.98" step="0.002"></label>
-        <div class="tl-buttons"><button type="button" class="ps-old">Training period (${fmt(old * 100, 1)}%)</button><button type="button" class="ps-last">Last validation block (${fmt(lastBlock * 100, 1)}%)</button><button type="button" class="ps-em">Estimate from unlabelled scores (EM)</button><button type="button" class="ps-new">Oracle: true future rate (${fmt(truth * 100, 1)}%)</button></div>
+        <div class="tl-buttons"><button type="button" class="ps-old">${L.old} (${fmt(old * 100, 1)}%)</button><button type="button" class="ps-last">${L.last} (${fmt(lastBlock * 100, 1)}%)</button><button type="button" class="ps-em">${L.em}</button><button type="button" class="ps-new">${L.oracle} (${fmt(truth * 100, 1)}%)</button></div>
       </div>
       <div class="tl-readout ps-readout"></div>
-      <figure style="margin:0"><figcaption>Simulated contribution at threshold 1/${VALUE} as a function of the base rate you assume (dashed: contacting every record)</figcaption><svg class="ps-svg" viewBox="0 0 640 230" role="img" aria-label="Simulated contribution versus assumed base rate"></svg></figure>`;
+      <figure style="margin:0"><figcaption>${L.cap(VALUE)}</figcaption><svg class="ps-svg" viewBox="0 0 640 230" role="img" aria-label="${L.aria}"></svg></figure>`;
     const $ = (s) => root.querySelector(s), range = $('.ps-range'), svg = $('.ps-svg');
     const rates = []; for (let r = 0.02; r <= 0.9801; r += 0.01) rates.push(r);
     const M = { l: 52, r: 12, t: 12, b: 34 }, W = 640, H = 230, iw = W - M.l - M.r, ih = H - M.t - M.b;
@@ -39,18 +53,18 @@
       $('.ps-val').textContent = fmt(assumed * 100, 1) + '%';
       range.value = assumed;
       $('.ps-readout').innerHTML = `<dl class="tl-stats">
-        <div><dt>Records selected at 1/${VALUE}</dt><dd>${fmt(cur.calls)}</dd></div>
-        <div><dt>Gain over call-everyone (${fmt(everyone)})</dt><dd class="${cur.gain >= 0 ? 'pos' : 'neg'}">${cur.gain >= 0 ? '+' : ''}${fmt(cur.gain)}</dd></div>
-        <div><dt>Mean predicted p</dt><dd>${fmt(cur.meanP * 100, 1)}%</dd></div>
-        <div><dt>Simulated contribution</dt><dd class="${cur.profit >= 0 ? 'pos' : 'neg'}">${cur.profit >= 0 ? '+' : ''}${fmt(cur.profit)}</dd></div></dl>
-        <p style="margin:0;max-width:30rem;color:var(--muted)">The true rate in this period is ${fmt(truth * 100, 1)}%, which a deployed system would not know. The EM estimate uses only the unlabelled scores of this period and assumes the class-conditional feature distributions did not change. Ranking (AP, AUC) never changes here, only who crosses the threshold.</p>`;
+        <div><dt>${L.sel(VALUE)}</dt><dd>${fmt(cur.calls)}</dd></div>
+        <div><dt>${L.gain(fmt(everyone))}</dt><dd class="${cur.gain >= 0 ? 'pos' : 'neg'}">${cur.gain >= 0 ? '+' : ''}${fmt(cur.gain)}</dd></div>
+        <div><dt>${L.meanP}</dt><dd>${fmt(cur.meanP * 100, 1)}%</dd></div>
+        <div><dt>${L.contr}</dt><dd class="${cur.profit >= 0 ? 'pos' : 'neg'}">${cur.profit >= 0 ? '+' : ''}${fmt(cur.profit)}</dd></div></dl>
+        <p style="margin:0;max-width:30rem;color:var(--muted)">${L.note(fmt(truth * 100, 1))}</p>`;
       svg.innerHTML = '';
       svgEl('rect', { x: M.l, y: M.t, width: iw, height: ih, class: 'tl-frame' }, svg);
       [0, 0.2, 0.4, 0.6, 0.8, 1].forEach((r) => { const x = X(Math.max(r, 0.02)); svgEl('line', { x1: x, x2: x, y1: M.t, y2: M.t + ih, class: 'tl-grid' }, svg); svgEl('text', { x, y: H - 16, class: 'tl-tick', 'text-anchor': 'middle' }, svg).textContent = fmt(r * 100) + '%'; });
       [lo, (lo + hi) / 2, hi].forEach((v) => { svgEl('text', { x: M.l - 5, y: Y(v) + 3, class: 'tl-tick', 'text-anchor': 'end' }, svg).textContent = fmt(v); });
-      svgEl('text', { x: M.l + iw / 2, y: H - 3, class: 'tl-axis', 'text-anchor': 'middle' }, svg).textContent = 'base rate assumed by the correction';
+      svgEl('text', { x: M.l + iw / 2, y: H - 3, class: 'tl-axis', 'text-anchor': 'middle' }, svg).textContent = L.xax;
       svgEl('path', { d: rates.map((r, i) => (i ? 'L' : 'M') + X(r).toFixed(1) + ' ' + Y(curve[i]).toFixed(1)).join(' '), class: 'tl-curve' }, svg);
-      [[old, 'training period'], [truth, 'oracle']].forEach(([r, lab], i) => {
+      [[old, L.trainP], [truth, L.oracleL]].forEach(([r, lab], i) => {
         svgEl('line', { x1: X(r), x2: X(r), y1: M.t, y2: M.t + ih, class: i ? 'tl-be-line' : 'tl-diag' }, svg);
         svgEl('text', { x: X(r) + 4, y: M.t + 11, class: 'tl-tick' }, svg).textContent = lab;
       });
@@ -68,8 +82,8 @@
 
   const base = document.currentScript ? new URL(document.currentScript.src).pathname.replace(/js\/prior-shift-lab\.js$/, '') : '/';
   document.querySelectorAll('.prior-shift-lab').forEach((root) => {
-    root.textContent = 'Loading scores…';
+    root.textContent = textFor(root).loading;
     fetch(base + root.dataset.src.replace(/^\//, '')).then((r) => r.json()).then((d) => build(root, d))
-      .catch(() => { root.textContent = 'Could not load the interactive lab.'; });
+      .catch(() => { root.textContent = textFor(root).fail; });
   });
 })();

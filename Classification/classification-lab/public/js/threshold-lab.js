@@ -2,6 +2,21 @@
 // Usage: <div class="threshold-lab" data-src="/series/x/artifacts/threshold_lab.json" data-cost="1" data-value="8"></div>
 // Data format: {"y":[0,1,...], "models":{"name":[scores...]}}
 (function () {
+  const TEXT = {
+    en: { model: 'Model', price1: 'Illustrative price list: a subscription is worth', price2: 'contacts (a contact costs 1)', threshold: 'Threshold',
+      be: 'Break-even (1/value)', best: 'Best on this sample', def: 'Default 0.5', called: 'Called', notCalled: 'Not called', subscribes: 'Subscribes', declines: 'Declines',
+      hits: 'hits', missed: 'missed', wasted: 'wasted contacts', skipped: 'correctly skipped', selected: 'Records selected', precision: 'Precision', recall: 'Recall', contribution: 'Simulated contribution',
+      roc: 'ROC curve', pr: 'Precision vs recall', profit: 'Simulated contribution vs threshold', hist: 'Score distribution',
+      fpr: 'false positive rate', tpr: 'recall (TPR)', rec: 'recall', prec: 'precision', thr: 'threshold', contr: 'contribution', pp: 'predicted probability', rs: 'records (√ scale)',
+      loading: 'Loading scores…', fail: 'Could not load the interactive lab.' },
+    he: { model: 'מודל', price1: 'רשימת מחירים להמחשה: הרשמה שווה', price2: 'שיחות (שיחה עולה 1)', threshold: 'סף',
+      be: 'נקודת איזון (1/ערך)', best: 'הטוב ביותר במדגם הזה', def: 'ברירת מחדל 0.5', called: 'התקשרנו', notCalled: 'לא התקשרנו', subscribes: 'נרשמים', declines: 'לא נרשמים',
+      hits: 'פגיעות', missed: 'הוחמצו', wasted: 'שיחות מבוזבזות', skipped: 'דולגו נכון', selected: 'רשומות שנבחרו', precision: 'דיוק חיובי (precision)', recall: 'שלמות (recall)', contribution: 'תרומה מדומה',
+      roc: 'עקומת ROC', pr: 'דיוק חיובי מול שלמות', profit: 'תרומה מדומה מול סף', hist: 'התפלגות הציונים',
+      fpr: 'שיעור חיוביים שגויים', tpr: 'שלמות (TPR)', rec: 'שלמות', prec: 'דיוק חיובי', thr: 'סף', contr: 'תרומה', pp: 'הסתברות חזויה', rs: 'רשומות (סקאלת √)',
+      loading: 'טוען ציונים…', fail: 'לא ניתן היה לטעון את המעבדה האינטראקטיבית.' },
+  };
+  const textFor = (root) => TEXT[root.dataset.lang === 'he' ? 'he' : 'en'];
   const NS = 'http://www.w3.org/2000/svg';
   const el = (tag, attrs = {}, parent) => {
     const n = tag in { svg: 1, path: 1, line: 1, circle: 1, rect: 1, text: 1, g: 1 } ? document.createElementNS(NS, tag) : document.createElement(tag);
@@ -12,6 +27,7 @@
   const fmt = (x, d = 0) => x.toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: d });
 
   function build(root, data) {
+    const T = textFor(root);
     const COST = +root.dataset.cost || 1;
     let VALUE = +root.dataset.value || 8;
     const names = Object.keys(data.models);
@@ -41,15 +57,15 @@
     root.classList.add('tl');
     const controls = el('div', { class: 'tl-controls' }, root);
     controls.innerHTML = `
-      <label>Model <select class="tl-model">${names.map((m) => `<option>${m}</option>`).join('')}</select></label>
-      <label>Illustrative price list: a subscription is worth <select class="tl-value"><option>2</option><option>4</option><option selected>8</option><option>16</option></select> contacts (a contact costs 1)</label>
-      <label class="tl-slider">Threshold <strong class="tl-tval"></strong>
+      <label>${T.model} <select class="tl-model">${names.map((m) => `<option>${m}</option>`).join('')}</select></label>
+      <label>${T.price1} <select class="tl-value"><option>2</option><option>4</option><option selected>8</option><option>16</option></select> ${T.price2}</label>
+      <label class="tl-slider">${T.threshold} <strong class="tl-tval"></strong>
         <input class="tl-range" type="range" min="0.01" max="0.9" step="0.005"></label>
-      <div class="tl-buttons"><button type="button" class="tl-be">Break-even (1/value)</button><button type="button" class="tl-best">Best on this sample</button><button type="button" class="tl-def">Default 0.5</button></div>`;
+      <div class="tl-buttons"><button type="button" class="tl-be">${T.be}</button><button type="button" class="tl-best">${T.best}</button><button type="button" class="tl-def">${T.def}</button></div>`;
     const readout = el('div', { class: 'tl-readout' }, root);
     const panels = el('div', { class: 'tl-panels' }, root);
     const mk = (title) => { const f = el('figure', {}, panels); el('figcaption', {}, f).textContent = title; return el('svg', { viewBox: '0 0 300 220', role: 'img', 'aria-label': title }, f); };
-    const svgRoc = mk('ROC curve'), svgPr = mk('Precision vs recall'), svgProfit = mk('Simulated contribution vs threshold'), svgHist = mk('Score distribution');
+    const svgRoc = mk(T.roc), svgPr = mk(T.pr), svgProfit = mk(T.profit), svgHist = mk(T.hist);
 
     const $ = (s) => root.querySelector(s);
     const range = $('.tl-range'), tval = $('.tl-tval');
@@ -82,22 +98,22 @@
       range.value = t;
       // readout
       readout.innerHTML = `
-        <div class="tl-cm"><div></div><b>Called</b><b>Not called</b>
-          <b>Subscribes</b><span class="good">${fmt(cur.tp)}<small>hits</small></span><span class="bad">${fmt(cur.fn)}<small>missed</small></span>
-          <b>Declines</b><span class="bad">${fmt(cur.fp)}<small>wasted contacts</small></span><span class="good">${fmt(cur.tn)}<small>correctly skipped</small></span></div>
+        <div class="tl-cm"><div></div><b>${T.called}</b><b>${T.notCalled}</b>
+          <b>${T.subscribes}</b><span class="good">${fmt(cur.tp)}<small>${T.hits}</small></span><span class="bad">${fmt(cur.fn)}<small>${T.missed}</small></span>
+          <b>${T.declines}</b><span class="bad">${fmt(cur.fp)}<small>${T.wasted}</small></span><span class="good">${fmt(cur.tn)}<small>${T.skipped}</small></span></div>
         <dl class="tl-stats">
-          <div><dt>Records selected</dt><dd>${fmt(cur.k)}</dd></div>
-          <div><dt>Precision</dt><dd>${fmt(cur.prec * 100, 1)}%</dd></div>
-          <div><dt>Recall</dt><dd>${fmt(cur.rec * 100, 1)}%</dd></div>
-          <div><dt>Simulated contribution</dt><dd class="${cur.profit >= 0 ? 'pos' : 'neg'}">${cur.profit >= 0 ? '+' : ''}${fmt(cur.profit)}</dd></div>
+          <div><dt>${T.selected}</dt><dd>${fmt(cur.k)}</dd></div>
+          <div><dt>${T.precision}</dt><dd>${fmt(cur.prec * 100, 1)}%</dd></div>
+          <div><dt>${T.recall}</dt><dd>${fmt(cur.rec * 100, 1)}%</dd></div>
+          <div><dt>${T.contribution}</dt><dd class="${cur.profit >= 0 ? 'pos' : 'neg'}">${cur.profit >= 0 ? '+' : ''}${fmt(cur.profit)}</dd></div>
         </dl>`;
       // ROC
-      axes(svgRoc, 'false positive rate', 'recall (TPR)', ticks01, ticks01);
+      axes(svgRoc, T.fpr, T.tpr, ticks01, ticks01);
       el('line', { x1: X(0), y1: Y(0), x2: X(1), y2: Y(1), class: 'tl-diag' }, svgRoc);
       pathOf(ks.map((k) => [X((k - cumTP[k]) / (n - P)), Y(cumTP[k] / P)]), 'tl-curve', svgRoc);
       dot(X(cur.fpr), Y(cur.rec), svgRoc);
       // PR
-      axes(svgPr, 'recall', 'precision', ticks01, ticks01);
+      axes(svgPr, T.rec, T.prec, ticks01, ticks01);
       el('line', { x1: X(0), x2: X(1), y1: Y(P / n), y2: Y(P / n), class: 'tl-diag' }, svgPr);
       pathOf(ks.filter((k) => k > 0).map((k) => [X(cumTP[k] / P), Y(cumTP[k] / k)]), 'tl-curve', svgPr);
       dot(X(cur.rec), Y(cur.prec), svgPr);
@@ -106,7 +122,7 @@
       const profits = grid.map((th) => stats(th).profit), best = Math.max(...profits), bestT = grid[profits.indexOf(best)];
       const lo = Math.min(0, ...profits), hi = Math.max(best, cur.profit, 1), norm = (v) => (v - lo) / (hi - lo);
       const XT = (th) => X((th - 0.01) / 0.89);
-      axes(svgProfit, 'threshold', 'contribution', [[0, '0'], [(0.25 - 0.01) / 0.89, '.25'], [(0.5 - 0.01) / 0.89, '.5'], [(0.75 - 0.01) / 0.89, '.75']],
+      axes(svgProfit, T.thr, T.contr, [[0, '0'], [(0.25 - 0.01) / 0.89, '.25'], [(0.5 - 0.01) / 0.89, '.5'], [(0.75 - 0.01) / 0.89, '.75']],
         [[norm(0), '0'], [1, fmt(hi)]]);
       el('line', { x1: XT(1 / VALUE), x2: XT(1 / VALUE), y1: M.t, y2: M.t + ih, class: 'tl-be-line' }, svgProfit);
       pathOf(grid.map((th, i) => [XT(th), Y(norm(profits[i]))]), 'tl-curve', svgProfit);
@@ -118,7 +134,7 @@
       const bins = 20, h0 = new Array(bins).fill(0), h1 = new Array(bins).fill(0), s = data.models[name];
       for (let i = 0; i < n; i++) (y[i] ? h1 : h0)[Math.min(bins - 1, Math.floor(s[i] * bins))]++;
       const mx = Math.max(...h0, ...h1), sc = (v) => Math.sqrt(v / mx);
-      axes(svgHist, 'predicted probability', 'records (√ scale)', ticks01, []);
+      axes(svgHist, T.pp, T.rs, ticks01, []);
       const bw = iw / bins;
       for (let b = 0; b < bins; b++) {
         el('rect', { x: M.l + b * bw + 1, y: Y(sc(h0[b])), width: bw / 2 - 1, height: ih * sc(h0[b]), class: 'tl-h0' }, svgHist);
@@ -138,8 +154,8 @@
 
   const base = document.currentScript ? new URL(document.currentScript.src).pathname.replace(/js\/threshold-lab\.js$/, '') : '/';
   document.querySelectorAll('.threshold-lab').forEach((root) => {
-    root.textContent = 'Loading scores…';
+    root.textContent = textFor(root).loading;
     fetch(base + root.dataset.src.replace(/^\//, '')).then((r) => r.json()).then((d) => build(root, d))
-      .catch(() => { root.textContent = 'Could not load the interactive lab.'; });
+      .catch(() => { root.textContent = textFor(root).fail; });
   });
 })();

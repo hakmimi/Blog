@@ -93,28 +93,28 @@ print(df.columns.tolist()[:6], "...")
 <div class="proc" role="group" aria-label="תרשים תהליך: אחד-עשר שלבים בחמש פאזות, עם לולאת חזרה">
 <section class="proc-phase"><h4><span>א</span> הגדרה</h4><ol>
 <li><a href="/he/series/classification/01-classification-is-a-decision/"><b>1</b><span>מגדירים את ההחלטה העסקית</span><small>מה מחליטים, ומה עולה כל טעות · חלק 1</small></a></li>
-<li><a href="/series/classification/02-why-classification-is-hard/"><b>2</b><span>מבינים את הנתונים</span><small>רק מה שידוע ברגע ההחלטה · חלק 2</small></a></li>
+<li><a href="/he/series/classification/02-why-classification-is-hard/"><b>2</b><span>מבינים את הנתונים</span><small>רק מה שידוע ברגע ההחלטה · חלק 2</small></a></li>
 </ol></section>
 <div class="proc-arrow" aria-hidden="true"></div>
 <section class="proc-phase"><h4><span>ב</span> הכנה</h4><ol>
-<li><a href="/series/classification/03-what-does-good-performance-mean/"><b>3</b><span>קובעים איך מודדים הצלחה</span><small>דיוק, שלמות, AUC, AP · חלקים 3 ו-4</small></a></li>
+<li><a href="/he/series/classification/03-what-does-good-performance-mean/"><b>3</b><span>קובעים איך מודדים הצלחה</span><small>דיוק, שלמות, AUC, AP · חלקים 3 ו-4</small></a></li>
 <li><a href="#כללי-המשחק-מפה-פשוטה"><b>4</b><span>מפרידים נתונים</span><small>פיתוח, השוואה, זמן · המפה למטה</small></a></li>
 </ol></section>
 <div class="proc-arrow" aria-hidden="true"></div>
 <section class="proc-phase"><h4><span>ג</span> בנייה</h4><ol>
-<li><a href="/series/classification/05-logistic-regression-naive-bayes/"><b>5</b><span>בונים קו בסיס פשוט</span><small>מה שחייבים לנצח · חלק 5</small></a></li>
-<li><a href="/series/classification/06-decision-trees/"><b>6</b><span>מנסים משפחות מודלים</span><small>עצים, יערות, boosting, רשתות · חלקים 6 עד 9</small></a></li>
-<li><a href="/series/classification/10-hyperparameter-search/"><b>7</b><span>מכווננים בהגינות</span><small>אותו מאמץ לכל מודל · חלק 10</small></a></li>
+<li><a href="/he/series/classification/05-logistic-regression-naive-bayes/"><b>5</b><span>בונים קו בסיס פשוט</span><small>מה שחייבים לנצח · חלק 5</small></a></li>
+<li><a href="/he/series/classification/06-decision-trees/"><b>6</b><span>מנסים משפחות מודלים</span><small>עצים, יערות, boosting, רשתות · חלקים 6 עד 9</small></a></li>
+<li><a href="/he/series/classification/10-hyperparameter-search/"><b>7</b><span>מכווננים בהגינות</span><small>אותו מאמץ לכל מודל · חלק 10</small></a></li>
 </ol></section>
 <div class="proc-arrow" aria-hidden="true"></div>
 <section class="proc-phase"><h4><span>ד</span> החלטה</h4><ol>
-<li><a href="/series/classification/11-probabilities-calibration-thresholds-costs/"><b>8</b><span>הופכים ציון להחלטה</span><small>כיול, סף, עלויות · חלקים 11 ו-14</small></a></li>
-<li><a href="/series/classification/12-head-to-head-leaderboard/"><b>9</b><span>משווים ובודקים אם ההפרש אמיתי</span><small>אם לא, בוחרים את המודל הפשוט · חלקים 12 ו-13</small></a></li>
+<li><a href="/he/series/classification/11-probabilities-calibration-thresholds-costs/"><b>8</b><span>הופכים ציון להחלטה</span><small>כיול, סף, עלויות · חלקים 11 ו-14</small></a></li>
+<li><a href="/he/series/classification/12-head-to-head-leaderboard/"><b>9</b><span>משווים ובודקים אם ההפרש אמיתי</span><small>אם לא, בוחרים את המודל הפשוט · חלקים 12 ו-13</small></a></li>
 </ol></section>
 <div class="proc-arrow" aria-hidden="true"></div>
 <section class="proc-phase"><h4><span>ה</span> ביקורת והפעלה</h4><ol>
-<li><a href="/series/classification/15-inside-the-winner/"><b>10</b><span>בודקים מבפנים ובזמן</span><small>על מה נשען, את מי מחמיץ · חלקים 15 ו-16</small></a></li>
-<li><a href="/series/classification/16-when-time-breaks-the-model/"><b>11</b><span>מפעילים ומנטרים</span><small>סחיפה וחישוב מחדש · חלק 16</small></a></li>
+<li><a href="/he/series/classification/15-inside-the-winner/"><b>10</b><span>בודקים מבפנים ובזמן</span><small>על מה נשען, את מי מחמיץ · חלקים 15 ו-16</small></a></li>
+<li><a href="/he/series/classification/16-when-time-breaks-the-model/"><b>11</b><span>מפעילים ומנטרים</span><small>סחיפה וחישוב מחדש · חלק 16</small></a></li>
 </ol></section>
 <div class="proc-loop"><b>↺ לולאת חזרה</b> אם הנתונים, המחירים או העולם משתנים, או שהבדיקה בשלב 10 מגלה בעיה, חוזרים לשלב 2 (מה מותר לקחת) או לשלב 4 (איך מפרידים) ובונים מחדש.</div></div>
 
@@ -122,7 +122,7 @@ print(df.columns.tolist()[:6], "...")
 
 ## כללי המשחק: מפה פשוטה
 
-כדי שהשוואה בין מודלים תהיה הוגנת, כל המודלים בסדרה עוברים אותו מסלול. הנה המסלול על דף אחד (הגרסה המלאה בדף [השיטות](/series/classification/methods/)).
+כדי שהשוואה בין מודלים תהיה הוגנת, כל המודלים בסדרה עוברים אותו מסלול. הנה המסלול על דף אחד (הגרסה המלאה בדף [השיטות](/he/series/classification/methods/)).
 
 <div class="proto" role="group" aria-label="מפת הפרוטוקול: חלוקה לפיתוח והשוואה, והמבחן בזמן">
 <div class="proto-row"><div class="proto-bar all"><b>כל הקובץ</b> 41,188 רשומות</div></div>
@@ -145,37 +145,37 @@ print(df.columns.tolist()[:6], "...")
 
 ## איך שישה-עשר החלקים מתחברים
 
-קוראים אותם כסיפור אחד בארבעה שלבים. לחצו על כל תיבה כדי לקפוץ לחלק. (חלק 1 כבר מתורגם; שאר התיבות מובילות כרגע לגרסה האנגלית.)
+קוראים אותם כסיפור אחד בארבעה שלבים. לחצו על כל תיבה כדי לקפוץ לחלק.
 
 <div class="flow" role="group" aria-label="תרשים זרימה של הסדרה: ארבעה שלבים, חלקים 1 עד 16">
 <div class="flow-start"><a href="/he/series/classification/00b-from-lines-to-sigmoid/"><b>0 · 0b</b> מפה והכנה: קווים, סיגמואיד, תפוחים</a></div>
 <div class="flow-arrow" aria-hidden="true"></div>
 <section class="flow-stage"><h4><span>1</span> יסודות</h4><p>על מה אנחנו מחליטים, ואיך מדרגים?</p><ol>
 <li><a href="/he/series/classification/01-classification-is-a-decision/"><b>1</b> ההחלטה</a></li>
-<li><a href="/series/classification/02-why-classification-is-hard/"><b>2</b> הנתונים והמלכודות שלהם</a></li>
-<li><a href="/series/classification/03-what-does-good-performance-mean/"><b>3</b> מה זה “טוב”</a></li>
-<li><a href="/series/classification/04-objective-functions/"><b>4</b> מה המודל ממזער</a></li>
+<li><a href="/he/series/classification/02-why-classification-is-hard/"><b>2</b> הנתונים והמלכודות שלהם</a></li>
+<li><a href="/he/series/classification/03-what-does-good-performance-mean/"><b>3</b> מה זה “טוב”</a></li>
+<li><a href="/he/series/classification/04-objective-functions/"><b>4</b> מה המודל ממזער</a></li>
 </ol></section>
 <div class="flow-arrow" aria-hidden="true"></div>
 <section class="flow-stage"><h4><span>2</span> מודלים</h4><p>איך כל משפחה עובדת, ועד כמה היא מצליחה?</p><ol>
-<li><a href="/series/classification/05-logistic-regression-naive-bayes/"><b>5</b> רגרסיה לוגיסטית, Naive Bayes</a></li>
-<li><a href="/series/classification/06-decision-trees/"><b>6</b> עצים</a></li>
-<li><a href="/series/classification/07-bagging-random-forests/"><b>7</b> יערות</a></li>
-<li><a href="/series/classification/08-gradient-boosting/"><b>8</b> Boosting</a></li>
-<li><a href="/series/classification/09-other-classification-families/"><b>9</b> k-NN, SVM, רשת עצבית</a></li>
+<li><a href="/he/series/classification/05-logistic-regression-naive-bayes/"><b>5</b> רגרסיה לוגיסטית, Naive Bayes</a></li>
+<li><a href="/he/series/classification/06-decision-trees/"><b>6</b> עצים</a></li>
+<li><a href="/he/series/classification/07-bagging-random-forests/"><b>7</b> יערות</a></li>
+<li><a href="/he/series/classification/08-gradient-boosting/"><b>8</b> Boosting</a></li>
+<li><a href="/he/series/classification/09-other-classification-families/"><b>9</b> k-NN, SVM, רשת עצבית</a></li>
 </ol></section>
 <div class="flow-arrow" aria-hidden="true"></div>
 <section class="flow-stage"><h4><span>3</span> כיול והחלטות</h4><p>איזה מודל מנצח, האם זה אמיתי, ומה זה שווה?</p><ol>
-<li><a href="/series/classification/10-hyperparameter-search/"><b>10</b> כוונון בלי לרמות את עצמנו</a></li>
-<li><a href="/series/classification/11-probabilities-calibration-thresholds-costs/"><b>11</b> הסתברויות, ספים, עלות</a></li>
-<li><a href="/series/classification/12-head-to-head-leaderboard/"><b>12</b> ראש בראש</a></li>
-<li><a href="/series/classification/13-is-the-winner-real/"><b>13</b> האם המנצח אמיתי?</a></li>
-<li><a href="/series/classification/14-pricing-the-models/"><b>14</b> תמחור המודלים</a></li>
+<li><a href="/he/series/classification/10-hyperparameter-search/"><b>10</b> כוונון בלי לרמות את עצמנו</a></li>
+<li><a href="/he/series/classification/11-probabilities-calibration-thresholds-costs/"><b>11</b> הסתברויות, ספים, עלות</a></li>
+<li><a href="/he/series/classification/12-head-to-head-leaderboard/"><b>12</b> ראש בראש</a></li>
+<li><a href="/he/series/classification/13-is-the-winner-real/"><b>13</b> האם המנצח אמיתי?</a></li>
+<li><a href="/he/series/classification/14-pricing-the-models/"><b>14</b> תמחור המודלים</a></li>
 </ol></section>
 <div class="flow-arrow" aria-hidden="true"></div>
 <section class="flow-stage"><h4><span>4</span> ביקורת וזמן</h4><p>על מה המודל נשען, והאם הזמן שובר אותו?</p><ol>
-<li><a href="/series/classification/15-inside-the-winner/"><b>15</b> בתוך המודל שנבחר</a></li>
-<li><a href="/series/classification/16-when-time-breaks-the-model/"><b>16</b> כשהזמן שובר את המודל</a></li>
+<li><a href="/he/series/classification/15-inside-the-winner/"><b>15</b> בתוך המודל שנבחר</a></li>
+<li><a href="/he/series/classification/16-when-time-breaks-the-model/"><b>16</b> כשהזמן שובר את המודל</a></li>
 </ol></section>
 <div class="flow-arrow" aria-hidden="true"></div>
 <div class="flow-end"><b>התוצאה</b> דירוג, סף שנגזר מהמחירים, והצהרה מה אי אפשר להוכיח</div></div>

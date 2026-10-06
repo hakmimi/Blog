@@ -1,10 +1,12 @@
 ---
 import BaseLayout from './BaseLayout.astro';
 import { site } from '../data/site';
-import { articleUrl, fmtDate, iso, seriesBySlug, seriesUrl, topicUrl } from '../lib/content';
+import { base, articleUrl, fmtDate, iso, seriesBySlug, seriesUrl, topicUrl } from '../lib/content';
 const { entry, prev, next, siblings, alt } = Astro.props;
 const { title, description, order, label, readingTime, series, date, updated, keywords, lang } = entry.data;
 const he = lang === 'he';
+const seriesTitle = he ? ({ classification: 'סיווג, בהרצה אמיתית' } as Record<string, string>)[series] ?? s.title : s.title;
+const seriesHref = he ? `${base}/he/series/${series}/` : seriesUrl(series);
 const ui = he
   ? { part: 'חלק', inPart: 'בחלק הזה', inSeries: 'בסדרה', updated: 'עודכן', prev: 'הקודם', next: 'הבא', other: 'English', notice: 'התרגום לעברית עדיין חלקי: חלקים שלא תורגמו מופיעים באנגלית. קוד ונוסחאות נשארים משמאל לימין.' }
   : { part: 'Part', inPart: 'In this part', inSeries: 'In this series', updated: 'updated', prev: 'Previous', next: 'Next', other: 'עברית', notice: '' };
@@ -22,7 +24,7 @@ const jsonLd = {
   <article class="article-shell">
     <header class="article-hero">
       {he ? (
-        <p class="eyebrow"><bdi><a href={seriesUrl(series)}>{s.title}</a></bdi> | <bdi>{ui.part} {label ?? order}</bdi>
+        <p class="eyebrow"><bdi><a href={seriesHref}>{seriesTitle}</a></bdi> | <bdi>{ui.part} {label ?? order}</bdi>
           {alt && <Fragment> | <bdi><a class="lang-switch" href={alt.href} hreflang={alt.lang}>{alt.label}</a></bdi></Fragment>}</p>
       ) : (
         <p class="eyebrow"><a href={seriesUrl(series)}>{s.title}</a> · {ui.part} {label ?? order}

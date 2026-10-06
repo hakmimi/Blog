@@ -45,3 +45,9 @@ If you edit a rendered file by mistake, copy the change into the template, becau
 ## Text only: nothing is recomputed
 
 `python scripts/build_articles.py 00` (or `npm run render` for every part) only re-renders the text. It does **not** run the model experiments (`run_all.py`) and it does not fit any model: numbers come from the saved files in `series/classification/artifacts/`, and code snippets are answered from `snippet_cache.json` unless you changed that snippet. While `npm run dev` is running, the page refreshes by itself a few seconds after the render.
+
+## Hebrew edition: all parts
+
+Every part has a Hebrew copy in `series/classification/articles/he/` (18 files). The site header has a language button (English / עברית) on every page; it jumps to the same part in the other language when that exists, otherwise to the other language's series page (`/he/series/classification/`).
+
+Helper for translating a part without touching its code: `python scripts/he_tools.py show 07` prints the English template with every code block replaced by `@@CODEn@@` and every output block by `@@OUT@@`; write the Hebrew text with the same markers, then `python scripts/he_tools.py apply 07 myfile.txt`. `python scripts/he_tools.py links` points links between parts at the Hebrew copies. A `rename=` value in a table token must not contain a comma. After editing: `python scripts/build_articles.py 07 && python scripts/check_series.py`.

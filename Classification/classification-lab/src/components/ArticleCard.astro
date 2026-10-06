@@ -1,19 +1,20 @@
 ---
 import { articleUrl, assetUrl, fmtDate, iso, topicUrl } from '../lib/content';
 const { article, showSeries = false, compact = false } = Astro.props;
-const { title, description, order, readingTime, figure, series, date, keywords } = article.data;
+const { title, description, order, label, readingTime, figure, series, date, keywords, lang } = article.data;
+const he = lang === 'he';
 const href = articleUrl(article);
 ---
 <article class:list={['article-card', { compact }]}>
   {figure && !compact && <a class="card-img" href={href} tabindex="-1" aria-hidden="true"><img src={assetUrl(series, 'figures', figure)} alt="" loading="lazy" /></a>}
   <div class="card-body">
     <p class="eyebrow">
-      {showSeries ? series : `Part ${String(order).padStart(2, '0')}`} · {readingTime} · <time datetime={iso(date)}>{fmtDate(date)}</time>
+      {showSeries ? series : he ? `חלק ${label ?? order}` : `Part ${String(order).padStart(2, '0')}`} {he ? '|' : '·'} <bdi>{readingTime}</bdi>{!he && <Fragment> · <time datetime={iso(date)}>{fmtDate(date)}</time></Fragment>}
     </p>
     <h3><a href={href}>{title}</a></h3>
     <p class="card-desc">{description}</p>
     <ul class="chips" aria-label="Keywords">
-      {keywords.slice(0, 4).map((k: string) => <li><a href={topicUrl(k)}>{k}</a></li>)}
+      {keywords.slice(0, 4).map((k: string) => he ? <li><span>{k}</span></li> : <li><a href={topicUrl(k)}>{k}</a></li>)}
     </ul>
   </div>
 </article>

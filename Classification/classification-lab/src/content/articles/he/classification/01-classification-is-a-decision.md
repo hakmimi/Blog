@@ -118,4 +118,4 @@ success      0.651   1373
 
 *מקורות.* Moro, Cortez ו-Rita (2014), [A data-driven approach to predict the success of bank telemarketing](https://doi.org/10.1016/j.dss.2014.03.001); הנתונים והתיעוד שלהם ב[מאגר UCI](https://doi.org/10.24432/C5K306).
 
-במרוצים משתמשים בשנים-עשר מודלים ובקו בסיס בלי מודל. [חלק 2](/series/classification/02-why-classification-is-hard/) (באנגלית) שואל קודם באילו עמודות מותר לנו להשתמש בכלל, כי אחת מהן משנה הכול.
+במרוצים משתמשים בשנים-עשר מודלים ובקו בסיס בלי מודל. [חלק 2](/he/series/classification/02-why-classification-is-hard/) שואל קודם באילו עמודות מותר לנו להשתמש בכלל, כי אחת מהן משנה הכול.

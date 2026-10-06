@@ -6,7 +6,7 @@ const standardization = katex.renderToString('z_j=(x_j-\\mu_j)/s_j', { throwOnEr
 const distance = katex.renderToString('d(x,x_i)=\\sqrt{\\sum_{j=1}^{3}(z_j-z_{ij})^2}', { displayMode: true, throwOnError: false });
 const vote = katex.renderToString('V_c=\\sum_{i\\in N_k} \\mathbf{1}(y_i=c)/(d_i+10^{-6})', { throwOnError: false });
 ---
-<BaseLayout title="Live Lab: Classify a Fruit" description="Change a fruit's measurements and watch a transparent k-nearest-neighbors classifier make a three-class prediction.">
+<BaseLayout alt={{ lang: 'he', href: `${b.replace('/series/classification', '')}/he/series/classification/fruit-lab/` }} title="Live Lab: Classify a Fruit" description="Change a fruit's measurements and watch a transparent k-nearest-neighbors classifier make a three-class prediction.">
   <section class="lab-hero">
     <div>
       <p class="eyebrow">Live technical lab · multiclass classification</p>

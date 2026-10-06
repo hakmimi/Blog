@@ -1,0 +1,32 @@
+---
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import ArticleCard from '../../../../components/ArticleCard.astro';
+import { base, getHebrewArticles } from '../../../../lib/content';
+
+const articles = await getHebrewArticles('classification');
+const extra = [
+  ['מעבדה חיה: איזה פרי זה?', 'מזיזים מחוונים וצופים ב-k שכנים קרובים מצביעים.', `${base}/he/series/classification/fruit-lab/`],
+  ['שיטות ופרוטוקול', 'חלוקות, תקציב כוונון, מדדים ומה הם לא מוכיחים.', `${base}/he/series/classification/methods/`],
+];
+const alt = { lang: 'en', href: `${base}/series/classification/` };
+---
+<BaseLayout lang="he" alt={alt} title="סיווג, בהרצה אמיתית" description="מגיליון נתונים של שיווק בנקאי ועד מודל שאפשר להגן עליו: נתונים אמיתיים, שנים-עשר מסווגים ושורת בסיס בלי מודל, עם כל שורת קוד והפלט שהיא הפיקה.">
+  <section class="hero small" style="--accent:#168c84">
+    <div class="hero-inner">
+      <p class="eyebrow">סדרה | בתהליך | <a href={`${base}/series/classification/`} hreflang="en">English</a></p>
+      <h1>סיווג, בהרצה אמיתית</h1>
+      <p class="lede">מגיליון נתונים של שיווק בנקאי ועד מודל שאפשר להגן עליו. מערך נתונים אמיתי אחד, שנים-עשר מסווגים ושורת בסיס בלי מודל, כל שורת קוד, וכל מספר מודפס מהניסוי שהפיק אותו.</p>
+      <div class="hero-stats">
+        <div><strong>{articles.length}</strong><span>חלקים</span></div>
+      </div>
+    </div>
+  </section>
+  <section class="section">
+    <div class="article-list">
+      {articles.map((a) => <ArticleCard article={a} />)}
+    </div>
+    <div class="extras">
+      {extra.map(([t, d, href]) => <a href={href}><strong>{t}</strong><span>{d}</span></a>)}
+    </div>
+  </section>
+</BaseLayout>

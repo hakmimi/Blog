@@ -354,3 +354,8 @@ a.series-card:hover { transform:translateY(-3px); border-color:color-mix(in srgb
 @media (max-width:700px) { .fl { grid-template-columns:1fr; } }
 :root[dir="rtl"] .fl svg { direction:ltr; }
 .lab-wrap { max-width:1180px; margin:0 auto; padding:0 max(3vw,1rem); }
+
+/* language switch button in the header */
+.site-header nav a.lang-btn { display:inline-flex; align-items:center; padding:.28rem .8rem; border:1px solid var(--teal); border-radius:999px; color:var(--teal); font-size:.82rem; font-weight:700; text-decoration:none; line-height:1.2; }
+.site-header nav a.lang-btn:hover { background:var(--teal); color:var(--card); }
+@media (max-width:800px) { .site-header nav > a.lang-btn { display:inline-flex; } }

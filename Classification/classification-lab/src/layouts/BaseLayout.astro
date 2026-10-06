@@ -5,6 +5,9 @@ import { site } from '../data/site';
 import { base } from '../lib/content';
 const { title, description = site.tagline, keywords = [], type = 'website', published, modified, jsonLd, lang = 'en', alt } = Astro.props;
 const he = lang === 'he';
+// Language switch: the exact counterpart page when the article has one, otherwise the other language's series page.
+const langTarget = alt?.href ?? (he ? `${base}/series/classification/` : `${base}/he/series/classification/`);
+const langLabel = he ? 'English' : 'עברית';
 const ui = he
   ? { skip: 'דלגו לתוכן', series: 'סדרות', topics: 'נושאים', about: 'אודות', search: 'חיפוש', footer: 'דוגמאות הקוד ברישיון MIT. לנתונים יש רישיונות משלהם, והם מצוינים בכל סדרה.' }
   : { skip: 'Skip to content', series: 'Series', topics: 'Topics', about: 'About', search: 'Search', footer: 'Code samples are MIT licensed. Datasets keep their own licenses, credited in each series.' };
@@ -52,6 +55,7 @@ const fullTitle = title === site.name ? title : `${title} · ${site.name}`;
         <a href={`${base}/#series`}>{ui.series}</a>
         <a href={`${base}/topics/`}>{ui.topics}</a>
         <a href={`${base}/about/`}>{ui.about}</a>
+        <a class="lang-btn" href={langTarget} hreflang={he ? 'en' : 'he'} lang={he ? 'en' : 'he'} aria-label={he ? 'Switch to English' : 'מעבר לעברית'}>{langLabel}</a>
         <button class="icon-btn" id="theme-toggle" type="button" aria-label="Toggle dark mode">◐</button>
         <button class="search-open" type="button" aria-label="Open search">{ui.search} <kbd>/</kbd></button>
       </nav>
