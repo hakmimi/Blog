@@ -1,0 +1,86 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import { site } from '../data/site';
+import { articleUrl, fmtDate, iso, seriesBySlug, seriesUrl, topicUrl } from '../lib/content';
+const { entry, prev, next, siblings } = Astro.props;
+const { title, description, order, readingTime, series, date, updated, keywords } = entry.data;
+const s = seriesBySlug[series];
+const jsonLd = {
+  '@context': 'https://schema.org', '@type': 'TechArticle', headline: title, description,
+  datePublished: iso(date), dateModified: iso(updated ?? date), keywords: keywords.join(', '),
+  author: { '@type': 'Person', name: site.author }, isPartOf: { '@type': 'CreativeWorkSeries', name: s.title },
+  position: order,
+};
+---
+<BaseLayout title={title} description={description} keywords={keywords} type="article"
+  published={iso(date)} modified={iso(updated ?? date)} jsonLd={jsonLd}>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+  <article class="article-shell">
+    <header class="article-hero">
+      <p class="eyebrow"><a href={seriesUrl(series)}>{s.title}</a> · Part {order}</p>
+      <h1>{title}</h1>
+      <p class="lede">{description}</p>
+      <p class="byline">
+        <span>{site.author}</span> · <time datetime={iso(date)}>{fmtDate(date)}</time>
+        {updated && <span> · updated <time datetime={iso(updated)}>{fmtDate(updated)}</time></span>} · {readingTime}
+      </p>
+      <ul class="chips" aria-label="Keywords">
+        {keywords.map((k: string) => <li><a href={topicUrl(k)}>{k}</a></li>)}
+      </ul>
+    </header>
+    <div class="article-grid">
+      <aside class="toc" aria-label="On this page">
+        <p>In this part</p><nav id="toc-links"></nav>
+        <p class="toc-series">In this series</p>
+        <ol class="series-list">
+          {siblings.map((a: any) => <li class:list={{ current: a.id === entry.id }}><a href={articleUrl(a)}>{a.data.title}</a></li>)}
+        </ol>
+      </aside>
+      <div class="prose"><slot /></div>
+    </div>
+    <nav class="chapter-nav" aria-label="Adjacent parts">
+      {prev ? <a href={articleUrl(prev)}><span>Previous</span>{prev.data.title}</a> : <span></span>}
+      {next ? <a class="next" href={articleUrl(next)}><span>Next</span>{next.data.title}</a> : <span></span>}
+    </nav>
+  </article>
+  <script>
+    const toc = document.querySelector('#toc-links');
+    document.querySelectorAll('.prose h2').forEach((h) => {
+      const a = document.createElement('a'); a.href = `#${h.id}`; a.textContent = h.textContent; toc?.append(a);
+    });
+
+    // Code blocks: language label + copy button. ```output fences get their own look.
+    document.querySelectorAll<HTMLPreElement>('.prose pre').forEach((pre) => {
+      const lang = pre.dataset.language || 'text';
+      const isOutput = lang === 'output';
+      const wrap = document.createElement('div');
+      wrap.className = `codeblock${isOutput ? ' is-output' : ''}`;
+      const bar = document.createElement('div'); bar.className = 'codebar';
+      const label = document.createElement('span'); label.textContent = lang; bar.append(label);
+      if (!isOutput) {
+        const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'Copy';
+        btn.addEventListener('click', async () => {
+          try { await navigator.clipboard.writeText(pre.innerText); btn.textContent = 'Copied ✓'; }
+          catch { btn.textContent = 'Press Ctrl+C'; }
+          setTimeout(() => (btn.textContent = 'Copy'), 1600);
+        });
+        bar.append(btn);
+      }
+      pre.replaceWith(wrap); wrap.append(bar, pre);
+    });
+
+    const progress = document.getElementById('progress');
+    const update = () => {
+      const h = document.documentElement;
+      const p = h.scrollTop / Math.max(1, h.scrollHeight - h.clientHeight);
+      if (progress) progress.style.transform = `scaleX(${Math.min(1, p)})`;
+    };
+    addEventListener('scroll', update, { passive: true }); update();
+
+    const links = [...document.querySelectorAll('#toc-links a')];
+    const io = new IntersectionObserver((entries) => entries.forEach((e) => {
+      if (e.isIntersecting) links.forEach((l) => l.classList.toggle('active', l.getAttribute('href') === `#${e.target.id}`));
+    }), { rootMargin: '-80px 0px -70% 0px' });
+    document.querySelectorAll('.prose h2').forEach((h) => io.observe(h));
+  </script>
+</BaseLayout>

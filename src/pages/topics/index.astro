@@ -1,0 +1,13 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getTopics, topicUrl } from '../../lib/content';
+const topics = [...(await getTopics()).values()].sort((a, b) => b.articles.length - a.articles.length || a.label.localeCompare(b.label));
+---
+<BaseLayout title="Topics" description="Every keyword used across the blog's series.">
+  <section class="section">
+    <div class="section-head"><p class="eyebrow">Browse</p><h1>Topics</h1></div>
+    <ul class="chips big">
+      {topics.map((t) => <li><a href={topicUrl(t.label)}>{t.label} <b>{t.articles.length}</b></a></li>)}
+    </ul>
+  </section>
+</BaseLayout>

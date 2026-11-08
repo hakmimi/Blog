@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.astro/
+public/series/
+__pycache__/
+*.pyc
+.venv/
+series/*/data/raw/
+series/*/*.log
+
+print/
