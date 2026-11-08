@@ -1,16 +1,28 @@
 # Blog
 
-My blog, live at https://hakmimi.github.io/Blog/. Built with Astro and the [Fuwari](https://github.com/saicaca/fuwari) theme (MIT). Published to GitHub Pages on every push to `main`.
+My blog, live at https://hakmimi.github.io/Blog/. Built with Astro and the [AstroPaper](https://github.com/satnaing/astro-paper) theme (MIT). Published to GitHub Pages on every push to `main`.
 
 ## Write a post
 
-```powershell
-corepack pnpm new-post <file-name>   # creates src/content/posts/<file-name>.md
-corepack pnpm dev                    # preview at http://localhost:4321/Blog/
+Add a Markdown file in `src/content/posts/` with this frontmatter:
+
+```yaml
+---
+author: Yitzhak
+pubDatetime: 2026-11-08T10:00:00Z
+title: My post
+tags: [workflows]
+description: One line about the post.
+---
 ```
 
-Frontmatter: `title, published, description, tags, category, draft`.
+Preview locally:
+
+```powershell
+corepack pnpm@11.3.0 install
+corepack pnpm@11.3.0 dev      # http://localhost:4321/Blog/
+```
 
 ## Settings
 
-Site name, profile, links and colors: `src/config.ts`.
+Site name, author, links and features: `astro-paper.config.ts`.
