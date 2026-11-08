@@ -14,6 +14,6 @@ export default defineConfig({
   integrations: [sitemap()],
   markdown: {
     processor: unified({ remarkPlugins: [remarkMath], rehypePlugins: [rehypeKatex, [rehypeBase, { base }]] }),
-    shikiConfig: { theme: 'github-dark' }
+    shikiConfig: { themes: { light: 'github-light', dark: 'github-dark' } }
   }
 });

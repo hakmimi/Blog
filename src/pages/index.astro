@@ -14,16 +14,11 @@ const count = (slug: string) => articles.filter((a) => a.data.series === slug).l
       <!-- TODO(Yitzhak): write the home page intro in your own words. -->
       <h1>{site.name}</h1>
       <p class="lede">{site.tagline}</p>
-      <div class="hero-stats">
-        <div><strong>{allSeries.length}</strong><span>{allSeries.length === 1 ? 'series' : 'series'}</span></div>
-        <div><strong>{articles.length}</strong><span>articles</span></div>
-      </div>
     </div>
   </section>
 
   <section class="section" id="series">
     <div class="section-head">
-      <p class="eyebrow">Series</p>
       <h2>Series</h2>
     </div>
     <div class="series-grid">
@@ -43,14 +38,14 @@ const count = (slug: string) => articles.filter((a) => a.data.series === slug).l
   </section>
 
   <section class="section">
-    <div class="section-head"><p class="eyebrow">Latest</p><h2>Newest articles</h2></div>
+    <div class="section-head"><h2>Latest posts</h2></div>
     <div class="article-list">
       {latest.map((a) => <ArticleCard article={a} showSeries />)}
     </div>
   </section>
 
   <section class="section">
-    <div class="section-head"><p class="eyebrow">Browse</p><h2>Topics</h2></div>
+    <div class="section-head"><h2>Topics</h2></div>
     <ul class="chips big">
       {topics.map(([key, t]) => <li><a href={topicUrl(t.label)}>{t.label} <b>{t.articles.length}</b></a></li>)}
     </ul>

@@ -14,7 +14,6 @@ const jsonLd = {
 ---
 <BaseLayout title={title} description={description} keywords={keywords} type="article"
   published={iso(date)} modified={iso(updated ?? date)} jsonLd={jsonLd}>
-  <div class="progress" id="progress" aria-hidden="true"></div>
   <article class="article-shell">
     <header class="article-hero">
       <p class="eyebrow"><a href={seriesUrl(series)}>{s.title}</a> · Part {order}</p>
