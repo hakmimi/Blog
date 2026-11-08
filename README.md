@@ -14,3 +14,7 @@ Astro site, published to GitHub Pages on every push to `main`.
 npm install
 npm run dev
 ```
+
+## Credits
+
+Colors and typography adapted from the [Riviera Villa Lite](https://github.com/riviera-themes/riviera-villa-lite) Astro theme (MIT).
