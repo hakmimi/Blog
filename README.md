@@ -1,20 +1,16 @@
 # Blog
 
-Astro site, published to GitHub Pages on every push to `main`.
+My blog, live at https://hakmimi.github.io/Blog/. Built with Astro and the [Fuwari](https://github.com/saicaca/fuwari) theme (MIT). Published to GitHub Pages on every push to `main`.
 
-## Add a series
-
-1. Add an entry to `src/data/series.ts`.
-2. Put posts in `src/content/articles/<series>/NN-slug.md` (frontmatter: `title, description, series, order, date, keywords[], readingTime`).
-3. Optional: figures and artifacts in `series/<series>/{figures,artifacts}`.
-
-## Run locally
+## Write a post
 
 ```powershell
-npm install
-npm run dev
+corepack pnpm new-post <file-name>   # creates src/content/posts/<file-name>.md
+corepack pnpm dev                    # preview at http://localhost:4321/Blog/
 ```
 
-## Credits
+Frontmatter: `title, published, description, tags, category, draft`.
 
-Colors and typography adapted from the [Riviera Villa Lite](https://github.com/riviera-themes/riviera-villa-lite) Astro theme (MIT).
+## Settings
+
+Site name, profile, links and colors: `src/config.ts`.
