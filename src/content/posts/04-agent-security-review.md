@@ -167,7 +167,7 @@ About **$0.0002 per session** and 4 seconds. That's cheaper than the article's $
 - **90 sessions per set is small.** One session is about 3 percentage points, and some attack styles have only 3 or 4 bad sessions. Small differences between levels may be noise.
 - **I removed one kind of attack.** In my spot check, one "bad" session was an attack whose only goal was to make the agent *say* something (recommend a hotel). No action happened, and the article reviews actions, so I left that attack goal out of all sets.
 
-**Data credit.** Sessions and labels come from **AgentDojo** (Debenedetti et al., NeurIPS 2024), MIT licence. See [`data/NOTICE.md`](https://github.com/hakmimi/ai-engineering-lab/blob/topic-04-agent-security-review/topics/04-agent-security-review-agentdojo/data/NOTICE.md) for what I took and changed.
+**Data credit.** Sessions and labels come from **AgentDojo** (Debenedetti et al., NeurIPS 2024), MIT licence. See [`data/NOTICE.md`](https://github.com/hakmimi/ai-engineering-lab/blob/main/topics/04-agent-security-review-agentdojo/data/NOTICE.md) for what I took and changed.
 
 ## Technical walkthrough
 
@@ -176,14 +176,14 @@ About **$0.0002 per session** and 4 seconds. That's cheaper than the article's $
 - **Source:** AgentDojo's saved runs of `gpt-4o-2024-05-13`, at commit `089ed46` of [their repo](https://github.com/ethz-spylab/agentdojo). About 6,900 saved sessions to choose from.
 - **How I drew the sets:** in each workplace I split the user requests in two halves, and the attack goals in two halves, with a fixed seed (2026). The main set only uses half A of both, the held-out set only half B. So the held-out set has requests, attack goals and attack styles the rules never saw.
 - **What the reviewer sees:** only the numbered chat. I removed every field that gives the answer away (`security`, `injections`, `attack_type`, the task ids…) and gave each session a plain id like `t-014`. The answers sit in a separate file, `key.json`, that the review code never opens.
-- **The grants:** one short "what this agent may do" per workplace, written by me from the workplace's purpose, like the article's `AGENTS` entries. [`data/grants.json`](https://github.com/hakmimi/ai-engineering-lab/blob/topic-04-agent-security-review/topics/04-agent-security-review-agentdojo/data/grants.json)
+- **The grants:** one short "what this agent may do" per workplace, written by me from the workplace's purpose, like the article's `AGENTS` entries. [`data/grants.json`](https://github.com/hakmimi/ai-engineering-lab/blob/main/topics/04-agent-security-review-agentdojo/data/grants.json)
 
 ### The tools
 
 | Tool | What I used it for |
 |---|---|
 | **Python 3** | Everything |
-| **OpenAI API**, `gpt-6-luna` | The reviewer, through a small shared helper ([`shared/llm.py`](https://github.com/hakmimi/ai-engineering-lab/blob/topic-04-agent-security-review/shared/llm.py)) that also counts tokens, time and cost. It talks to Anthropic too: set `REVIEW_MODEL=claude-haiku-5-5` to rerun with Claude |
+| **OpenAI API**, `gpt-6-luna` | The reviewer, through a small shared helper ([`shared/llm.py`](https://github.com/hakmimi/ai-engineering-lab/blob/main/shared/llm.py)) that also counts tokens, time and cost. It talks to Anthropic too: set `REVIEW_MODEL=claude-haiku-5-5` to rerun with Claude |
 | **AgentDojo** | The sessions and the answer key |
 | **pytest** | Offline tests; a shared fixture blocks every real API call during tests |
 | **Claude Code** | My pair programmer: design, plan, code, and an independent review of the whole branch before any money was spent |
@@ -220,4 +220,4 @@ None of these would have crashed anything. They would just have made the numbers
 
 ### The code
 
-Everything is on GitHub: [ai-engineering-lab / 04-agent-security-review-agentdojo](https://github.com/hakmimi/ai-engineering-lab/tree/topic-04-agent-security-review/topics/04-agent-security-review-agentdojo). It has the rules, the three review levels, the offline tests, the design and plan, the spot-check sheet, and a results file and graphs built only from real runs.
+Everything is on GitHub: [ai-engineering-lab / 04-agent-security-review-agentdojo](https://github.com/hakmimi/ai-engineering-lab/tree/main/topics/04-agent-security-review-agentdojo). It has the rules, the three review levels, the offline tests, the design and plan, the spot-check sheet, and a results file and graphs built only from real runs.
