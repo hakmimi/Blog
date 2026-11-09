@@ -3,6 +3,10 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+  schedule:
+    # Daily rebuild so posts with a future pubDatetime appear on their day without a push.
+    # 08:15 UTC = 10:15 in Israel in winter (11:15 in summer): just after a 10:00 publish time.
+    - cron: "15 8 * * *"
 permissions:
   contents: read
   pages: write
