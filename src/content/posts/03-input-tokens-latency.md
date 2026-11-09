@@ -3,7 +3,7 @@ title: "Fewer input tokens, faster answers? Testing the advice on real contracts
 description: "Anthropic's latency guide says input tokens cost time. I tested its four input-token levers on 60 real NDAs with OpenAI models. They saved money and bytes, but not seconds."
 pubDatetime: 2026-11-09T16:00:00+02:00
 tags: ["latency", "caching", "evals"]
-draft: true
+draft: false
 ---
 
 ## The bottom line
@@ -32,7 +32,7 @@ So I took the four claims and ran them on the stack I actually use: OpenAI model
 
 ## The use case: an NDA desk
 
-I reused the 60 real NDAs from [part 2 of the prompt-vs-workflow series](/Blog/posts/02-prompt-vs-workflow-real-contracts/), with their lawyer-written labels.
+I reused the 60 real NDAs from [the prompt-vs-workflow post](/Blog/posts/01-prompt-vs-workflow/), with their lawyer-written labels.
 
 A legal team keeps a **pack of NDAs** open and asks one question per chat turn:
 
