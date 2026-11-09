@@ -7,17 +7,13 @@ source: ["anthropic"]
 draft: false
 ---
 
-## How this started
+Asking a model to check its own work sounds like free quality. But a grader is just another model call. If it can't tell a right answer from a wrong one, the loop only adds cost, or worse, talks a right answer into a wrong one.
 
-So, I came across Anthropic's cookbook page [Evaluator-optimizer](https://platform.claude.com/cookbook/patterns-agents-evaluator-optimizer). One AI writes an answer, a second AI grades it, and the first one rewrites until the grade is PASS.
+That loop is the whole idea of Anthropic's cookbook page [Evaluator-optimizer](https://platform.claude.com/cookbook/patterns-agents-evaluator-optimizer): one AI writes an answer, a second AI grades it, and the first one rewrites until the grade is PASS. The page never measures whether the grade is right. So I put the grader on trial, on a job where "right" can be checked: SQL.
 
-It made me wonder. Asking a model to check its own work sounds like free quality. But a grader is just another model call. If it can't tell a right answer from a wrong one, the loop only adds cost, or worse, talks a right answer into a wrong one.
+## Write, grade, rewrite
 
-The page doesn't measure it. So I tried to find out.
-
-## What Anthropic claims, and what it implies
-
-The pattern is simple:
+The pattern has three parts:
 
 1. **A writer** produces an answer.
 2. **A grader** checks it and answers **PASS**, **NEEDS_IMPROVEMENT** or **FAIL**, with feedback.
@@ -25,23 +21,21 @@ The pattern is simple:
 
 The page says this fits best when there are clear grading rules and rewriting adds value, and it names two signs of a good fit: answers get clearly better with feedback, and the model can give useful feedback itself.
 
-What it implies: **let a model check its own work, and you get better answers.**
+The idea: **let a model check its own work, and you get better answers.**
 
-How it shows it: **one example**, a small code class (a stack that also tracks its minimum). The grader **reads** the code; nothing is run or tested. Its first feedback was about extras (error handling, type hints, comments), and the page stops after the second try, so we never see a PASS. The loop has no round limit, and there are no numbers.
+The evidence: **one example**, a small code class (a stack that also tracks its minimum). The grader **reads** the code; nothing is run or tested. Its first feedback was about extras (error handling, type hints, comments), and the page stops after the second try, so we never see a PASS. The loop has no round limit, and there are no numbers.
 
-So the page shows the loop running. It never checks whether the grade is **right**.
+We see the loop running. We never see whether the grade is **right**.
 
-## My experiment
+## The grader on trial
 
-So I decided to take it a step further and run my own experiment.
-
-### The question
+### Three questions
 
 **On real text-to-SQL questions with known answers, does the write → grade → rewrite loop give more right answers than one try? When the grader says PASS, is the answer really right? And does feedback from running the SQL beat feedback from an AI reading it?**
 
 SQL is a good test because "right" isn't an opinion: run the query, and compare its rows with the rows of the correct query.
 
-### The data
+### 120 BIRD questions
 
 [BIRD](https://bird-bench.github.io/) is a public text-to-SQL benchmark built on real databases. Its **Mini-Dev** set has **500 questions over 11 SQLite databases** (California schools, Formula 1 results, a bank, football matches, a Q&A site and more), each with a correct query written by the dataset's authors, a short **hint** ("free-meal rate = free meal count ÷ enrollment") and a difficulty tag.
 
@@ -52,9 +46,9 @@ I drew two sets with a fixed seed:
 
 Both have 18 simple, 30 moderate and 12 challenging questions.
 
-### The process
+### From one try to a full loop
 
-I built the job five ways, adding one thing at a time:
+Level 0 is a single try; each level after it changes one thing:
 
 - **Level 0 · one try.** The model sees the schema (with 3 example rows per table), the hint and the question, and writes one query.
 - **Level 1 · AI grader reads it.** The cookbook's loop: a grader **reads** the query, without running it. Up to 3 writes.
@@ -69,7 +63,7 @@ The cookbook's grader checks code for correctness, speed and style. For SQL only
 
 ![The loop: writer, run it, grader, score](../../assets/images/05-evaluator-optimizer/process-diagram.png)
 
-## How I measure it
+## Right, fixed, broken
 
 | What I measure | In plain words |
 |---|---|
@@ -91,9 +85,9 @@ The cookbook's grader checks code for correctness, speed and style. For SQL only
 - **The bigger model might beat all of them**, like it did in topics 01 and 02.
 - **Some right answers will get broken** by a grader asking for "improvements".
 
-## The results
+## What the loop actually did
 
-I ran everything: 2 sets, 7 levels, 3 repeats each. The whole topic, smoke runs and a discarded buggy run included, cost **$3.83**. The full tables are in [`results.md`](https://github.com/hakmimi/ai-engineering-lab/blob/main/topics/05-evaluator-optimizer-text-to-sql/results.md).
+Two sets, seven levels, three repeats each. The whole topic, smoke runs and a discarded buggy run included, cost **$3.83**. The full tables are in [`results.md`](https://github.com/hakmimi/ai-engineering-lab/blob/main/topics/05-evaluator-optimizer-text-to-sql/results.md).
 
 ### 1 · The loop didn't make more answers right
 
@@ -211,7 +205,7 @@ So if you're going to pay for the big model, **pay it to write, not to grade.**
 | *(added later)* A bigger grader would catch more | ❌ It PASSed 85–94% of wrong queries, like the small one |
 | Some right answers will get broken | ✅ 1–3 per level, mostly where the grader and the answer key disagree |
 
-## Key takeaways
+## Trust the rows, not the grade
 
 - **A grader is only as good as what it can check.** Reading a query, the grader agreed with the writer about 9 times in 10, wrong or not. Its PASS told me nothing the first try didn't.
 - **Run it before you judge it.** The only feedback that helped for free was the database's own: an error, a timeout or "no rows". It fixed a few answers and broke none.
@@ -221,7 +215,7 @@ So if you're going to pay for the big model, **pay it to write, not to grade.**
 - **A smarter grader is not a better grader.** The big model as a teacher PASSed wrong queries as often as the small one, and mostly answered with one word.
 - **For more right answers, a bigger model beat every loop.** +12 points on the held-out set, at 10× the cost per question but still under a fifth of a cent. Using it as a writer beat using it as a grader.
 
-## Limitations
+## What this doesn't show
 
 - **Not Claude.** The writer and grader are `gpt-6-luna`, and level 0+ is `gpt-6.1-sol`, like the rest of this series. A Claude model may grade differently.
 - **Levels 4 and 5 were added after the first results.** They use the same prompts and code paths as levels 1 and 3, only the grader model changes, and they ran on both sets. Still, they weren't in the original plan.
@@ -234,15 +228,15 @@ So if you're going to pay for the big model, **pay it to write, not to grade.**
 
 **Data credit.** Questions, hints and correct queries come from **BIRD Mini-Dev** (the BIRD-SQL team), CC BY-SA 4.0. See [`data/NOTICE.md`](https://github.com/hakmimi/ai-engineering-lab/blob/main/topics/05-evaluator-optimizer-text-to-sql/data/NOTICE.md) for what I took and changed.
 
-## Technical walkthrough
+## Inside the code
 
-### The data
+### Getting BIRD cheaply
 
 - **Source:** `minidev.zip` from BIRD's official link (801 MB). I only needed the SQLite part, so I fetched **only the files I needed** with HTTP range requests (about 346 MB): the 500 questions, the table list and the 11 SQLite databases. The MySQL and PostgreSQL copies were never downloaded.
 - **How I drew the sets:** split the 11 databases 6 / 5 with a fixed seed (2026), then drew 18 simple, 30 moderate and 12 challenging questions from each group. Every correct query was run first (read-only, 30 s limit); none failed.
 - **What the model sees:** each table's `CREATE TABLE` text, 3 example rows per table (long cells cut at 60 characters), the hint and the question. Never the correct query, its rows or the difficulty tag.
 
-### The tools
+### Tools
 
 | Tool | What I used it for |
 |---|---|
@@ -253,7 +247,7 @@ So if you're going to pay for the big model, **pay it to write, not to grade.**
 | **pytest** | Offline tests; a shared fixture blocks every real API call |
 | **Claude Code** | My pair programmer: design, plan, code and analysis |
 
-### The process, step by step
+### The run, step by step
 
 1. `build_data.py` splits the databases, draws the two sets and writes `data/main.json` and `data/test.json`.
 2. `schema.py` builds the schema text the writer sees.
@@ -262,9 +256,9 @@ So if you're going to pay for the big model, **pay it to write, not to grade.**
 5. `score.py` compares each query's rows with the correct query's rows. `lenient.py` adds the "extra columns forgiven" score.
 6. `report.py` builds `results.md` **from the run files only**. No number is typed by hand.
 
-### The evals
+### Tests
 
-The offline tests (no API calls, no cost) pin down what would quietly skew the numbers:
+Free offline tests cover the places where a bug would change a score without crashing:
 
 - **The database can't be changed:** an `INSERT` fails, and a slow query stops at the time limit.
 - **Fair comparison:** row order and duplicates don't matter, and binary values compare the same on both sides.
@@ -275,13 +269,13 @@ The offline tests (no API calls, no cost) pin down what would quietly skew the n
 - **Scoring counted by hand:** fixed, broken, PASS on wrong and false alarm on small made-up runs.
 - **Money:** a dry run makes no calls, and a run over budget or over the topic limit is refused.
 
-### Lessons from building it
+### Bugs that changed the numbers
 
 - **The model escaped its own SQL.** In my first main-set run, the writer sometimes wrote `&gt;` instead of `>` inside the `<sql>` tag, as if writing HTML. SQLite read that as a column named `gt`. **38 rounds** across the first runs had it, and at levels 2 and 3 the loop spent its rewrites fixing *my* glue, not the SQL. A test now covers it, the code un-escapes the text, and I re-ran the whole main set. The bad runs are kept in `runs/superseded/`, and the new runs have **0**.
 - **Read the wrong answers before trusting the score.** In the smoke run, many "wrong" queries were right in spirit: same numbers plus an extra column. That's why I added the lenient score next to BIRD's rule instead of replacing it.
 - **A new model, a new format.** In the first teacher run, the big model answered just `PASS`, with no tags. My code counted that as unreadable and stopped the loop, in **93%** of the questions. A test now covers bare verdicts, the code accepts them, and I re-ran both teacher levels. The bad run is kept in `runs/superseded/`. Levels 0–3 never had an unreadable grade, so their numbers didn't change.
 - **Check what "broken" means.** Reading every broken answer showed the pattern in result 5: the grader wasn't careless, it just had its own idea of right.
 
-### The code
+### Where to find it
 
-Everything is on GitHub: [ai-engineering-lab / 05-evaluator-optimizer-text-to-sql](https://github.com/hakmimi/ai-engineering-lab/tree/main/topics/05-evaluator-optimizer-text-to-sql). It has the seven levels, the offline tests, the design and plan, the drawn question sets, and a results file built only from real runs.
+Source: [ai-engineering-lab / 05-evaluator-optimizer-text-to-sql](https://github.com/hakmimi/ai-engineering-lab/tree/main/topics/05-evaluator-optimizer-text-to-sql). It has the seven levels, the offline tests, the design and plan, the drawn question sets, and a results file built only from real runs.

@@ -7,39 +7,31 @@ source: ["anthropic"]
 draft: false
 ---
 
-## How this started
+When I build something with an LLM, my first try is almost always one long prompt: here's everything, decide. It's simple, cheap and fast, and I had never really checked whether it was good enough.
 
-So, I came across Anthropic's cookbook post [Basic Multi-LLM Workflows](https://platform.claude.com/cookbook/patterns-agents-basic-workflows). It shows three ways to split one job across several model calls: **chain** the steps one after another, run them **in parallel**, or **route** each input to a specialist prompt.
+Anthropic's cookbook post [Basic Multi-LLM Workflows](https://platform.claude.com/cookbook/patterns-agents-basic-workflows) points the other way. It shows three ways to split one job across several model calls: **chain** the steps one after another, run them **in parallel**, or **route** each input to a specialist prompt. Would splitting my job give better answers? And what would it cost in time, money and things that can break? I tested it twice: first on data I made up, then on real contracts.
 
-It made me wonder. When I build something with an LLM, my first try is almost always one long prompt: here's everything, decide. It's simple, cheap and fast. Would splitting the job actually give better answers? And what would it cost me in time, money and things that can break?
+## Three patterns, no scoreboard
 
-The post doesn't say. So I tried to find out, twice: first on data I made up, then on real contracts.
-
-## What Anthropic claims, and what it implies
-
-The post is short and practical. Each pattern gets one small example:
+Each pattern gets one small example in the post:
 
 1. **Chain:** turn a plain-text quarterly summary into a table, in four steps (pull out the numbers, convert them, sort them, format them).
 2. **Parallel:** ask how a market change affects four groups (customers, employees, investors, suppliers), all at the same time.
 3. **Route:** sort three support tickets into billing, technical, account or product, then answer each with that team's prompt.
 
-The claim is in one line at the top: these workflows **"trade off cost or latency for potentially improved task performances."**
+The promise sits in one line at the top: these workflows **"trade off cost or latency for potentially improved task performances."** Put simply: **pay a bit more in calls and time, get a better answer.**
 
-What it implies: **if you pay a bit more in calls and time, you get a better answer.**
+The post is upfront about what it is. It calls the code **"sample implementations meant to demonstrate core concepts - not production code."** It prints the outputs and stops there. No accuracy, no token count, no cost, no timing.
 
-But the post is honest about what it is. It calls the code **"sample implementations meant to demonstrate core concepts - not production code."** It prints the outputs and stops there. No accuracy, no token count, no cost, no timing.
+It shows *how* to build each pattern. It never tests the word **"improved"**.
 
-So it shows *how* to build each pattern. It never tests the word **"improved"**.
+## Same job, built five ways
 
-## My experiment
-
-So I decided to take it a step further and run my own experiment.
-
-### The question
+### What I wanted to know
 
 **If I give the same job to one big prompt and to a workflow that splits it, with right answers known in advance, which one gets more right, and what does each cost?**
 
-### The data
+### Made-up claims, then real NDAs
 
 I ran it twice, because the first data set had a weak spot I didn't like.
 
@@ -59,9 +51,9 @@ For each contract and each statement, the job is: does the contract **say it**, 
 - **Main set**, 30 NDAs from the dataset's dev split. Tuned on this one.
 - **Held-out set**, 30 NDAs from its test split. No prompt changed once this run started.
 
-### The process
+### Five versions of one job
 
-I built the job five ways, adding one pattern at a time, so I can see what each one is worth:
+Each version adds one pattern to the one before, so every pattern's value shows on its own:
 
 - **Level 0 · one big prompt.** Everything in, one answer out.
 - **Level 1 · + route.** One call first decides what matters (the claim type, or the sentences for each statement). The answer prompt sees only that.
@@ -75,7 +67,7 @@ Levels 0–3 use `gpt-6-luna` (small and cheap). Level 0+ uses `gpt-6.1-sol`. Pr
 
 ![NDA flow: route, parallel statement checks, chain](../../assets/images/02-prompt-vs-workflow-real-contracts/process-diagram.png)
 
-## How I measure it
+## Scoring the answers
 
 | What I measure | In plain words |
 |---|---|
@@ -96,7 +88,7 @@ Levels 0–3 use `gpt-6-luna` (small and cheap). Level 0+ uses `gpt-6.1-sol`. Pr
 - On **real, longer contracts** the workflow had its best chance to catch up.
 - If it didn't beat one prompt, that's an answer too.
 
-## The results
+## Claims first, then contracts
 
 ### Round 1 · claims, main set
 
@@ -172,7 +164,7 @@ I tuned those fixes on these same 30 claims, so the "fixed" rows are a best case
 - **The bigger model has the opposite problem.** It almost never misses what the contract says (5% against 13%), but where the lawyers said "not mentioned" it answered "says it" or "says the opposite" about 1 time in 3. It reads more into the text than the labels allow.
 - **"Says the opposite" stays hard for everyone.** It's rare (about 1 pair in 10) and often hides in an exception to a clause.
 
-## Key takeaways
+## Where I was wrong
 
 - **I was wrong about the workflow.** In both rounds, one big prompt was the most accurate option on the small model, and the cheapest.
 - **Splitting a job doesn't make the model smarter. It makes each call see less.** A document checker that can't see the rest of the claim, or an answer step that sees only the router's picks, fails in exactly that way.
@@ -190,7 +182,7 @@ I tuned those fixes on these same 30 claims, so the "fixed" rows are a best case
 | **Chain** | You need to show each step, or the math must be exact, so code does it | A step must answer yes/no where the truth is "part of it" |
 | **Bigger model** | You measured it on your own labels | You assume it's better without checking |
 
-## Limitations
+## How far to trust this
 
 - **Small samples:** 30 + 30 claims, and 30 + 30 NDAs out of 607. One claim is about 3 points, so small gaps between levels may be noise.
 - **One model family** (OpenAI) and 3 repeats per level.
@@ -201,14 +193,14 @@ I tuned those fixes on these same 30 claims, so the "fixed" rows are a best case
 
 **Data credit.** The NDAs and labels come from **ContractNLI** (Koreeda & Manning, 2021), released under **CC BY 4.0**. The insurance claims are made up.
 
-## Technical walkthrough
+## Under the hood
 
-### The data
+### The claims and the NDAs
 
 - **Claims:** three policy wordings in markdown, 21 customers with their policies, 30 main claims and 30 hard claims, each with its documents and an answer key in JSON. One ruling after the hard run (a burst water heater itself isn't covered), and the scores were re-computed from the saved runs, not re-run.
 - **NDAs:** drawn with a fixed seed from the downloaded ContractNLI files: 30 from the dev split (main), 30 from the test split (held-out). Each statement's label and proof sentence numbers kept as the dataset has them. 510 contract × statement pairs per set.
 
-### The tools
+### What I used
 
 | Tool | What I used it for |
 |---|---|
@@ -218,7 +210,7 @@ I tuned those fixes on these same 30 claims, so the "fixed" rows are a best case
 | **pytest** | Offline tests; a shared fixture blocks every real API call during tests |
 | **Claude Code** | My pair programmer: design, plan, code and review |
 
-### The process, step by step
+### The pipeline
 
 1. `data.py` loads the set (claims, or NDAs and the 17 statements) and the answer key.
 2. `prompts.py` holds all the prompt text, so one file shows what each step is told.
@@ -228,7 +220,7 @@ I tuned those fixes on these same 30 claims, so the "fixed" rows are a best case
 6. `run.py` prints a cost estimate first, stops over budget, and saves every run as a file.
 7. `report.py` builds the results file **from the run files only**. No number is typed by hand.
 
-### The evals
+### Tests that guard the numbers
 
 Offline tests, no API calls, no cost. They pin down the things that would quietly skew the numbers:
 
@@ -239,7 +231,7 @@ Offline tests, no API calls, no cost. They pin down the things that would quietl
 - **Scoring:** label right, F1 per label and proof found/precision checked on small hand-made cases.
 - **No real calls:** the model is replaced with a fake in every test.
 
-### Lessons from building it
+### Three quiet bugs
 
 Three of my bugs, and none of them crashed anything. They just made the workflow look worse than it was:
 
@@ -249,7 +241,7 @@ Three of my bugs, and none of them crashed anything. They just made the workflow
 
 All three were format problems. Next time I'd ask the API for a **fixed answer format** (structured output) instead of XML tags, and **save the raw text of every answer my code can't read**, so I don't need extra calls to find out why.
 
-### The code
+### Get the code
 
 Everything is on GitHub, with the data, the answer keys, the offline tests and a results file built only from real runs:
 

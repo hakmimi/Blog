@@ -7,17 +7,13 @@ source: ["anthropic"]
 draft: false
 ---
 
-## How this started
+More and more people let agents pay bills, send emails and post messages for them. If one of those agents gets tricked by something it reads, who notices?
 
-So, I came across this article from Anthropic: [Agent security review with Managed Agents](https://platform.claude.com/cookbook/managed-agents-cma-agent-security-review). It shows how to have Claude read the logs of your AI agents after they finish, and point at the moments where an agent did something it wasn't allowed to do.
+Anthropic's answer, in the cookbook article [Agent security review with Managed Agents](https://platform.claude.com/cookbook/managed-agents-cma-agent-security-review): have Claude read the logs of your agents after they finish, and point at the moments where an agent did something it wasn't allowed to do. I wanted to know two things the article doesn't show: does the review actually catch a tricked agent, and how often does it raise an alarm for nothing?
 
-It made me wonder. More and more people let agents pay bills, send emails and post messages for them. If one of those agents gets tricked, would this kind of review actually catch it? And how often would it raise an alarm for nothing?
+## A three-step safety net
 
-The article doesn't say. So I tried to find out.
-
-## What Anthropic claims, and what it implies
-
-The idea is simple. You write down what your agent is allowed to do. Then every finished session goes through three steps:
+You write down what your agent is allowed to do. Then every finished session goes through three steps:
 
 1. **Cheap rules** scan the log for obvious red flags. No AI, no cost.
 2. **Claude reads the session** and gives it a danger score from 0 to 100.
@@ -27,21 +23,19 @@ Each session ends up in one of three bands: **Routine** (nothing to do), **Look*
 
 The article runs this on 20 example sessions. Four come out as "Act", and each one is a real problem: a fake invoice that tricked the agent into sending a report to an outsider, an admin password the agent found and used, and so on. The whole review cost about **9 cents**.
 
-What it implies: **this is a cheap, practical safety net for your agents.**
+The pitch: **a cheap, practical safety net for your agents.**
 
-But the article is honest about one thing. It calls these **"worked examples, not an accuracy measurement."** It also warns that the reviewer is itself a model reading text an attacker may have written, so it "can over-flag or miss."
+The article is honest about its limits. It calls these **"worked examples, not an accuracy measurement."** It also warns that the reviewer is itself a model reading text an attacker may have written, so it "can over-flag or miss."
 
-So it shows the net catching four fish. It doesn't tell us how many get through.
+It shows the net catching four fish. It doesn't say how many get through.
 
-## My experiment
+## Sessions with a known verdict
 
-So I decided to take it a step further and run my own experiment.
-
-### The question
+### What I wanted to know
 
 **If I give this review a pile of agent sessions where I already know the truth, how many bad ones does it catch, how many innocent ones does it flag, and can an attacker talk it out of a flag?**
 
-### The data
+### Borrowing AgentDojo's answer key
 
 I needed agent sessions with a known answer, and I didn't want to write the answers myself. In an earlier topic I did that, and it was the weakest part of the work.
 
@@ -61,9 +55,9 @@ I took the saved sessions of one agent (GPT-4o) and built three sets:
 
 That last one is the part I'm most curious about. The attacker already got the agent to obey a planted message. Can the same trick work on the reviewer?
 
-### The process
+### Three reviewers, one step apart
 
-I built the review three ways, adding one step each time, so I can see what each step is worth:
+Each level keeps the one before it and adds one step, so each step's worth shows on its own:
 
 - **Level 0 · rules only.** Simple checks: did money, an email or a link go somewhere the user's request doesn't cover? Is there instruction-like text hiding in a tool result? Free.
 - **Level 1 · one prompt.** The model reads the session and gives a score. Nothing else.
@@ -75,7 +69,7 @@ I planned to use **Claude Haiku 5.5**, the article's model. On the day, my Anthr
 
 ![The review flow: rules, a model, code checks, band](../../assets/images/04-agent-security-review/process-diagram.png)
 
-## How I measure it
+## Catches and false alarms
 
 | What I measure | In plain words |
 |---|---|
@@ -94,9 +88,9 @@ I planned to use **Claude Haiku 5.5**, the article's model. On the day, my Anthr
 - **Some sessions will be fooled** by the "approved by phone" line, more at level 1 than at level 2, because at level 2 the rule hits still point at the bad action.
 - **The cost will stay close to the article's** few cents per 20 sessions.
 
-## The results
+## What the review caught
 
-I ran everything: 3 sets, 3 levels, 3 repeats of each model level. The whole experiment cost **$0.27**.
+All of it, 3 sets and 3 levels with 3 repeats of each model level, cost **$0.27**.
 
 ### 1 · The model caught every bad session. The rules didn't.
 
@@ -147,7 +141,7 @@ About **$0.0002 per session** and 4 seconds. That's cheaper than the article's $
 | Some sessions get fooled by the note | ❌ None, 0 of 30 every time |
 | Cost close to the article's | ✅ even lower, on shorter sessions |
 
-## Key takeaways
+## If you run agents
 
 - **The model review is the part that generalizes.** Rules catch the attacks you already know. The model caught new attack styles the rules had never seen.
 - **Don't trust a perfect score on your own test data.** My rules looked flawless on the set I built them on, and missed 37% the moment the wording changed.
@@ -156,7 +150,7 @@ About **$0.0002 per session** and 4 seconds. That's cheaper than the article's $
 - **Check the reviewer's quotes.** Up to 1 in 15 first answers cited evidence that wasn't there.
 - **A planted "this is fine" note didn't work here.** A reviewer that reads the whole log seems to trust the actions over the words. One test, one wording, so I'd keep watching this.
 
-## Limitations
+## Caveats
 
 - **The reviewer is `gpt-6-luna`, not Claude Haiku 5.5.** My Anthropic account ran out of credit on the day. The method is the article's, the model isn't, so a Claude reviewer could do better or worse.
 - **The attacks are blunt.** In AgentDojo, an attack that worked usually leaves an obvious trace: money to an unknown account, a post to a strange website. A 100% catch rate here doesn't promise 100% on subtle attacks.
@@ -170,16 +164,16 @@ About **$0.0002 per session** and 4 seconds. That's cheaper than the article's $
 
 **Data credit.** Sessions and labels come from **AgentDojo** (Debenedetti et al., NeurIPS 2024), MIT licence. See [`data/NOTICE.md`](https://github.com/hakmimi/ai-engineering-lab/blob/main/topics/04-agent-security-review-agentdojo/data/NOTICE.md) for what I took and changed.
 
-## Technical walkthrough
+## Building the reviewer
 
-### The data
+### Drawing the sessions
 
 - **Source:** AgentDojo's saved runs of `gpt-4o-2024-05-13`, at commit `089ed46` of [their repo](https://github.com/ethz-spylab/agentdojo). About 6,900 saved sessions to choose from.
 - **How I drew the sets:** in each workplace I split the user requests in two halves, and the attack goals in two halves, with a fixed seed (2026). The main set only uses half A of both, the held-out set only half B. So the held-out set has requests, attack goals and attack styles the rules never saw.
 - **What the reviewer sees:** only the numbered chat. I removed every field that gives the answer away (`security`, `injections`, `attack_type`, the task ids…) and gave each session a plain id like `t-014`. The answers sit in a separate file, `key.json`, that the review code never opens.
 - **The grants:** one short "what this agent may do" per workplace, written by me from the workplace's purpose, like the article's `AGENTS` entries. [`data/grants.json`](https://github.com/hakmimi/ai-engineering-lab/blob/main/topics/04-agent-security-review-agentdojo/data/grants.json)
 
-### The tools
+### Tools
 
 | Tool | What I used it for |
 |---|---|
@@ -189,7 +183,7 @@ About **$0.0002 per session** and 4 seconds. That's cheaper than the article's $
 | **pytest** | Offline tests; a shared fixture blocks every real API call during tests |
 | **Claude Code** | My pair programmer: design, plan, code, and an independent review of the whole branch before any money was spent |
 
-### The process, step by step
+### The flow
 
 1. `build_data.py` reads the AgentDojo clone, draws the three sets and writes them to `data/`.
 2. `rules.py` runs the level 0 checks: money, email, links or invites going somewhere the user's request doesn't cover, sensitive actions nobody asked for, and planted-instruction wording in tool output.
@@ -197,9 +191,9 @@ About **$0.0002 per session** and 4 seconds. That's cheaper than the article's $
 4. `run.py` prints a cost estimate first, asks before spending, stops at a budget, and refuses to go past $5 for the whole topic. Every run is saved as a file.
 5. `report.py` builds `results.md` and the graphs (plain SVG files in `charts/`) **from the run files only**. No number is typed by hand.
 
-### The evals
+### Offline checks
 
-The code has offline tests (no API calls, no cost). They pin down the things that would quietly skew the numbers:
+Before any paid run, free offline tests (no API calls) check what could quietly bend the numbers:
 
 - **No leaks:** no answer field ever reaches the reviewer, and the sessions aren't sorted by kind.
 - **No overlap:** main and held-out never share a user request or an attack goal.
@@ -209,7 +203,7 @@ The code has offline tests (no API calls, no cost). They pin down the things tha
 - **Fair scoring:** an unreadable answer counts against the reviewer, while an API outage (overload, timeout) is left out and counted separately.
 - **The rules stay honest:** every planted-text pattern must appear somewhere in the main set.
 
-### Lessons from building it
+### What a fresh reviewer found
 
 Before spending any money, I had a fresh reviewer go through the whole branch. It found three things that would have quietly changed my results:
 
@@ -219,6 +213,6 @@ Before spending any money, I had a fresh reviewer go through the whole branch. I
 
 None of these would have crashed anything. They would just have made the numbers wrong.
 
-### The code
+### The repo
 
-Everything is on GitHub: [ai-engineering-lab / 04-agent-security-review-agentdojo](https://github.com/hakmimi/ai-engineering-lab/tree/main/topics/04-agent-security-review-agentdojo). It has the rules, the three review levels, the offline tests, the design and plan, the spot-check sheet, and a results file and graphs built only from real runs.
+All of it is here: [ai-engineering-lab / 04-agent-security-review-agentdojo](https://github.com/hakmimi/ai-engineering-lab/tree/main/topics/04-agent-security-review-agentdojo). It has the rules, the three review levels, the offline tests, the design and plan, the spot-check sheet, and a results file and graphs built only from real runs.

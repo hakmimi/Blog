@@ -7,38 +7,32 @@ source: ["anthropic"]
 draft: false
 ---
 
-## How this started
+Almost everything I build sends the model a big, fixed block of text (rules, documents) and a small question that changes. If the model has to read that whole block before it writes a word, the block is slowing me down on every single call.
 
-So, I came across Anthropic's guide [Latency Optimization on the Claude API](https://platform.claude.com/cookbook/latency-optimization-latency-optimization#input-token-management). One section, "input token management", starts from a simple idea: **the model reads every input token before it writes the first word.** So send fewer tokens, and don't send the same ones twice.
+That's the starting point of the "input token management" section in Anthropic's guide [Latency Optimization on the Claude API](https://platform.claude.com/cookbook/latency-optimization-latency-optimization#input-token-management): **the model reads every input token before it writes the first word.** So send fewer tokens, and don't send the same ones twice. The guide has numbers, but they're for Claude, on Anthropic's network. I use OpenAI models, from home. Would the same levers make my answers come faster?
 
-It made me wonder. Almost everything I build sends the model a big, fixed block of text (rules, documents) and a small question that changes. If reading costs time, that big block should be slowing me down every single call. Would these levers make my answers come faster?
+## Four levers, timed on Claude
 
-The guide has numbers, but they're for Claude, on Anthropic's network. I use OpenAI models, from home. So I tried to find out.
-
-## What Anthropic claims, and what it implies
-
-The section tests four levers on a made-up insurance desk, each with a before/after number:
+The guide tests four levers on a made-up insurance desk, each with a before/after number:
 
 1. **Fewer tokens.** A bigger prompt means a slower first word: about **+0.25 s per 100K tokens**.
 2. **Prompt caching.** Keep the start of the prompt the same, and the model doesn't re-read it. Cost drops by about **85%**, and on a long prompt the second turn's first word goes from **1.7 s to 0.5 s**.
 3. **Pre-warming.** Send a cheap request with the shared start before the user asks, so the cache is ready. The first turn goes from **1.0 s to 0.8 s**.
 4. **Let the server keep the chat.** Instead of re-sending the whole conversation each turn, send only the new message. In their example, the upload drops from **22.3 MB to 0.3 KB** (the chat had page images), and the first word from **1.27 s to 0.63 s**.
 
-What it implies: **trim and cache your input, and your users wait less.**
+The message: **trim and cache your input, and your users wait less.**
 
 The guide is careful about one thing: short prompts don't get faster from caching. The speed win is for **long** prompts.
 
-But every number is **Claude, on Anthropic's own network**. It doesn't tell us whether these are rules about input tokens in general, or facts about one stack.
+But every number is **Claude, on Anthropic's own network**. Are these rules about input tokens in general, or facts about one stack? The guide can't tell us.
 
-## My experiment
+## The same levers, from my desk
 
-So I decided to take it a step further and run my own experiment.
-
-### The question
+### What I timed
 
 **Do the four input-token levers make the first word come sooner on OpenAI models, from a normal home connection, on real documents? And do they keep the answers just as good?**
 
-### The data
+### 60 NDAs, again
 
 I reused the **60 real NDAs** from my [prompt-vs-workflow post](/Blog/posts/01-prompt-vs-workflow/), with their lawyer-written labels from **ContractNLI**.
 
@@ -50,7 +44,7 @@ The model answers with a label (says it / says the opposite / not mentioned) and
 
 The contracts are the big, fixed part of the prompt: about **79K tokens** for a 30-NDA pack. The questions are small and change every turn. That's exactly the shape where caching should shine.
 
-### The process
+### One lever per test
 
 Each claim became a before/after test. One setting changes, everything else stays the same:
 
@@ -68,7 +62,7 @@ Each lever has an OpenAI version, and they're **close, not the same**:
 
 Models: `gpt-6-luna` (small) everywhere, and `gpt-6.1-sol` (large) in test 1, both at the lowest thinking effort each one accepts.
 
-## How I measure it
+## The stopwatch
 
 | What I measure | In plain words |
 |---|---|
@@ -87,7 +81,7 @@ Models: `gpt-6-luna` (small) everywhere, and `gpt-6.1-sol` (large) in test 1, bo
 - **Caching would cut the cost** a lot, and **speed up the 30-NDA chats**, since that pack is long.
 - **Pre-warming and the server-side chat would help a little**, maybe less than on Claude, because my home network adds its own delay.
 
-## The results
+## Cheaper, not faster
 
 All numbers are medians. "First word" is the time to the first piece of answer text.
 
@@ -135,7 +129,7 @@ The upload shrank by **99.7%**, and the first word stayed the same (interval −
 
 Label right was **60–80%** in every variant, with no variant consistently ahead. 7 of 442 answers in test 2 broke the answer format, and I count them as wrong. (That's lower than the 82% in the prompt-vs-workflow post, because thinking was off and each question sits inside a 30-contract pack. Here it's a guard rail, not a score.)
 
-## Key takeaways
+## What I'll change in my own code
 
 - **I was half right.** Caching cut the cost just like the guide says. But none of the levers made my first word come sooner.
 - **On a small model, reading is cheap.** About 0.4 s per 100K tokens, so caching 79K tokens can save at most ~0.3 s. My network and the API swing more than that.
@@ -152,7 +146,7 @@ Label right was **60–80%** in every variant, with no variant consistently ahea
 
 **My rule of thumb:** turn caching on **for the money**, always. For speed, check thinking effort and the network first, then measure before trusting any lever.
 
-## Limitations
+## Why these numbers might not travel
 
 - **One machine, one home connection, one day.** Network noise is part of what I measured. From a cloud machine, reading time would stand out more.
 - **OpenAI, not Claude.** The levers are close, not the same.
@@ -164,15 +158,15 @@ Total cost of the whole experiment: **about $3.55**.
 
 **Data credit.** The NDAs and labels come from **ContractNLI** (Koreeda & Manning, 2021, [stanfordnlp.github.io/contract-nli](https://stanfordnlp.github.io/contract-nli/)), released under **CC BY 4.0**.
 
-## Technical walkthrough
+## How the timer works
 
-### The data
+### The documents
 
 - **The NDAs, statements and answer key** are read straight from the prompt-vs-workflow topic's data folder. Nothing is copied.
 - **Packs:** contracts numbered C01, C02… and stacked until a target size is reached (20K to 151K tokens). Each keeps its sentence numbers, so the proof can still be checked.
 - **Questions:** 17 per chat, one per ContractNLI statement, each naming a contract code.
 
-### The tools
+### Tools
 
 | Tool | What I used it for |
 |---|---|
@@ -181,7 +175,7 @@ Total cost of the whole experiment: **about $3.55**.
 | **pytest** | Offline tests with a fake client, no network |
 | **Claude Code** | My pair programmer: design, plan, code and review |
 
-### The process, step by step
+### Step by step
 
 1. `timer.py` makes one **streamed** call and records the time of every event: first word, total, tokens and bytes sent.
 2. `packs.py` builds the contract packs, the questions and the prompt text, and reads the answers.
@@ -191,9 +185,9 @@ Total cost of the whole experiment: **about $3.55**.
 6. `run.py` prints a cost estimate, asks before spending, and refuses to pass a **$10 ceiling** for the topic. Every run is saved as a file.
 7. `report.py` builds the results file **from the run files only**. No number is typed by hand.
 
-### The evals
+### Tests for the timer
 
-Offline tests, no API calls, no cost. They pin down the things that would quietly skew the timing:
+No API calls and no cost here. These tests guard the timing itself:
 
 - **The timer is honest:** thinking tokens count as output, not as the first word; an error mid-stream keeps the partial times.
 - **Rate limits are retried outside the clock**, and a bad request is never retried.
@@ -202,7 +196,7 @@ Offline tests, no API calls, no cost. They pin down the things that would quietl
 - **Fair stats:** warm-up calls and errors are left out but counted; a "cold" request that read from cache is flagged and left out.
 - **Money:** cached tokens are priced at the cache rate, and the run stops before crossing the budget.
 
-### Lessons from building it
+### What the runs taught me
 
 The runs caught four things my design hadn't:
 
@@ -211,6 +205,6 @@ The runs caught four things my design hadn't:
 - **Re-sending an 80K-token chat every turn hits rate limits.** Test 4 hit the 2M tokens-per-minute limit 4 times.
 - **Use medians.** One request in the pre-warm re-run stalled for about two hours. The median didn't move.
 
-### The code
+### Code and raw results
 
-Everything is on GitHub: [ai-engineering-lab / 03-input-tokens-latency-contract-nli](https://github.com/hakmimi/ai-engineering-lab/tree/main/topics/03-input-tokens-latency-contract-nli). It has the streaming timer, the five tests, the offline tests, the design and plan, and a results file built only from real runs.
+The code lives here: [ai-engineering-lab / 03-input-tokens-latency-contract-nli](https://github.com/hakmimi/ai-engineering-lab/tree/main/topics/03-input-tokens-latency-contract-nli). It has the streaming timer, the five tests, the offline tests, the design and plan, and a results file built only from real runs.
