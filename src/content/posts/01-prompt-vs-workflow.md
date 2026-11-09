@@ -1,7 +1,7 @@
 ---
 title: "One big prompt or a workflow?"
 description: "Anthropic shows three ways to split a job across several LLM calls, but never measures if they pay off. I tested them on made-up insurance claims, then on 60 real NDAs with lawyer-written labels."
-pubDatetime: 2026-11-09T10:00:00+02:00
+pubDatetime: 2026-11-02T10:00:00+02:00
 tags: ["workflows", "prompting", "evals"]
 draft: false
 ---
