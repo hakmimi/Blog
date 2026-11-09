@@ -5,6 +5,7 @@ import Header from "@/components/Header.astro";
 import Footer from "@/components/Footer.astro";
 import Datetime from "@/components/Datetime.astro";
 import Tag from "@/components/Tag.astro";
+import SourceLogos from "@/components/SourceLogos.astro";
 import { getPostSlug, getPostUrl } from "@/utils/getPostPaths";
 import { getSortedPosts } from "@/utils/getSortedPosts";
 import { slugifyStr } from "@/utils/slugify";
@@ -121,6 +122,7 @@ const ogImage = ogImageUrl
       class="text-accent inline-block text-2xl font-bold sm:text-3xl"
     >
       {title}
+      <SourceLogos sources={post.data.source} size="lg" />
     </h1>
 
     <div class="my-2 flex items-center gap-2">

@@ -1,0 +1,32 @@
+---
+import { SOURCES, type SourceKey } from "@/utils/sources";
+
+type Props = { sources?: SourceKey[]; size?: "sm" | "lg" };
+
+const { sources = [], size = "sm" } = Astro.props;
+const px = size === "lg" ? "0.8em" : "0.95em";
+---
+
+{
+  sources.length > 0 && (
+    <span class="ms-2 inline-flex items-center gap-1.5 align-middle">
+      {sources.map(key => {
+        const s = SOURCES[key];
+        return (
+          <svg
+            role="img"
+            aria-label={`Source: ${s.name}`}
+            viewBox="0 0 24 24"
+            width={px}
+            height={px}
+            fill={s.color}
+            class="inline-block shrink-0"
+          >
+            <title>{`Based on an article by ${s.name}`}</title>
+            <path d={s.path} />
+          </svg>
+        );
+      })}
+    </span>
+  )
+}
