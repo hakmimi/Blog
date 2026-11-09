@@ -3,7 +3,7 @@ title: "Can an AI grade its own SQL?"
 description: "Anthropic's evaluator-optimizer loop lets one model grade another until it says PASS. I tested it on 120 BIRD text-to-SQL questions with known answers: the grader said PASS to 82-94% of wrong queries, the loop added nothing, and even a bigger 'teacher' model grading a small 'student' didn't help. Running the query did a little; a bigger writer did a lot."
 pubDatetime: 2026-11-09T21:00:00+02:00
 tags: ["evals", "workflows", "sql"]
-draft: true
+draft: false
 ---
 
 ## How this started
