@@ -158,8 +158,8 @@ Splitting a job doesn't make the model smarter. It makes each call see **less**.
 - Let the document check **see the whole claim**, or check all documents in one call.
 - Let the chain answer **"partial because part is excluded"**.
 - Build the **hard set first**, before any tuning, and keep it hidden until the end.
-- Try **longer, real-size documents**, where one prompt should start to struggle. That's the next test.
+- Try **longer, real-size documents**, where one prompt should start to struggle. I ran a version of that test in [part 2: real contracts](/Blog/posts/02-prompt-vs-workflow-real-contracts/).
 
 ## The code
 
-Everything is on GitHub: [ai-engineering-lab / 01-prompt-vs-workflow](https://github.com/hakmimi/ai-engineering-lab/tree/topic-01-prompt-vs-workflow/topics/01-prompt-vs-workflow). It has the full pipeline in Python, the made-up data with its answer key, offline tests, and a results file built only from real runs.
+Everything is on GitHub: [ai-engineering-lab / 01-prompt-vs-workflow-claimsflow](https://github.com/hakmimi/ai-engineering-lab/tree/main/topics/01-prompt-vs-workflow-claimsflow). It has the full pipeline in Python, the made-up data with its answer key, offline tests, and a results file built only from real runs.
