@@ -1,0 +1,76 @@
+---
+import { getCollection, type CollectionEntry } from "astro:content";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Breadcrumb from "@/components/Breadcrumb.astro";
+import Main from "@/components/Main.astro";
+import Footer from "@/components/Footer.astro";
+import Card from "@/components/Card.astro";
+import { postFilter } from "@/utils/postFilter";
+import { useTranslations } from "@/i18n";
+import config from "@/config";
+
+// Posts placed by when the article they test came out (the first article listed), newest article first.
+// A post's own date stays its real publish date; this page only orders by the article's date.
+
+const locale = Astro.currentLocale ?? config.site.lang;
+const t = useTranslations(locale);
+
+type Post = CollectionEntry<"posts">;
+const articleDate = (post: Post) => post.data.articles[0]?.date;
+
+const posts = (await getCollection("posts"))
+  .filter(postFilter)
+  .filter(post => articleDate(post))
+  .sort((a, b) => articleDate(b)!.getTime() - articleDate(a)!.getTime());
+
+const monthFormatter = new Intl.DateTimeFormat("en", { month: "long", timeZone: "UTC" });
+
+// year → month → posts, keeping the newest-first order above
+const groups = new Map<number, Map<number, Post[]>>();
+for (const post of posts) {
+  const d = articleDate(post)!;
+  const year = d.getUTCFullYear();
+  const month = d.getUTCMonth();
+  if (!groups.has(year)) groups.set(year, new Map());
+  const months = groups.get(year)!;
+  if (!months.has(month)) months.set(month, []);
+  months.get(month)!.push(post);
+}
+---
+
+<Layout title={`${t.pages.timelineTitle} | ${config.site.title}`}>
+  <Header />
+
+  <Breadcrumb />
+
+  <Main pageTitle={t.pages.timelineTitle} pageDesc={t.pages.timelineDesc}>
+    {
+      [...groups.entries()].map(([year, months]) => (
+        <div>
+          <span class="text-2xl font-bold">{year}</span>{" "}
+          <sup class="text-muted-foreground text-sm">
+            {[...months.values()].reduce((n, list) => n + list.length, 0)}
+          </sup>
+          {[...months.entries()].map(([month, list]) => (
+            <div class="flex flex-col sm:flex-row">
+              <div class="mt-6 min-w-36 text-lg sm:my-6">
+                <span class="font-bold">
+                  {monthFormatter.format(new Date(Date.UTC(2000, month, 1)))}
+                </span>{" "}
+                <sup class="text-muted-foreground text-xs">{list.length}</sup>
+              </div>
+              <ul>
+                {list.map(post => (
+                  <Card {...post} />
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      ))
+    }
+  </Main>
+
+  <Footer />
+</Layout>

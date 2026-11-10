@@ -7,6 +7,7 @@ export default {
     tags: "Tags",
     about: "About",
     archives: "Archives",
+    timeline: "Timeline",
     search: "Search",
   },
   post: {
@@ -50,6 +51,9 @@ export default {
 
     archivesTitle: "Archives",
     archivesDesc: "All the articles I've archived.",
+
+    timelineTitle: "Timeline",
+    timelineDesc: "Every post, placed by when the article it tests came out. The post date is when I tested it.",
 
     searchTitle: "Search",
     searchDesc: "Search any article ...",

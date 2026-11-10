@@ -6,6 +6,7 @@ import Footer from "@/components/Footer.astro";
 import Datetime from "@/components/Datetime.astro";
 import Tag from "@/components/Tag.astro";
 import SourceLogos from "@/components/SourceLogos.astro";
+import ArticleInfo from "@/components/ArticleInfo.astro";
 import { getPostSlug, getPostUrl } from "@/utils/getPostPaths";
 import { getSortedPosts } from "@/utils/getSortedPosts";
 import { slugifyStr } from "@/utils/slugify";
@@ -124,6 +125,8 @@ const ogImage = ogImageUrl
       {title}
       <SourceLogos sources={post.data.source} size="lg" />
     </h1>
+
+    <ArticleInfo articles={post.data.articles} size="lg" />
 
     <div class="my-2 flex items-center gap-2">
       <Datetime {pubDatetime} {modDatetime} {timezone} size="lg" />

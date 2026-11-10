@@ -1,9 +1,14 @@
 ---
 title: "Fewer input tokens, faster answers?"
 description: "Anthropic's latency guide says input tokens cost time, and shows four levers to cut them. I tested all four on 60 real NDAs with OpenAI models, from my home connection. They saved money and bytes, but not seconds."
-pubDatetime: 2026-11-05T10:00:00+02:00
+pubDatetime: 2026-11-09T10:00:00+02:00
 tags: ["latency", "caching", "evals"]
 source: ["anthropic"]
+articles:
+  - publisher: "Anthropic"
+    title: "Latency optimization (cookbook)"
+    url: "https://platform.claude.com/cookbook/latency-optimization-latency-optimization"
+    date: 2026-11-02
 draft: false
 ---
 

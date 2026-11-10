@@ -4,6 +4,15 @@ description: "LinkedIn and Pinterest find tables for text-to-SQL the same way: s
 pubDatetime: 2026-11-16T10:00:00+02:00
 tags: ["evals", "retrieval", "sql"]
 source: ["linkedin", "pinterest"]
+articles:
+  - publisher: "LinkedIn"
+    title: "Practical text-to-SQL for data analytics"
+    url: "https://www.linkedin.com/blog/engineering/ai/practical-text-to-sql-for-data-analytics"
+    date: 2024-12-09
+  - publisher: "Pinterest"
+    title: "How we built Text-to-SQL at Pinterest"
+    url: "https://medium.com/pinterest-engineering/how-we-built-text-to-sql-at-pinterest-30bad30dabff"
+    date: 2024-04-02
 draft: false
 ---
 

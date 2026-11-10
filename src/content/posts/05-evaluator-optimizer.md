@@ -4,6 +4,11 @@ description: "Anthropic's evaluator-optimizer loop lets one model grade another 
 pubDatetime: 2026-11-09T21:00:00+02:00
 tags: ["evals", "workflows", "sql"]
 source: ["anthropic"]
+articles:
+  - publisher: "Anthropic"
+    title: "Evaluator-optimizer (cookbook)"
+    url: "https://platform.claude.com/cookbook/patterns-agents-evaluator-optimizer"
+    date: 2024-12-19
 draft: false
 ---
 

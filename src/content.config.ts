@@ -19,6 +19,17 @@ const posts = defineCollection({
       tags: z.array(z.string()).default(["others"]),
       // Company whose article the post tests; its logo shows next to the title.
       source: z.array(z.enum(SOURCE_KEYS)).default([]),
+      // The article(s) the post tests: shown under the title, and used to place the post on the Timeline page.
+      articles: z
+        .array(
+          z.object({
+            publisher: z.string(),
+            title: z.string(),
+            url: z.string().url(),
+            date: z.coerce.date(),
+          })
+        )
+        .default([]),
       ogImage: image().or(z.string()).optional(),
       description: z.string(),
       canonicalURL: z.string().optional(),

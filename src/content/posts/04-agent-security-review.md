@@ -4,6 +4,11 @@ description: "Anthropic's cookbook reviews finished agent sessions for forbidden
 pubDatetime: 2026-11-09T17:00:00+02:00
 tags: ["security", "agents", "evals"]
 source: ["anthropic"]
+articles:
+  - publisher: "Anthropic"
+    title: "Agent security review with Managed Agents (cookbook)"
+    url: "https://platform.claude.com/cookbook/managed-agents-cma-agent-security-review"
+    date: 2026-10-16
 draft: false
 ---
 

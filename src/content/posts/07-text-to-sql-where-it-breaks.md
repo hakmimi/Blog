@@ -1,9 +1,14 @@
 ---
 title: "Text-to-SQL: is the hard part finding the tables?"
 description: "Uber's QueryGPT scores its text-to-SQL two ways, finding the tables itself or being handed the right ones, but never prints the gap. I ran that test on 120 BIRD questions over a 75-table warehouse: a table agent found every table 87-92% of the time, and 3 of 4 wrong answers had every table they needed. The writing was the weak part. And 'the query runs' said yes to 95% of wrong answers."
-pubDatetime: 2026-11-19T10:00:00+02:00
+pubDatetime: 2026-11-23T10:00:00+02:00
 tags: ["evals", "sql", "agents"]
 source: ["uber"]
+articles:
+  - publisher: "Uber"
+    title: "QueryGPT"
+    url: "https://www.uber.com/lb/en/blog/query-gpt/"
+    date: 2024-09-19
 draft: false
 ---
 
