@@ -1,6 +1,6 @@
 ---
 title: "Workflow or free agent: which gives the same answer twice?"
-description: "Safe Software's guide says fixed agentic workflows are more reliable and reproducible than a free AI agent, but shows no numbers. I built its five patterns and a tool-using agent on 120 BIRD text-to-SQL questions, 3 runs each. On new databases every workflow beat the agent (57-61% right vs 45%) and gave the same answer more often (78-92% vs 61%). Most of the gap came from one error: table names that don't run, from an agent that rarely tested its queries."
+description: "Safe Software's guide says fixed agentic workflows are more reliable and reproducible than a free AI agent, but shows no numbers. I built its five patterns and a tool-using agent on 120 BIRD text-to-SQL questions, 3 runs each. On new databases every workflow beat the agent (57-61% right vs 45%) and gave the same answer more often (78-92% vs 61%). Most of the gap came from one error: table names that don't run, in queries the agent never ran before answering."
 pubDatetime: 2026-11-25T10:00:00+02:00
 tags: ["agents", "workflows", "sql"]
 source: ["safe"]
@@ -103,7 +103,7 @@ The agent gave the same answer in all 3 runs for **62%** (main) and **61%** (hel
 
 The steadiest of all was the **evaluator-optimizer** on the held-out set: the same answer on **92%** of questions, and no failing SQL at all.
 
-### 3 · Why: it used names that don't run, and rarely tested its queries
+### 3 · Why: it used names that don't run, and never ran the ones that failed
 
 The agent's table list shows names as `database.table`, like `superhero.superhero`. That's a label, not something SQLite understands. On the held-out set, **35** of the agent's final queries used that form and failed with "no such table". On the main set, **15**. No workflow ever did this: the router only names a database, and the writer sees plain `CREATE TABLE` text.
 
@@ -115,7 +115,7 @@ The agent could have caught it. It had a `run_sql` tool for exactly this. But it
 | described a database first | 26% | 21% |
 | ran a test query first | 8% | 3% |
 
-It used **1.4–1.5 steps** on average out of 10, and never hit the cap. The freedom to check was there; it wasn't used.
+It used **1.4–1.5 steps** on average out of 10, and never hit the cap. The freedom to check was there; it wasn't used. Of the **15** (main) and **35** (held-out) answers that failed on these names, the agent had run **0** with `run_sql` before answering.
 
 So I asked: what if those names had worked? I re-ran the agent's **stored** queries offline, with each database also reachable under its own name. No model calls, nothing re-asked. On the held-out set, **29 of the 35** failed queries would have been right. The agent would score **61% instead of 45%**, and give the same answer **83% of the time instead of 61%**. That's level with the workflows. On the main set: **51% instead of 49%**, same answer **77% instead of 62%**.
 
@@ -217,13 +217,13 @@ This topic's `agentflow/levels.py` only supplies the prompts, the readers and th
 
 ### The evals
 
-**77 offline tests** in this topic (no API calls, a fake model, tiny SQLite databases built in the test), plus **18** for `shared/patterns`:
+**79 offline tests** in this topic (no API calls, a fake model, tiny SQLite databases built in the test), plus **18** for `shared/patterns`:
 
 - **Readers:** database names in any case or quotes, HUMAN only when allowed, at most 4 sub-questions, tool calls with and without SQL.
 - **Levels:** each level makes exactly the calls it should; the vote ignores row order and lets failed queries lose; one sub-question means no combine call; an agent answer with no SQL or an unknown database goes back to it as a note.
 - **Scoring:** API errors left out of every rate; a handoff's final answer still counts.
 - **Same prompts:** a snapshot of every prompt each level sends, taken before the move to `shared/patterns`. The move had to reproduce it exactly.
-- **What-if:** the attached copy is read-only, and only "no such table: database.…" failures are re-run.
+- **What-if:** the attached copy is read-only, and only "no such table: database.…" failures are re-run; a failing query counts as "run first" only if the agent ran that exact query.
 
 ### Lessons from building it
 
