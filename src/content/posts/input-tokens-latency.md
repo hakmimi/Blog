@@ -1,7 +1,7 @@
 ---
 title: "Fewer input tokens, faster answers?"
 description: "Anthropic's latency guide says input tokens cost time, and shows four levers to cut them. I tested all four on 60 real NDAs with OpenAI models, from my home connection. They saved money and bytes, but not seconds."
-pubDatetime: 2026-11-09T10:00:00+02:00
+pubDatetime: 2026-11-04T10:00:00+02:00
 tags: ["latency", "caching", "evals"]
 source: ["anthropic"]
 articles:
@@ -9,6 +9,7 @@ articles:
     title: "Latency optimization"
     url: "https://platform.claude.com/cookbook/latency-optimization-latency-optimization"
     date: 2026-11-02
+topics: ["03-input-tokens-latency-contract-nli"]
 draft: false
 ---
 
@@ -39,7 +40,7 @@ But every number is **Claude, on Anthropic's own network**. Are these rules abou
 
 ### 60 NDAs, again
 
-I reused the **60 real NDAs** from my [prompt-vs-workflow post](/Blog/posts/01-prompt-vs-workflow/), with their lawyer-written labels from **ContractNLI**.
+I reused the **60 real NDAs** from my [prompt-vs-workflow post](/Blog/posts/prompt-vs-workflow/), with their lawyer-written labels from **ContractNLI**.
 
 The job is an **NDA desk**. A legal team keeps a pack of NDAs open and asks one question per chat turn:
 

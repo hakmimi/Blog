@@ -30,6 +30,9 @@ const posts = defineCollection({
           })
         )
         .default([]),
+      // The ai-engineering-lab folder(s) under topics/ this post reports on, e.g. "07-text-to-sql-where-it-breaks".
+      // Not shown on the site; it is the link from a post (whose URL has no number) back to its code in git.
+      topics: z.array(z.string()).default([]),
       ogImage: image().or(z.string()).optional(),
       description: z.string(),
       canonicalURL: z.string().optional(),

@@ -1,7 +1,7 @@
 ---
 title: "Can an AI catch another AI doing something it shouldn't?"
 description: "Anthropic's cookbook reviews finished agent sessions for forbidden actions, but shows no accuracy numbers. I tested it on 180 AgentDojo sessions with a known answer: the model caught every bad one, the rules caught 63% of new attacks, and a planted 'this is fine' note fooled nobody."
-pubDatetime: 2026-11-09T17:00:00+02:00
+pubDatetime: 2026-11-08T10:00:00+02:00
 tags: ["security", "agents", "evals"]
 source: ["anthropic"]
 articles:
@@ -9,6 +9,7 @@ articles:
     title: "Agent security review with Managed Agents"
     url: "https://platform.claude.com/cookbook/managed-agents-cma-agent-security-review"
     date: 2026-10-16
+topics: ["04-agent-security-review-agentdojo"]
 draft: false
 ---
 

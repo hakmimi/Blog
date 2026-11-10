@@ -25,6 +25,15 @@ import config from "./astro-paper.config";
 export default defineConfig({
   site: config.site.url,
   base: "/Blog",
+  // Post URLs dropped their number prefix on 2026-11-10; keep the old links working.
+  redirects: {
+    "/posts/01-prompt-vs-workflow": "/Blog/posts/prompt-vs-workflow/",
+    "/posts/03-input-tokens-latency": "/Blog/posts/input-tokens-latency/",
+    "/posts/04-agent-security-review": "/Blog/posts/agent-security-review/",
+    "/posts/05-evaluator-optimizer": "/Blog/posts/evaluator-optimizer/",
+    "/posts/06-text-to-sql-table-retrieval": "/Blog/posts/text-to-sql-table-retrieval/",
+    "/posts/07-text-to-sql-where-it-breaks": "/Blog/posts/text-to-sql-where-it-breaks/",
+  },
   integrations: [
     mdx(),
     sitemap({

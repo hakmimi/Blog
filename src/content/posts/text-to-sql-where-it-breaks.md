@@ -1,7 +1,7 @@
 ---
 title: "Text-to-SQL: is the hard part finding the tables?"
 description: "Uber's QueryGPT scores its text-to-SQL two ways, finding the tables itself or being handed the right ones, but never prints the gap. I ran that test on 120 BIRD questions over a 75-table warehouse: a table agent found every table 87-92% of the time, and 3 of 4 wrong answers had every table they needed. The writing was the weak part. And 'the query runs' said yes to 95% of wrong answers."
-pubDatetime: 2026-11-23T10:00:00+02:00
+pubDatetime: 2026-11-18T10:00:00+02:00
 tags: ["evals", "sql", "agents"]
 source: ["uber"]
 articles:
@@ -9,6 +9,7 @@ articles:
     title: "QueryGPT"
     url: "https://www.uber.com/lb/en/blog/query-gpt/"
     date: 2024-09-19
+topics: ["07-text-to-sql-where-it-breaks"]
 draft: false
 ---
 
@@ -18,7 +19,7 @@ Uber describes this test in their write-up of [QueryGPT](https://www.uber.com/lb
 
 ## Why everyone builds a table finder
 
-QueryGPT is a chain of small agents: an **intent agent** picks a business area, a **table agent** proposes tables (the user can fix them), a **column-prune agent** trims wide tables, and only then is the query written. LinkedIn and Pinterest built the same kind of step, which I tested in my [last post](/Blog/posts/06-text-to-sql-table-retrieval/). The shared belief: the model can write SQL fine, it just gets lost in a big warehouse.
+QueryGPT is a chain of small agents: an **intent agent** picks a business area, a **table agent** proposes tables (the user can fix them), a **column-prune agent** trims wide tables, and only then is the query written. LinkedIn and Pinterest built the same kind of step, which I tested in my [last post](/Blog/posts/text-to-sql-table-retrieval/). The shared belief: the model can write SQL fine, it just gets lost in a big warehouse.
 
 To check their system, Uber keeps a set of questions, each with a "golden" query, and runs two flows:
 
@@ -43,7 +44,7 @@ Two things in there deserve numbers:
 
 ### The questions
 
-The same 60 + 60 questions I used in the [grader post](/Blog/posts/05-evaluator-optimizer/), from [BIRD](https://bird-bench.github.io/) Mini-Dev: real SQLite databases (schools, Formula 1, a bank, hospital lab tests, football and more), each question with a hint and a correct query written by the dataset's authors. The **main set** (6 databases) is where I looked and set things. The **held-out set** (5 other databases) ran once at the end, with nothing changed.
+The same 60 + 60 questions I used in the [grader post](/Blog/posts/evaluator-optimizer/), from [BIRD](https://bird-bench.github.io/) Mini-Dev: real SQLite databases (schools, Formula 1, a bank, hospital lab tests, football and more), each question with a hint and a correct query written by the dataset's authors. The **main set** (6 databases) is where I looked and set things. The **held-out set** (5 other databases) ran once at the end, with nothing changed.
 
 ### A small warehouse
 
@@ -155,7 +156,7 @@ The LLM score does much better. On the held-out set it **flagged three of four w
 - **Uber's split is the right tool.** Running "given the right tables" next to "find them yourself" took one extra level and answered the question directly. Any team can run it on their own warehouse.
 - **Don't grade with "it runs".** If your eval logs only "runs" and "has rows", most wrong answers look fine. Keep questions with known answers and compare rows.
 - **An LLM similarity score is a decent cheap filter**, but set its line on data with known answers, and don't trust it alone.
-- **The companies may still be right, at their scale.** In my [last post](/Blog/posts/06-text-to-sql-table-retrieval/), on 971 look-alike tables, search was the weak link. Here, on 75 very different ones, it wasn't. Measure your own warehouse before you decide where to spend.
+- **The companies may still be right, at their scale.** In my [last post](/Blog/posts/text-to-sql-table-retrieval/), on 971 look-alike tables, search was the weak link. Here, on 75 very different ones, it wasn't. Measure your own warehouse before you decide where to spend.
 
 ## Before you quote these numbers
 

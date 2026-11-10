@@ -1,7 +1,7 @@
 ---
 title: "Can an AI find the right tables in a big database?"
 description: "LinkedIn and Pinterest find tables for text-to-SQL the same way: search for 20, let an LLM pick 7. I tested it on 971 tables and 332 questions with a public answer key. The LLM step doubled the questions that got every table (22% to 45% held-out), descriptions and Pinterest's summaries added more, and following foreign keys took it to 75-78%. The LLM was never the weak link; search was."
-pubDatetime: 2026-11-16T10:00:00+02:00
+pubDatetime: 2026-11-15T10:00:00+02:00
 tags: ["evals", "retrieval", "sql"]
 source: ["linkedin", "pinterest"]
 articles:
@@ -13,6 +13,7 @@ articles:
     title: "How we built Text-to-SQL at Pinterest"
     url: "https://medium.com/pinterest-engineering/how-we-built-text-to-sql-at-pinterest-30bad30dabff"
     date: 2024-04-02
+topics: ["06-text-to-sql-table-retrieval"]
 draft: false
 ---
 
