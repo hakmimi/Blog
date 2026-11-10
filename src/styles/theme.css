@@ -3,32 +3,39 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-accent-soft: var(--accent-soft);
   --color-accent-foreground: var(--accent-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
-  --font-app: var(--font-google-sans-code);
+  --font-app: var(--font-inter);
+  --font-code: var(--font-google-sans-code);
 }
 
-/* Light theme values */
+/* Light theme: "mint and sea" (teal to cyan) on white */
 :root,
 [data-theme="light"] {
-  --background: #fdfdfd;
-  --foreground: #282728;
-  --accent: #006cac;
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --accent: #0d9488;
+  --accent-2: #0891b2;
+  --accent-soft: #f0fdfa;
   --accent-foreground: #ffffff;
-  --muted: #e6e6e6;
-  --muted-foreground: #6b7280;
-  --border: #ece9e9;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --border: #e2e8f0;
 }
 
-/* Dark theme values */
+/* Dark theme: the same mint on deep slate */
 [data-theme="dark"] {
-  --background: #212737;
-  --foreground: #eaedf3;
-  --accent: #ff6b01;
-  --accent-foreground: #ffffff;
-  --muted: #343f60;
-  --muted-foreground: #afb9ca;
-  --border: #ab4b08;
+  --background: #0b1220;
+  --foreground: #e2e8f0;
+  --accent: #2dd4bf;
+  --accent-2: #22d3ee;
+  --accent-soft: #0f2e2c;
+  --accent-foreground: #0b1220;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --border: #1e293b;
 }

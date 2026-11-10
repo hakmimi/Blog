@@ -14,21 +14,22 @@ const { variant: Heading = "h2", id, data, filePath } = Astro.props;
 const { title, description, source, articles } = data;
 ---
 
-<li class="my-6">
+<li class="border-border border-t py-5 first:border-t-0">
   <a
     href={getPostUrl(id, filePath, Astro.currentLocale)}
-    class:list={[
-      "text-accent inline-block text-lg font-medium",
-      "decoration-dashed underline-offset-4 hover:underline",
-      "focus-visible:no-underline focus-visible:underline-offset-0",
-    ]}
+    class="group flex items-start justify-between gap-4"
   >
-    <Heading transition:name={toTransitionName(id)}>
+    <Heading
+      transition:name={toTransitionName(id)}
+      class="group-hover:text-accent text-lg leading-snug font-semibold tracking-tight transition-colors"
+    >
       {title}
-      <SourceLogos sources={source} />
     </Heading>
+    <SourceLogos sources={source} />
   </a>
-  {/* Publish dates are hidden for now; the article's date shows instead. */}
-  <ArticleInfo articles={articles} />
-  <p>{description}</p>
+  {/* Publish dates are hidden; the article's month shows instead. */}
+  <p class="text-muted-foreground mt-1.5 line-clamp-3 text-[0.95rem] leading-relaxed">{description}</p>
+  <div class="mt-2">
+    <ArticleInfo articles={articles} />
+  </div>
 </li>

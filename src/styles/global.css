@@ -30,8 +30,20 @@
   @apply max-w-app mx-auto w-full px-4;
 }
 
+/* Header, footer and home page: wider than the reading column */
+@utility app-layout-wide {
+  @apply mx-auto w-full max-w-5xl px-4;
+}
+
 @utility active-nav {
-  @apply underline decoration-wavy decoration-2 underline-offset-8;
+  @apply text-accent font-semibold;
+}
+
+/* Code keeps the monospace font; everything else uses Inter */
+code,
+pre,
+kbd {
+  font-family: var(--font-code), ui-monospace, monospace;
 }
 
 :target {
