@@ -15,7 +15,7 @@ draft: false
 
 When I build something with an LLM, my first try is almost always one long prompt: here's everything, decide. It's simple, cheap and fast, and I had never really checked whether it was good enough.
 
-Anthropic's cookbook post [Basic Multi-LLM Workflows](https://platform.claude.com/cookbook/patterns-agents-basic-workflows) points the other way. It shows three ways to split one job across several model calls: **chain** the steps one after another, run them **in parallel**, or **route** each input to a specialist prompt. Would splitting my job give better answers? And what would it cost in time, money and things that can break? I tested it twice: first on data I made up, then on real contracts.
+Anthropic's cookbook post [Basic Multi-LLM Workflows](https://platform.claude.com/cookbook/patterns-agents-basic-workflows) ([code](https://github.com/anthropics/claude-cookbooks/blob/main/patterns/agents/basic_workflows.ipynb)) points the other way. It shows three ways to split one job across several model calls: **chain** the steps one after another, run them **in parallel**, or **route** each input to a specialist prompt. Would splitting my job give better answers? And what would it cost in time, money and things that can break? I tested it twice: first on data I made up, then on real contracts.
 
 ## Three patterns, no scoreboard
 

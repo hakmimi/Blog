@@ -15,7 +15,7 @@ draft: false
 
 Asking a model to check its own work sounds like free quality. But a grader is just another model call. If it can't tell a right answer from a wrong one, the loop only adds cost, or worse, talks a right answer into a wrong one.
 
-That loop is the whole idea of Anthropic's cookbook page [Evaluator-optimizer](https://platform.claude.com/cookbook/patterns-agents-evaluator-optimizer): one AI writes an answer, a second AI grades it, and the first one rewrites until the grade is PASS. The page never measures whether the grade is right. So I put the grader on trial, on a job where "right" can be checked: SQL.
+That loop is the whole idea of Anthropic's cookbook page [Evaluator-optimizer](https://platform.claude.com/cookbook/patterns-agents-evaluator-optimizer) ([code](https://github.com/anthropics/claude-cookbooks/blob/main/patterns/agents/evaluator_optimizer.ipynb)): one AI writes an answer, a second AI grades it, and the first one rewrites until the grade is PASS. The page never measures whether the grade is right. So I put the grader on trial, on a job where "right" can be checked: SQL.
 
 ## Write, grade, rewrite
 
@@ -57,7 +57,7 @@ Both have 18 simple, 30 moderate and 12 challenging questions.
 Level 0 is a single try; each level after it changes one thing:
 
 - **Level 0 · one try.** The model sees the schema (with 3 example rows per table), the hint and the question, and writes one query.
-- **Level 1 · AI grader reads it.** The cookbook's loop: a grader **reads** the query, without running it. Up to 3 writes.
+- **Level 1 · AI grader reads it.** The cookbook's loop: a grader **reads** the query, without running it. Up to 3 writes (my cap; the cookbook's loop has none).
 - **Level 2 · just run it.** No AI grader. Code **runs** the query; if it fails or returns no rows, the writer gets the real error and tries again. Up to 3 writes.
 - **Level 3 · AI grader sees the result.** Like level 1, but the grader also sees the error or the first 10 rows the query returned.
 - **Level 0+ · bigger model, one try.**

@@ -15,7 +15,7 @@ draft: false
 
 More and more people let agents pay bills, send emails and post messages for them. If one of those agents gets tricked by something it reads, who notices?
 
-Anthropic's answer, in the cookbook article [Agent security review with Managed Agents](https://platform.claude.com/cookbook/managed-agents-cma-agent-security-review): have Claude read the logs of your agents after they finish, and point at the moments where an agent did something it wasn't allowed to do. I wanted to know two things the article doesn't show: does the review actually catch a tricked agent, and how often does it raise an alarm for nothing?
+Anthropic's answer, in the cookbook article [Agent security review with Managed Agents](https://platform.claude.com/cookbook/managed-agents-cma-agent-security-review) ([code](https://github.com/anthropics/claude-cookbooks/blob/main/managed_agents/CMA_agent_security_review.ipynb)): have Claude read the logs of your agents after they finish, and point at the moments where an agent did something it wasn't allowed to do. I wanted to know two things the article doesn't show: does the review actually catch a tricked agent, and how often does it raise an alarm for nothing?
 
 ## A three-step safety net
 

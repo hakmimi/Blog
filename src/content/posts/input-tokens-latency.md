@@ -15,7 +15,7 @@ draft: false
 
 Almost everything I build sends the model a big, fixed block of text (rules, documents) and a small question that changes. If the model has to read that whole block before it writes a word, the block is slowing me down on every single call.
 
-That's the starting point of the "input token management" section in Anthropic's guide [Latency Optimization on the Claude API](https://platform.claude.com/cookbook/latency-optimization-latency-optimization#input-token-management): **the model reads every input token before it writes the first word.** So send fewer tokens, and don't send the same ones twice. The guide has numbers, but they're for Claude, on Anthropic's network. I use OpenAI models, from home. Would the same levers make my answers come faster?
+That's the starting point of the "input token management" section in Anthropic's guide [Latency Optimization on the Claude API](https://platform.claude.com/cookbook/latency-optimization-latency-optimization#input-token-management) ([code and raw timings](https://github.com/anthropics/claude-cookbooks/tree/main/latency_optimization)): **the model reads every input token before it writes the first word.** So send fewer tokens, and don't send the same ones twice. The guide has numbers, but they're for Claude, on Anthropic's network. I use OpenAI models, from home. Would the same levers make my answers come faster?
 
 ## Four levers, timed on Claude
 
