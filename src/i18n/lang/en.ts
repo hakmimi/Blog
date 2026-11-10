@@ -53,7 +53,7 @@ export default {
     archivesDesc: "All the articles I've archived.",
 
     timelineTitle: "Timeline",
-    timelineDesc: "Every post, placed by when the article it tests came out. The post date is when I tested it.",
+    timelineDesc: "Every post, placed by when the article it evaluates came out. The post date is when I evaluated it.",
 
     searchTitle: "Search",
     searchDesc: "Search any article ...",

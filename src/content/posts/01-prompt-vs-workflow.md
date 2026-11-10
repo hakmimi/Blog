@@ -6,7 +6,7 @@ tags: ["workflows", "prompting", "evals"]
 source: ["anthropic"]
 articles:
   - publisher: "Anthropic"
-    title: "Basic workflows (cookbook)"
+    title: "Basic workflows"
     url: "https://platform.claude.com/cookbook/patterns-agents-basic-workflows"
     date: 2024-12-19
 draft: false

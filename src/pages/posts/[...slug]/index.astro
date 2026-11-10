@@ -3,7 +3,6 @@ import { type CollectionEntry, getCollection, render } from "astro:content";
 import PostLayout from "@/layouts/PostLayout.astro";
 import Header from "@/components/Header.astro";
 import Footer from "@/components/Footer.astro";
-import Datetime from "@/components/Datetime.astro";
 import Tag from "@/components/Tag.astro";
 import SourceLogos from "@/components/SourceLogos.astro";
 import ArticleInfo from "@/components/ArticleInfo.astro";
@@ -71,7 +70,6 @@ const {
   canonicalURL,
   pubDatetime,
   modDatetime,
-  timezone,
   tags,
   hideEditPost,
   hideToc,
@@ -129,7 +127,7 @@ const ogImage = ogImageUrl
     <ArticleInfo articles={post.data.articles} size="lg" />
 
     <div class="my-2 flex items-center gap-2">
-      <Datetime {pubDatetime} {modDatetime} {timezone} size="lg" />
+      {/* Publish date hidden for now; ArticleInfo above shows the article's date. */}
       <span
         aria-hidden="true"
         class:list={[

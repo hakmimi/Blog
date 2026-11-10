@@ -6,7 +6,7 @@ tags: ["latency", "caching", "evals"]
 source: ["anthropic"]
 articles:
   - publisher: "Anthropic"
-    title: "Latency optimization (cookbook)"
+    title: "Latency optimization"
     url: "https://platform.claude.com/cookbook/latency-optimization-latency-optimization"
     date: 2026-11-02
 draft: false

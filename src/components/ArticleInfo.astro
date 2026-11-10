@@ -1,5 +1,5 @@
 ---
-// The article(s) a post tests, with the month each came out. Plain text on cards, links on the post page.
+// The article(s) a post evaluates, linked, with the month each came out.
 type Article = { publisher: string; title: string; url: string; date: Date };
 type Props = { articles?: Article[]; size?: "sm" | "lg" };
 
@@ -10,17 +10,13 @@ const month = new Intl.DateTimeFormat("en", { month: "short", year: "numeric", t
 {
   articles.length > 0 && (
     <p class:list={["text-muted-foreground text-sm", { "sm:text-base": size === "lg" }]}>
-      <span>Tests </span>
+      <span>Evaluating </span>
       {articles.map((a, i) => (
         <>
           {i > 0 && <span> and </span>}
-          {size === "lg" ? (
-            <a href={a.url} class="hover:text-accent underline decoration-dashed underline-offset-4">
-              {a.publisher}: {a.title}
-            </a>
-          ) : (
-            <span>{a.publisher}</span>
-          )}
+          <a href={a.url} class="hover:text-accent underline decoration-dashed underline-offset-4">
+            {a.publisher}: {a.title}
+          </a>
           <span> ({month.format(a.date)})</span>
         </>
       ))}

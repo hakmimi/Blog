@@ -6,7 +6,7 @@ tags: ["evals", "workflows", "sql"]
 source: ["anthropic"]
 articles:
   - publisher: "Anthropic"
-    title: "Evaluator-optimizer (cookbook)"
+    title: "Evaluator-optimizer"
     url: "https://platform.claude.com/cookbook/patterns-agents-evaluator-optimizer"
     date: 2024-12-19
 draft: false

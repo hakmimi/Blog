@@ -2,7 +2,6 @@
 import type { CollectionEntry } from "astro:content";
 import { getPostUrl } from "@/utils/getPostPaths";
 import { toTransitionName } from "@/utils/toTransitionName";
-import Datetime from "./Datetime.astro";
 import SourceLogos from "./SourceLogos.astro";
 import ArticleInfo from "./ArticleInfo.astro";
 
@@ -12,7 +11,7 @@ type Props = {
 
 const { variant: Heading = "h2", id, data, filePath } = Astro.props;
 
-const { title, description, source, articles, ...props } = data;
+const { title, description, source, articles } = data;
 ---
 
 <li class="my-6">
@@ -29,7 +28,7 @@ const { title, description, source, articles, ...props } = data;
       <SourceLogos sources={source} />
     </Heading>
   </a>
-  <Datetime {...props} />
+  {/* Publish dates are hidden for now; the article's date shows instead. */}
   <ArticleInfo articles={articles} />
   <p>{description}</p>
 </li>

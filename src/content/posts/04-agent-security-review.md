@@ -6,7 +6,7 @@ tags: ["security", "agents", "evals"]
 source: ["anthropic"]
 articles:
   - publisher: "Anthropic"
-    title: "Agent security review with Managed Agents (cookbook)"
+    title: "Agent security review with Managed Agents"
     url: "https://platform.claude.com/cookbook/managed-agents-cma-agent-security-review"
     date: 2026-10-16
 draft: false

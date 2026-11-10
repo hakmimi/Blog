@@ -20,7 +20,7 @@ export default defineAstroPaperConfig({
   features: {
     lightAndDarkMode: true,
     dynamicOgImage: true,
-    showArchives: true,
+    showArchives: false, // the archive groups posts by publish month, which would show the dates
     showBackButton: true,
     editPost: { enabled: false },
     search: "pagefind",
