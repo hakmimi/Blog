@@ -1,6 +1,6 @@
 ---
 title: "Workflow or free agent: which gives the same answer twice?"
-description: "Safe Software's guide says fixed agentic workflows are more reliable and reproducible than a free AI agent, but shows no numbers. I built its five patterns and a tool-using agent on 120 BIRD text-to-SQL questions, 3 runs each. On new databases every workflow beat the agent (57-61% right vs 45%) and gave the same answer more often (78-92% vs 61%). Most of the gap came from one trap: table names that don't run, and an agent that rarely tested its own query."
+description: "Safe Software's guide says fixed agentic workflows are more reliable and reproducible than a free AI agent, but shows no numbers. I built its five patterns and a tool-using agent on 120 BIRD text-to-SQL questions, 3 runs each. On new databases every workflow beat the agent (57-61% right vs 45%) and gave the same answer more often (78-92% vs 61%). Most of the gap came from one error: table names that don't run, from an agent that rarely tested its queries."
 pubDatetime: 2026-11-25T10:00:00+02:00
 tags: ["agents", "workflows", "sql"]
 source: ["safe"]
@@ -8,7 +8,7 @@ articles:
   - publisher: "Safe Software"
     title: "AI Agentic Workflows: Tutorial & Best Practices"
     url: "https://fme.safe.com/guides/ai-agent-architecture/ai-agentic-workflows/"
-    date: 2025-05-01
+    date: 2025-05-14
 topics: ["09-agentic-patterns-bird"]
 draft: false
 ---
@@ -50,7 +50,7 @@ The same 60 + 60 questions as [topic 05](https://github.com/hakmimi/ai-engineeri
 
 ### The levels
 
-Every level that writes SQL uses the **same writer prompt** (topic 05's) and the same schema text (`CREATE TABLE` plus 3 example rows per table). Each level changes one thing.
+Every SQL writer in the workflows uses the **same writer prompt** (topic 05's). The level 3 combiner and the level 5 agent have their own prompts. Wherever a database is shown in full, it is the same schema text: `CREATE TABLE` plus 3 example rows per table. Each level changes one thing.
 
 | Level | Pattern | What it does | AI calls |
 |---|---|---|---|
@@ -103,7 +103,7 @@ The agent gave the same answer in all 3 runs for **62%** (main) and **61%** (hel
 
 The steadiest of all was the **evaluator-optimizer** on the held-out set: the same answer on **92%** of questions, and no failing SQL at all.
 
-### 3 · Why: it used names that don't run, and didn't test them
+### 3 · Why: it used names that don't run, and rarely tested its queries
 
 The agent's table list shows names as `database.table`, like `superhero.superhero`. That's a label, not something SQLite understands. On the held-out set, **35** of the agent's final queries used that form and failed with "no such table". On the main set, **15**. No workflow ever did this: the router only names a database, and the writer sees plain `CREATE TABLE` text.
 
@@ -119,7 +119,7 @@ It used **1.4–1.5 steps** on average out of 10, and never hit the cap. The fre
 
 So I asked: what if those names had worked? I re-ran the agent's **stored** queries offline, with each database also reachable under its own name. No model calls, nothing re-asked. On the held-out set, **29 of the 35** failed queries would have been right. The agent would score **61% instead of 45%**, and give the same answer **83% of the time instead of 61%**. That's level with the workflows. On the main set: **51% instead of 49%**, same answer **77% instead of 62%**.
 
-This what-if is not the result. The result is the 45%. But it shows where the gap came from: not from the agent "thinking worse", but from one trap a fixed workflow can't fall into, and an agent that skipped its own checks.
+This what-if is not the result. The result is the 45%. But it shows where most of the held-out gap sits: in one error that no workflow made.
 
 ### 4 · The patterns barely fired
 
@@ -130,13 +130,13 @@ What the patterns actually did, on both sets:
 - **Evaluator-optimizer:** **1.08** (main) and **1.16** (held-out) rounds. The grader passed the first query most of the time.
 - **Parallel vote:** **2.7–2.8** of 3 writers agreed with the winner. Three tries mostly gave one answer.
 
-And the plain **one prompt** (level 0) was as good as any of them: **51%** on main, **61%** on held-out. With 11 very different databases, routing wasn't hard enough for the extra machinery to pay off.
+And the plain **one prompt** (level 0) was as good as any of them: **51%** on main, **61%** on held-out. Every level picked the right database for **100%** of answers, so routing had nothing to fix here.
 
 ### 5 · The agent wasn't slow
 
 ![Median seconds per question](../../assets/images/agentic-patterns-bird/seconds.svg)
 
-The guide says agents add latency. Here the agent was one of the **fastest**: **5.7 s** (main) and **4.9 s** (held-out) per question, next to **4.5–4.9 s** for one prompt and **10–12 s** for the orchestrator and the evaluator. That's because it barely took steps. An agent that checks its work would be slower; this one didn't check.
+The guide says agents add latency. Here the agent was one of the **fastest**: **5.7 s** (main) and **4.9 s** (held-out) per question, next to **4.5–4.9 s** for one prompt and **10–12 s** for the orchestrator and the evaluator. It took **1.4–1.5** steps per question on average.
 
 ![Cost per question](../../assets/images/agentic-patterns-bird/cost.svg)
 
@@ -153,7 +153,7 @@ Cost tells the same story. Everything cost **less than a tenth of a cent** per q
 
 ## What I'd tell someone choosing
 
-- **The guide's rule held, for a reason it doesn't name.** The workflows won on held-out data, and they were steadier everywhere. But the win came from **structure**: the router can only output a database name, the writer only sees real table text. The free agent had room to make a mistake the workflow couldn't make.
+- **The guide's rule held here.** The workflows won on held-out data, and they were steadier everywhere. Most of the held-out gap sits in one error the workflows never made. Their **structure** kept them away from it: the router only outputs a database name, and the writer only sees real table text. The free agent had room to make that mistake.
 - **Freedom to check is not checking.** Given a test tool and 10 steps, the agent answered at once in two out of three cases. If you build an agent, measure what it actually does with its tools, not just its final answer.
 - **Measure "the same answer twice" on its own.** It moved more than accuracy did: the agent lost up to **31 points** on it against the evaluator-optimizer. A system that's right 55% of the time but differently each run is hard to trust.
 - **A pattern only helps if its trigger happens.** The handoff and the planner never fired on these questions. Before adding a pattern, check that the failure it fixes actually shows up in your data.
@@ -161,16 +161,16 @@ Cost tells the same story. Everything cost **less than a tenth of a cent** per q
 
 ## What this doesn't show
 
-- **The agent's trap is partly my setup.** It got the same `database.table` list as the router, a choice made so both start equal. A list written differently, or native function calling with a separate database field, might never have led it there. I didn't fix the prompt and run again: that would be tuning after seeing the held-out results. The offline what-if is reported next to the real numbers, not instead of them.
-- **The what-if is not a re-run.** It runs the agent's stored queries with the prefix allowed. An agent with a fixed prompt might also behave differently in other ways.
-- **Text tools, not function calling.** The agent calls tools by writing `<tool>…</tool>` in its answer, so every level goes through the same plain model call. Native tool calling might change how it acts.
-- **One cheap model.** Every role is `gpt-6-luna`; the guide uses GPT-4o (now retired). A stronger model might check its work more, or need the patterns less.
-- **One task, an easy route.** 11 very different databases make routing easy. The handoff and the planner might matter on a harder warehouse or longer questions.
+- **The agent's trap is partly my setup.** It got the same `database.table` list as the router, a choice made so both start equal. I didn't test another list format, or native function calling with a separate database field. I didn't fix the prompt and run again: that would be tuning after seeing the held-out results. The offline what-if is reported next to the real numbers, not instead of them.
+- **The what-if is not a re-run.** It runs the agent's stored queries with the prefix allowed. It does not show what an agent with a fixed prompt would do: that was not run.
+- **Text tools, not function calling.** The agent calls tools by writing `<tool>…</tool>` in its answer, so every level goes through the same plain model call. Native tool calling was not tested.
+- **One cheap model.** Every role is `gpt-6-luna`; the guide uses GPT-4o. No other model was tested.
+- **One task, an easy route.** 11 very different databases make routing easy. A harder warehouse or longer questions were not tested.
 - **The stand-in person knows the answer.** At level 1h, a handoff goes to the right database by design. It never happened, so it didn't matter here.
 - **60 questions per set.** One question is 1.7 points. Gaps under about 5–7 points are noise.
 - **All SQL errors count as one outcome** for "same answer": two different errors in two runs count as the same.
 - **No spot check of the answer key.** I skipped it by choice: the key is BIRD's, and I'd already used it in topics 05 and 07.
-- **The SQL timeout is 10 seconds**, and runs went 4 questions at a time. One agent query timed out on the held-out set.
+- **The SQL timeout is 10 seconds**, and runs went 4 questions at a time. A final query that ran longer counts as an SQL error, in every level.
 
 **Data credit.** Questions, hints, correct queries and databases come from **BIRD Mini-Dev** (Li et al.), CC BY-SA 4.0. See [`data/NOTICE.md`](https://github.com/hakmimi/ai-engineering-lab/blob/main/topics/09-agentic-patterns-bird/data/NOTICE.md).
 
@@ -228,7 +228,7 @@ This topic's `agentflow/levels.py` only supplies the prompts, the readers and th
 ### Lessons from building it
 
 - **A snapshot before a refactor.** The runs were made with the levels as first written. Moving them onto `shared/patterns` afterwards could have changed a prompt by one character. A test that records every prompt and outcome for nine scenarios proved the move changed nothing.
-- **Median, not mean, for time.** In a smoke run, two single API calls took about 400 seconds each. A mean would have made a cheap level look slow. Seconds are now the median.
+- **Median, not mean, for time.** In a smoke run, two questions took about 400 seconds each. A mean would have made a cheap level look slow. Seconds are now the median.
 - **A smoke run should cover more than one database.** My 8-question smoke runs all came from `california_schools`, and the agent's prefix trap never showed up there. It appeared in the full runs, on other databases. Next time the smoke sample spans the databases.
 - **A fresh review before spending money.** It caught that the agent started with less than the router, so it now gets the same table list, and that an `answer` with no SQL ended the run instead of going back to the agent. That same table list is also where the `database.table` names came from: a fair start, and a trap I didn't see coming.
 
